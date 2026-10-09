@@ -14,11 +14,11 @@ function mockRepo(over: any = {}) {
 const stubAdapter = { searchSimilar: jest.fn().mockResolvedValue([]), sim: () => 0 };
 
 describe('DedupService decisions', () => {
-  let opsRepo: any; let rowsRepo: any; let matchesRepo: any; let remarksRepo: any; let service: DedupService;
+  let opsRepo: any; let rowsRepo: any; let matchesRepo: any; let remarksService: any; let service: DedupService;
 
   beforeEach(() => {
-    opsRepo = mockRepo(); rowsRepo = mockRepo(); matchesRepo = mockRepo(); remarksRepo = mockRepo();
-    service = new DedupService(opsRepo, rowsRepo, matchesRepo, stubAdapter as any, remarksRepo);
+    opsRepo = mockRepo(); rowsRepo = mockRepo(); matchesRepo = mockRepo(); remarksService = { append: jest.fn(async (e: any) => e) };
+    service = new DedupService(opsRepo, rowsRepo, matchesRepo, stubAdapter as any, remarksService);
   });
 
   it('requires a remark when the import row is deprioritized', async () => {
@@ -43,7 +43,7 @@ describe('DedupService decisions', () => {
     expect(savedMatch.decidedAt).toBeInstanceOf(Date);
     expect(out.row.status).toBe('deprioritized');
     expect(out.row.remarks).toMatch(/duplicate/i);
-    const savedRemark = remarksRepo.save.mock.calls[0][0];
+    const savedRemark = remarksService.append.mock.calls[0][0];
     expect(savedRemark).toMatchObject({ beneficiaryId: 'ben-9', kind: 'decision', authoredBy: 'u1' });
   });
 

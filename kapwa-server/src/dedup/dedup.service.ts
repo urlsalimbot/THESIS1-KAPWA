@@ -8,6 +8,7 @@ import { DedupAdapter } from './dedup-adapter';
 import { Person } from '../beneficiaries/person.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { PersonAddress } from '../beneficiaries/person-address.entity';
+import { BeneficiaryRemarksService } from './beneficiary-remarks.service';
 
 /** Writes the stored priority-list Excel (Task 8 supplies the implementation). */
 export interface DedupOutputWriter {
@@ -30,8 +31,7 @@ export class DedupService {
     private readonly matchesRepo: Repository<ClientImportMatch>,
     private readonly adapter: DedupAdapter,
     @Optional()
-    @InjectRepository(BeneficiaryRemark)
-    private readonly remarksRepo?: Repository<BeneficiaryRemark>,
+    private readonly remarksService?: BeneficiaryRemarksService,
     @Optional()
     @InjectRepository(Person)
     private readonly personRepo?: Repository<Person>,
@@ -54,8 +54,8 @@ export class DedupService {
     source: string | undefined,
     authoredBy: string,
   ): Promise<void> {
-    if (!this.remarksRepo) return;
-    await this.remarksRepo.save(this.remarksRepo.create({ beneficiaryId, operationId, kind, remark, source, authoredBy }));
+    if (!this.remarksService) return;
+    await this.remarksService.append({ beneficiaryId, operationId, kind, remark, source, authoredBy });
   }
 
   /** A row's status derives from its matches: pending wins, then deprioritized,
@@ -116,18 +116,11 @@ export class DedupService {
     await this.rowsRepo.save(row);
 
     // The decision is traceable on the record that survives.
-    if (body.keep !== 'import_row' && match.targetPersonId && this.remarksRepo) {
+    if (body.keep !== 'import_row' && match.targetPersonId && this.remarksService) {
       const bens = await this.rowsRepo.query('SELECT id FROM beneficiaries WHERE person_id = $1 LIMIT 1', [match.targetPersonId]);
       const beneficiaryId = bens?.[0]?.id;
       if (beneficiaryId) {
-        await this.remarksRepo.save(this.remarksRepo.create({
-          beneficiaryId,
-          operationId,
-          kind: 'decision',
-          remark,
-          source: op.source,
-          authoredBy: actorId,
-        }));
+        await this.remarksService.append({ beneficiaryId, operationId, kind: 'decision', remark, source: op.source, authoredBy: actorId });
       }
     }
     return { row, match };

@@ -16,13 +16,13 @@ const stubAdapter = { searchSimilar: jest.fn().mockResolvedValue([]), sim: () =>
 const stubWriter = { write: jest.fn().mockResolvedValue('exports/client-dedup/op1.xlsx') };
 
 describe('DedupService.finalize', () => {
-  let opsRepo: any; let rowsRepo: any; let matchesRepo: any; let remarksRepo: any;
+  let opsRepo: any; let rowsRepo: any; let matchesRepo: any; let remarksService: any;
   let personRepo: any; let beneficiaryRepo: any; let addressRepo: any; let service: DedupService;
 
   beforeEach(() => {
-    opsRepo = mockRepo(); rowsRepo = mockRepo(); matchesRepo = mockRepo(); remarksRepo = mockRepo();
+    opsRepo = mockRepo(); rowsRepo = mockRepo(); matchesRepo = mockRepo(); remarksService = { append: jest.fn(async (e: any) => e) };
     personRepo = mockRepo(); beneficiaryRepo = mockRepo(); addressRepo = mockRepo();
-    service = new DedupService(opsRepo, rowsRepo, matchesRepo, stubAdapter as any, remarksRepo, personRepo, beneficiaryRepo, addressRepo, stubWriter as any);
+    service = new DedupService(opsRepo, rowsRepo, matchesRepo, stubAdapter as any, remarksService, personRepo, beneficiaryRepo, addressRepo, stubWriter as any);
   });
 
   it('refuses to finalize while any match is still pending, writing nothing', async () => {
@@ -47,7 +47,7 @@ describe('DedupService.finalize', () => {
     expect(createdPerson).toMatchObject({ surname: 'Reyes', firstName: 'Pedro' });
     expect(createdPerson.gender).toBeUndefined();
     expect(beneficiaryRepo.create.mock.calls[0][0]).toMatchObject({ personId: 'p-new' });
-    const remark = remarksRepo.save.mock.calls[0][0];
+    const remark = remarksService.append.mock.calls[0][0];
     expect(remark).toMatchObject({ beneficiaryId: 'ben-new', kind: 'import', remark: 'AICS', authoredBy: 'u1' });
     const savedOp = opsRepo.save.mock.calls.at(-1)[0];
     expect(savedOp).toMatchObject({ status: 'finalized', accomplisher: 'u1', outputFile: 'exports/client-dedup/op1.xlsx' });
@@ -68,7 +68,7 @@ describe('DedupService.finalize', () => {
     expect((rowsRepo.save.mock.calls.find((c: any) => c[0].id === 'r1') as any)[0].remarks).toMatch(/Barangay updated to Partida/);
     const savedAddress = addressRepo.save.mock.calls[0][0];
     expect(savedAddress.barangay).toBe('Partida');
-    expect(remarksRepo.save.mock.calls[0][0]).toMatchObject({ beneficiaryId: 'ben-9', kind: 'barangay_update' });
+    expect(remarksService.append.mock.calls[0][0]).toMatchObject({ beneficiaryId: 'ben-9', kind: 'barangay_update' });
   });
 
   it('creates nothing for a deprioritized row', async () => {
