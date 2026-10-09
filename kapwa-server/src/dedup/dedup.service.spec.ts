@@ -78,6 +78,32 @@ describe('DedupService', () => {
     expect(out.data[0]).toMatchObject({ pending: 2, noMatch: 1, decided: 4, totalRows: 7 });
   });
 
+  it('rowMatches enriches person candidates with recent remark history', async () => {
+    rowsRepo.findOne.mockResolvedValue({ id: 'row1', operationId: 'op1', rowIndex: 2 });
+    matchesRepo.findAndCount.mockResolvedValue([
+      [{ id: 'm1', rowId: 'row1', targetType: 'db_person', targetPersonId: 'p1', score: 0.9, signals: {}, status: 'pending' }],
+      1,
+    ]);
+    rowsRepo.query
+      .mockResolvedValueOnce([{ id: 'p1', lastName: 'Reyes', firstName: 'Pedro' }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          person_id: 'p1', kind: 'decision', remark: 'Same person.',
+          source: 'Batch 1.xlsx', authorName: 'Juan Dela Cruz', createdAt: new Date('2026-10-01T02:30:00Z'),
+        },
+      ]);
+    const out = await service.rowMatches('op1', 'row1', 1, 20);
+    expect(out.data[0].person).toMatchObject({ id: 'p1' });
+    expect(out.data[0].remarks).toEqual([
+      {
+        kind: 'decision', remark: 'Same person.',
+        source: 'Batch 1.xlsx', authorName: 'Juan Dela Cruz', createdAt: expect.any(Date),
+      },
+    ]);
+  });
+
   it('returns detail counts by row status for the review header', async () => {
     opsRepo.findOne.mockResolvedValue({ id: 'op1', source: 'x' });
     rowsRepo.query.mockResolvedValue([{ status: 'pending', count: '2' }, { status: 'no_match', count: '3' }]);

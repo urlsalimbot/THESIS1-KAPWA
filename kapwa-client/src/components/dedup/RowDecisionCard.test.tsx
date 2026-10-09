@@ -13,6 +13,10 @@ const personCandidate: DedupCandidate = {
   person: { id: 'p1', lastName: 'Reyes', firstName: 'Pedro', middleName: 'P.', dob: '1988-03-21', barangay: 'Bigte' },
   interventions: 2,
   cases: [{ controlNo: 'C-2026-001', status: 'active' }, { controlNo: 'C-2026-002', status: 'closed' }],
+  remarks: [
+    { kind: 'decision', remark: 'Same person.', source: 'Batch 1.xlsx', authorName: 'Juan Dela Cruz', createdAt: '2026-10-01T02:30:00Z' },
+    { kind: 'import', remark: 'AICS food pack request', source: 'Batch 1.xlsx', authorName: null, createdAt: '2026-10-01T01:00:00Z' },
+  ],
 };
 
 describe('RowDecisionCard', () => {
@@ -21,6 +25,14 @@ describe('RowDecisionCard', () => {
     expect(screen.getByText(/C-2026-001/)).toBeTruthy();
     expect(screen.getByText(/C-2026-002/)).toBeTruthy();
     expect(screen.getByText(/2 interventions/i)).toBeTruthy();
+  });
+
+  it('shows the existing record’s recent remark history while deciding', () => {
+    render(<RowDecisionCard row={row} candidates={[personCandidate]} onDecide={vi.fn()} onRevert={vi.fn()} />);
+    expect(screen.getByText(/recent remarks/i)).toBeTruthy();
+    expect(screen.getByText(/Same person\./)).toBeTruthy();
+    expect(screen.getByText('Decision')).toBeTruthy();
+    expect(screen.getByText('Batch 1.xlsx · Juan Dela Cruz')).toBeTruthy();
   });
 
   it('shows the household-served badge and each member with their interventions', () => {
@@ -38,6 +50,7 @@ describe('RowDecisionCard', () => {
     expect(screen.getByText(/Maria/)).toBeTruthy();
     expect(screen.getByText(/C-2026-009/)).toBeTruthy();
     expect(screen.getByText(/1 intervention/i)).toBeTruthy();
+    expect(screen.queryByText(/recent remarks/i)).toBeNull();
   });
 
   it('opens a dialog for the deprioritizing choice and requires a remark before saving', async () => {

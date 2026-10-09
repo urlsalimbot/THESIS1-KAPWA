@@ -28,6 +28,14 @@ interface CandidateCase {
   status?: string;
 }
 
+export interface CandidateRemark {
+  kind: 'import' | 'decision' | 'barangay_update' | 'manual';
+  remark: string;
+  source?: string | null;
+  authorName?: string | null;
+  createdAt: string;
+}
+
 interface CandidateMember {
   personId: string;
   lastName?: string;
@@ -44,6 +52,8 @@ export interface DedupCandidate {
   status: 'pending' | 'primary' | 'deprioritized';
   remark?: string | null;
   signals?: Record<string, unknown> & { householdServed?: boolean };
+  /** Recent remark history of the existing record (db_person targets only). */
+  remarks?: CandidateRemark[];
   person?: {
     id: string; lastName?: string; firstName?: string; middleName?: string; dob?: string; barangay?: string;
   } | null;
@@ -251,6 +261,35 @@ function CandidateCard({
   );
 }
 
+const REMARK_KIND_LABELS: Record<CandidateRemark['kind'], string> = {
+  import: 'Import',
+  decision: 'Decision',
+  barangay_update: 'Barangay update',
+  manual: 'Remark',
+};
+
+function RecentRemarks({ remarks }: { remarks: CandidateRemark[] }) {
+  return (
+    <div className="space-y-1 border-t border-border pt-2">
+      <div className="text-xs font-medium text-muted-foreground">Recent remarks</div>
+      <ul className="space-y-1">
+        {remarks.map((r, i) => (
+          <li key={i} className="text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">{REMARK_KIND_LABELS[r.kind]}</span>
+            {' — '}
+            {r.remark}
+            {(r.source || r.authorName) && (
+              <span className="block text-[10px]">
+                {[r.source, r.authorName].filter(Boolean).join(' · ')}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function CaseLines({ cases }: { cases: CandidateCase[] }) {
   if (cases.length === 0) return <div className="text-muted-foreground">No cases on record</div>;
   return (
@@ -275,6 +314,7 @@ function CandidateBody({ candidate: c }: { candidate: DedupCandidate }) {
         <div>
           {c.interventions ?? 0} intervention{(c.interventions ?? 0) === 1 ? '' : 's'}
         </div>
+        {c.remarks && c.remarks.length > 0 && <RecentRemarks remarks={c.remarks} />}
       </div>
     );
   }

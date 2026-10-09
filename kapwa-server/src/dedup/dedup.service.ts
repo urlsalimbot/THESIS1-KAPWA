@@ -532,6 +532,38 @@ export class DedupService {
           `SELECT id, row_index AS "rowIndex", last_name AS "lastName", first_name AS "firstName", dob, barangay
              FROM client_import_rows WHERE id::text = ANY($1::text[])`, [importRowIds])
       : [];
+    // Recent remark history (≤5, newest first) for each person-targeted
+    // candidate — the reviewer sees the existing record's provenance while
+    // deciding whether it is the same person.
+    const recentRemarks: any[] = personIds.length
+      ? await this.rowsRepo.query(
+          `WITH ranked AS (
+             SELECT b.person_id::text AS person_id,
+                    br.kind, br.remark, br.source,
+                    br.created_at AS "createdAt",
+                    NULLIF(TRIM(CONCAT_WS(' ', u.first_name, NULLIF(u.middle_name, ''), u.last_name)), '') AS "authorName",
+                    ROW_NUMBER() OVER (PARTITION BY br.beneficiary_id ORDER BY br.created_at DESC) AS rn
+               FROM beneficiary_remarks br
+               JOIN beneficiaries b ON b.id = br.beneficiary_id
+               LEFT JOIN users u ON u.id = br.authored_by
+              WHERE b.person_id::text = ANY($1::text[])
+           )
+           SELECT person_id, kind, remark, source, "createdAt", "authorName"
+             FROM ranked WHERE rn <= 5 ORDER BY person_id, rn`,
+          [personIds])
+      : [];
+    const remarksByPerson = new Map<string, any[]>();
+    for (const r of recentRemarks) {
+      const list = remarksByPerson.get(r.person_id) ?? [];
+      list.push({
+        kind: r.kind,
+        remark: r.remark,
+        source: r.source ?? null,
+        authorName: r.authorName ?? null,
+        createdAt: r.createdAt,
+      });
+      remarksByPerson.set(r.person_id, list);
+    }
 
     const interventionBy = new Map(interventions.map((i) => [i.person_id, Number(i.count)]));
     const memberName = (mid: string) => {
@@ -541,6 +573,7 @@ export class DedupService {
     const data = matches.map((m) => ({
       ...m,
       person: people.find((p) => p.id === m.targetPersonId) ?? null,
+      remarks: remarksByPerson.get(m.targetPersonId as string) ?? [],
       interventions: interventionBy.get(m.targetPersonId as string) ?? 0,
       cases: cases.filter((c) => c.person_id === m.targetPersonId),
       household: households.find((h) => h.id === m.targetHouseholdId)
