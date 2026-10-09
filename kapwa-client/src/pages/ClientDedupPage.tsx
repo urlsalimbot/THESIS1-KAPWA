@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import type { ColumnDef } from '@tanstack/react-table';
-import { ArrowLeft, Download, FileSpreadsheet, Plus, Trash2, Upload } from 'lucide-react';
+import { Download, FileSpreadsheet, Plus, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, downloadClientDedupOutput } from '../lib/api';
 import { formatDate } from '../lib/format';
 import { queryKeys } from '../lib/query-keys';
+import { PageShell } from '@/components/PageShell';
 import { DataTable } from '@/components/data-table/DataTable';
 import { RowDecisionCard, type DedupCandidate, type DedupRow } from '@/components/dedup/RowDecisionCard';
 import {
@@ -16,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -194,18 +195,15 @@ function OperationsList({ onDefine, onOpen }: { onDefine: () => void; onOpen: (i
   );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Client Deduplication</h1>
-          <p className="text-sm text-muted-foreground">
-            Import a client list, review candidate matches, and export the priority list.
-          </p>
-        </div>
+    <PageShell
+      title="Client Deduplication"
+      description="Import a client list, review candidate matches, and export the priority list."
+      actions={
         <Button onClick={onDefine}>
           <Plus className="mr-2 h-4 w-4" /> New deduplication
         </Button>
-      </div>
+      }
+    >
       <DataTable
         columns={columns}
         data={data?.data ?? []}
@@ -214,7 +212,7 @@ function OperationsList({ onDefine, onOpen }: { onDefine: () => void; onOpen: (i
         pagination={{ pageIndex: 0, pageSize: 50 }}
         sorting={[]}
       />
-    </div>
+    </PageShell>
   );
 }
 
@@ -280,18 +278,12 @@ function DefineUploadView({
   }
 
   return (
-    <div className="space-y-4">
-      <Button variant="ghost" size="sm" onClick={onBack}>
-        <ArrowLeft className="mr-2 h-4 w-4" /> Back to operations
-      </Button>
+    <PageShell
+      title="Define the client list"
+      description="Match each declared row to the column that carries it in the file. The six baseline rows are required; declare any extra field your list includes."
+      backTo={{ label: 'Operations', onClick: onBack }}
+    >
       <Card>
-        <CardHeader>
-          <CardTitle>Define the client list</CardTitle>
-          <CardDescription>
-            Match each declared row to the column that carries it in the file. The six baseline rows are
-            required; declare any extra field your list includes.
-          </CardDescription>
-        </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="dedup-source">List name</Label>
@@ -412,7 +404,7 @@ function DefineUploadView({
           </Button>
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   );
 }
 
@@ -521,20 +513,12 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
   }
 
   return (
-    <div className="space-y-4" data-testid="review-view">
-      <div className="flex items-start justify-between gap-4">
-        <Button variant="ghost" size="sm" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to operations
-        </Button>
-        <div className="text-right text-sm text-muted-foreground">
-          <div className="font-medium text-foreground">{detail?.source ?? 'Review'}</div>
-          {detail ? (
-            <div>
-              {detail.pending} pending · {detail.totalRows} rows
-            </div>
-          ) : null}
-        </div>
-      </div>
+    <div data-testid="review-view">
+      <PageShell
+        title={detail?.source ?? 'Review'}
+        description={detail ? `${detail.pending} pending · ${detail.totalRows} rows` : undefined}
+        backTo={{ label: 'Operations', onClick: onBack }}
+      >
       <DataTable
         columns={columns}
         data={rows}
@@ -580,6 +564,7 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </PageShell>
     </div>
   );
 }
@@ -609,15 +594,13 @@ function OutputView({
   }
 
   return (
-    <div className="space-y-4" data-testid="output-view">
-      <Button variant="ghost" size="sm" onClick={onBack}>
-        <ArrowLeft className="mr-2 h-4 w-4" /> Back to operations
-      </Button>
+    <div data-testid="output-view">
+      <PageShell
+        title="Priority list ready"
+        description={detail?.source ?? 'Finalized import'}
+        backTo={{ label: 'Operations', onClick: onBack }}
+      >
       <Card>
-        <CardHeader>
-          <CardTitle>Priority list ready</CardTitle>
-          <CardDescription>{detail?.source ?? 'Finalized import'}</CardDescription>
-        </CardHeader>
         <CardContent className="space-y-4">
           {summary ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -637,6 +620,7 @@ function OutputView({
           </Button>
         </CardContent>
       </Card>
+      </PageShell>
     </div>
   );
 }

@@ -193,7 +193,7 @@ describe('ClientDedupPage', () => {
     await userEvent.click(await screen.findByRole('button', { name: /review matches/i }));
 
     await userEvent.click(await screen.findByRole('button', { name: /keep import row 1 \(b\)/i }));
-    await userEvent.type(screen.getByPlaceholderText(/why is this a duplicate/i), 'Same person.');
+    await userEvent.type(await screen.findByPlaceholderText(/why is this a duplicate/i), 'Same person.');
     await userEvent.click(screen.getByRole('button', { name: /save decision/i }));
 
     await waitFor(() =>

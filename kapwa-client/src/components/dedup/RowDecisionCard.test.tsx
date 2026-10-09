@@ -40,11 +40,14 @@ describe('RowDecisionCard', () => {
     expect(screen.getByText(/1 intervention/i)).toBeTruthy();
   });
 
-  it('requires a remark before deprioritizing and posts the decision', async () => {
+  it('opens a dialog for the deprioritizing choice and requires a remark before saving', async () => {
     const onDecide = vi.fn().mockResolvedValue(undefined);
     render(<RowDecisionCard row={row} candidates={[personCandidate]} onDecide={onDecide} onRevert={vi.fn()} />);
 
     await userEvent.click(screen.getByRole('button', { name: /keep existing record/i }));
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /keep the existing record/i })).toBeTruthy();
+
     const save = screen.getByRole('button', { name: /save decision/i }) as HTMLButtonElement;
     expect(save.disabled).toBe(true);
 
@@ -52,6 +55,18 @@ describe('RowDecisionCard', () => {
     expect(save.disabled).toBe(false);
     await userEvent.click(save);
     expect(onDecide).toHaveBeenCalledWith('m1', 'existing_record', 'Same person — same control number.');
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('cancelling the dialog posts nothing', async () => {
+    const onDecide = vi.fn().mockResolvedValue(undefined);
+    render(<RowDecisionCard row={row} candidates={[personCandidate]} onDecide={onDecide} onRevert={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole('button', { name: /keep existing record/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /^cancel$/i }));
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(onDecide).not.toHaveBeenCalled();
   });
 
   it('offers the intra-import A/B choice; keeping B deprioritizes this row', async () => {
@@ -64,7 +79,7 @@ describe('RowDecisionCard', () => {
 
     expect(screen.getByRole('button', { name: /keep this row \(a\)/i })).toBeTruthy();
     await userEvent.click(screen.getByRole('button', { name: /keep import row 1 \(b\)/i }));
-    const save = screen.getByRole('button', { name: /save decision/i }) as HTMLButtonElement;
+    const save = await screen.findByRole('button', { name: /save decision/i }) as HTMLButtonElement;
     expect(save.disabled).toBe(true);
     await userEvent.type(screen.getByPlaceholderText(/why is this a duplicate/i), 'Row 1 is the original list entry.');
     await userEvent.click(save);
@@ -75,7 +90,7 @@ describe('RowDecisionCard', () => {
     const onDecide = vi.fn().mockResolvedValue(undefined);
     render(<RowDecisionCard row={row} candidates={[personCandidate]} onDecide={onDecide} onRevert={vi.fn()} />);
     await userEvent.click(screen.getByRole('button', { name: /retain this row/i }));
-    const save = screen.getByRole('button', { name: /save decision/i }) as HTMLButtonElement;
+    const save = await screen.findByRole('button', { name: /save decision/i }) as HTMLButtonElement;
     expect(save.disabled).toBe(false);
     await userEvent.click(save);
     expect(onDecide).toHaveBeenCalledWith('m1', 'import_row', undefined);

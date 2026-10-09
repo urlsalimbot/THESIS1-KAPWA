@@ -3,6 +3,9 @@ import { AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose,
+} from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 
 export type KeepChoice = 'import_row' | 'existing_record' | 'other_import_row';
@@ -70,25 +73,34 @@ function targetLabel(c: DedupCandidate): string {
   return 'Duplicate row in this import';
 }
 
+function decisionTitle(keep: KeepChoice, c: DedupCandidate): string {
+  if (keep === 'other_import_row') return `Keep import row ${c.pairedRow?.rowIndex ?? '?'} (B)`;
+  if (keep === 'existing_record') {
+    return c.targetType === 'household' ? 'Keep the household record' : 'Keep the existing record';
+  }
+  return c.targetType === 'import_row' ? 'Keep this row (A)' : 'Retain this row';
+}
+
 /**
- * One import row's decision surface: every candidate with its evidence, the
- * retain/deprioritize choice, the mandatory remark for deprioritizing, and
- * revert for already-decided candidates.
+ * One import row's decision surface: every candidate with its evidence, a
+ * dialog for the retain/deprioritize choice (with the mandatory remark for
+ * deprioritizing), and revert for already-decided candidates.
  */
 export function RowDecisionCard({ row, candidates, loading = false, onDecide, onRevert }: RowDecisionCardProps) {
-  const [action, setAction] = useState<{ matchId: string; keep: KeepChoice } | null>(null);
+  const [pending, setPending] = useState<{ matchId: string; keep: KeepChoice } | null>(null);
   const [remark, setRemark] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const needsRemark = action !== null && action.keep !== 'import_row';
-  const canSave = action !== null && (!needsRemark || remark.trim() !== '');
+  const needsRemark = pending !== null && pending.keep !== 'import_row';
+  const canSave = pending !== null && (!needsRemark || remark.trim() !== '');
+  const selected = pending ? candidates.find((c) => c.id === pending.matchId) ?? null : null;
 
   async function save() {
-    if (!action || !canSave) return;
+    if (!pending || !canSave) return;
     setBusy(true);
     try {
-      await onDecide(action.matchId, action.keep, remark.trim() || undefined);
-      setAction(null);
+      await onDecide(pending.matchId, pending.keep, remark.trim() || undefined);
+      setPending(null);
       setRemark('');
     } finally {
       setBusy(false);
@@ -116,43 +128,60 @@ export function RowDecisionCard({ row, candidates, loading = false, onDecide, on
             <CandidateCard
               key={c.id}
               candidate={c}
-              selected={action?.matchId === c.id}
-              onSelect={setAction}
+              onSelect={(keep) => {
+                setPending({ matchId: c.id, keep });
+                setRemark('');
+              }}
               onRevert={onRevert}
             />
           ))
         )}
 
-        {action && (
-          <div className="space-y-2 rounded-md border bg-muted/40 p-3">
-            <Textarea
-              value={remark}
-              onChange={(e) => setRemark(e.target.value)}
-              placeholder={needsRemark ? 'Why is this a duplicate? (required)' : 'Note (optional)'}
-              rows={2}
-            />
-            <div className="flex flex-wrap items-center gap-2">
-              <Button size="sm" onClick={save} disabled={!canSave || busy}>
-                Save decision
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setAction(null);
-                  setRemark('');
-                }}
-              >
-                Cancel
-              </Button>
-              {needsRemark && remark.trim() === '' && (
-                <span className="text-xs text-muted-foreground">
-                  A remark is required when deprioritizing a row.
-                </span>
-              )}
-            </div>
-          </div>
-        )}
+        <Dialog
+          open={pending !== null}
+          onOpenChange={(open) => {
+            if (!open) {
+              setPending(null);
+              setRemark('');
+            }
+          }}
+        >
+          {pending && selected && (
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>{decisionTitle(pending.keep, selected)}</DialogTitle>
+                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <span>{targetLabel(selected)}</span>
+                  <span>{Math.round(Number(selected.score) * 100)}% match</span>
+                </div>
+                <DialogDescription>
+                  {pending.keep === 'import_row'
+                    ? 'This row stays in the list and is saved as its own client record.'
+                    : 'This import row is pushed below as a duplicate of the kept record — a remark is required.'}
+                </DialogDescription>
+              </DialogHeader>
+              <CandidateBody candidate={selected} />
+              <div className="space-y-2">
+                <Textarea
+                  value={remark}
+                  onChange={(e) => setRemark(e.target.value)}
+                  placeholder={needsRemark ? 'Why is this a duplicate? (required)' : 'Note (optional)'}
+                  rows={3}
+                />
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline" size="sm">
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <Button size="sm" onClick={save} disabled={!canSave || busy}>
+                  Save decision
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          )}
+        </Dialog>
       </CardContent>
     </Card>
   );
@@ -160,20 +189,15 @@ export function RowDecisionCard({ row, candidates, loading = false, onDecide, on
 
 function CandidateCard({
   candidate: c,
-  selected,
   onSelect,
   onRevert,
 }: {
   candidate: DedupCandidate;
-  selected: boolean;
-  onSelect: (action: { matchId: string; keep: KeepChoice }) => void;
+  onSelect: (keep: KeepChoice) => void;
   onRevert: (matchId: string) => void | Promise<void>;
 }) {
   return (
-    <div
-      className={`space-y-2 rounded-md border p-3 ${selected ? 'ring-2 ring-ring' : ''}`}
-      data-testid={`candidate-${c.id}`}
-    >
+    <div className="space-y-2 rounded-md border p-3" data-testid={`candidate-${c.id}`}>
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-medium">{targetLabel(c)}</span>
         <span className="text-xs text-muted-foreground">{Math.round(Number(c.score) * 100)}% match</span>
@@ -181,21 +205,21 @@ function CandidateCard({
       <CandidateBody candidate={c} />
       {c.status === 'pending' ? (
         <div className="flex flex-wrap gap-2 pt-1">
-          <Button size="sm" variant="outline" onClick={() => onSelect({ matchId: c.id, keep: 'import_row' })}>
+          <Button size="sm" variant="outline" onClick={() => onSelect('import_row')}>
             {c.targetType === 'import_row' ? 'Keep this row (A)' : 'Retain this row (new client)'}
           </Button>
           {c.targetType === 'import_row' && (
-            <Button size="sm" variant="outline" onClick={() => onSelect({ matchId: c.id, keep: 'other_import_row' })}>
+            <Button size="sm" variant="outline" onClick={() => onSelect('other_import_row')}>
               Keep import row {c.pairedRow?.rowIndex ?? '?'} (B)
             </Button>
           )}
           {c.targetType === 'db_person' && (
-            <Button size="sm" variant="outline" onClick={() => onSelect({ matchId: c.id, keep: 'existing_record' })}>
+            <Button size="sm" variant="outline" onClick={() => onSelect('existing_record')}>
               Keep existing record
             </Button>
           )}
           {c.targetType === 'household' && (
-            <Button size="sm" variant="outline" onClick={() => onSelect({ matchId: c.id, keep: 'existing_record' })}>
+            <Button size="sm" variant="outline" onClick={() => onSelect('existing_record')}>
               Keep household record
             </Button>
           )}
