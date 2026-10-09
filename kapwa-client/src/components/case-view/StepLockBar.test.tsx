@@ -96,6 +96,24 @@ describe('StepLockBar', () => {
     expect(screen.getByText(NOT_DONE_HINT)).toBeTruthy();
   });
 
+  it('names the lifecycle floor, not the work, when the step is not due yet', () => {
+    // A non-cancelled hearing is on file, but the case is still `in_review`:
+    // Court Hearings is implementation work, floored at `active`. "Complete this
+    // step" would send the worker back to a task they already finished, so the
+    // copy has to name the case's position instead.
+    renderBar({
+      stepKey: 'court_hearings',
+      caseData: { id: 'c1', status: 'in_review' },
+      opts: { courtHearingCount: 1 },
+    });
+
+    const lock = screen.getByRole('button', { name: /^lock$/i });
+    expect(lock).toBeDisabled();
+    expect(screen.queryByText(NOT_DONE_HINT)).toBeNull();
+    expect(lock).toHaveAccessibleDescription(/opens once the case reaches active/i);
+    expect(screen.getByText(/opens once the case reaches active/i)).toBeTruthy();
+  });
+
   // --- done -------------------------------------------------------------
 
   it('enables Lock once the step is done', () => {

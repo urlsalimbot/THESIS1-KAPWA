@@ -4,7 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { CaseStepLocksService, CASE_STEP_LABELS, CASE_STEP_UNGUARDED_FIELDS } from './case-step-locks.service';
-import { COMMON_STEPS } from './case-step-labels';
+import { COMMON_STEPS, CASE_STEP_FLOORS, CASE_STATUS_INDEX } from './case-step-labels';
 import { CaseStepLock } from './case-step-lock.entity';
 import { CasesService } from './cases.service';
 import { CasesExportService } from './cases-export.service';
@@ -286,6 +286,23 @@ describe('CaseStepLocksService', () => {
     await expect(service.lock('c1', 'assessment', swUser)).rejects.toThrow(/not complete/i);
     // The rejection happens before any write.
     expect(lockRepo.save).not.toHaveBeenCalled();
+    expect(lockRepo.insertQb.execute).not.toHaveBeenCalled();
+  });
+
+  it('names the lifecycle floor, not the work, when a recorded hearing is sealed below active', async () => {
+    // Everything this step asks for is on file — one non-cancelled hearing — so
+    // the only thing refusing the seal is the case's position. Calling that
+    // "not complete yet" sends the worker back to work they already did; the
+    // message has to name the status the case must reach.
+    findById.mockResolvedValue({
+      id: 'c1',
+      status: 'in_review',
+      caseCategory: 'Children in Conflict with the Law (CICL)',
+    } as unknown as Case);
+    courtHearingCount.mockResolvedValue(1);
+
+    await expect(service.lock('c1', 'court_hearings', swUser)).rejects.toThrow(/reaches active/i);
+    // Still refused before any write.
     expect(lockRepo.insertQb.execute).not.toHaveBeenCalled();
   });
 
@@ -764,7 +781,17 @@ describe('CaseStepLocksService', () => {
       if (fx.expected) {
         await expect(service.lock('c1', fx.step, swUser)).resolves.toBeDefined();
       } else {
-        await expect(service.lock('c1', fx.step, swUser)).rejects.toThrow(/not complete/i);
+        // Two refusals wear one boolean. A step floored above the case's status
+        // is refused for the case's *position* and the message names the status
+        // it must reach; only a step that is due and short of data is told to
+        // "finish". Assert the branch this fixture case actually takes.
+        const c = caseFor(fx);
+        const floor = CASE_STEP_FLOORS[fx.step] ?? 0;
+        const index = c.status == null ? undefined : CASE_STATUS_INDEX[c.status];
+        const floored = index !== undefined && index < floor;
+        await expect(service.lock('c1', fx.step, swUser)).rejects.toThrow(
+          floored ? /opens once the case reaches/i : /not complete/i,
+        );
       }
     });
 
