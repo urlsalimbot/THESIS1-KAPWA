@@ -90,7 +90,7 @@ export function Layout({ children }: { children?: React.ReactNode }) {
         </Sheet>
 
         <main id="main-content" className="flex-1 min-h-0 bg-background overflow-auto pb-16 lg:pb-5">
-          <div className="mx-auto w-full max-w-[1600px] p-4 lg:p-5">
+          <div className="mx-auto w-full max-w-[1600px] p-4 lg:p-5 [@media(max-height:820px)]:p-3">
             <ErrorBoundary>
               {children || <Outlet />}
             </ErrorBoundary>

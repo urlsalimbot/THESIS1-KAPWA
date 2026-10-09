@@ -42,7 +42,7 @@ export function PageShell({ title, description, actions, backTo, cachedAt, child
   }
 
   return (
-    <div className="flex flex-col gap-3 lg:gap-4">
+    <div className="flex flex-col gap-3 lg:gap-4 [@media(max-height:820px)]:gap-2.5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           {backTo && (

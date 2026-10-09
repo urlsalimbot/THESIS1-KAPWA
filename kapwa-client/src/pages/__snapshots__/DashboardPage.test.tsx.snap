@@ -3,7 +3,7 @@
 exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + recent cases table 1`] = `
 <div>
   <div
-    class="flex flex-col gap-3 lg:gap-4"
+    class="flex flex-col gap-3 lg:gap-4 [@media(max-height:820px)]:gap-2.5"
   >
     <div
       class="flex items-start justify-between gap-3"
@@ -992,52 +992,52 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
                   class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
                 >
                   <th
-                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [@media(max-height:820px)]:h-10 [@media(max-height:820px)]:px-3"
                   >
                     Date
                   </th>
                   <th
-                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [@media(max-height:820px)]:h-10 [@media(max-height:820px)]:px-3"
                   >
                     Surname
                   </th>
                   <th
-                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [@media(max-height:820px)]:h-10 [@media(max-height:820px)]:px-3"
                   >
                     First
                   </th>
                   <th
-                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [@media(max-height:820px)]:h-10 [@media(max-height:820px)]:px-3"
                   >
                     Middle
                   </th>
                   <th
-                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [@media(max-height:820px)]:h-10 [@media(max-height:820px)]:px-3"
                   >
                     Gender
                   </th>
                   <th
-                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [@media(max-height:820px)]:h-10 [@media(max-height:820px)]:px-3"
                   >
                     Category
                   </th>
                   <th
-                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [@media(max-height:820px)]:h-10 [@media(max-height:820px)]:px-3"
                   >
                     Case Category
                   </th>
                   <th
-                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [@media(max-height:820px)]:h-10 [@media(max-height:820px)]:px-3"
                   >
                     Barangay
                   </th>
                   <th
-                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [@media(max-height:820px)]:h-10 [@media(max-height:820px)]:px-3"
                   >
                     Status
                   </th>
                   <th
-                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [@media(max-height:820px)]:h-10 [@media(max-height:820px)]:px-3"
                   >
                     Actions
                   </th>
