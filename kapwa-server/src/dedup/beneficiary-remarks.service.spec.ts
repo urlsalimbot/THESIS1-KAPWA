@@ -6,6 +6,7 @@ function mockRepo(over: any = {}) {
     findAndCount: jest.fn().mockResolvedValue([[], 0]),
     create: jest.fn((e: any) => e),
     save: jest.fn(async (e: any) => e),
+    query: jest.fn().mockResolvedValue([]),
     ...over,
   };
 }
@@ -28,6 +29,17 @@ describe('BeneficiaryRemarksService', () => {
     expect(options.order).toEqual({ createdAt: 'DESC' });
     expect(options.skip).toBe(2);
     expect(options.take).toBe(2);
+  });
+
+  it('decorates each remark with its author’s display name', async () => {
+    repo.findAndCount.mockResolvedValue([
+      [{ id: 'r1', authoredBy: 'u1' }, { id: 'r2', authoredBy: null }],
+      2,
+    ]);
+    repo.query.mockResolvedValue([{ id: 'u1', fullName: 'Juan Dela Cruz' }]);
+    const out = await service.list('ben-1', 1, 20);
+    expect(out.data[0]).toMatchObject({ id: 'r1', authorName: 'Juan Dela Cruz' });
+    expect(out.data[1]).toMatchObject({ id: 'r2', authorName: null });
   });
 
   it('rejects an empty manual remark', async () => {

@@ -23,7 +23,25 @@ export class BeneficiaryRemarksService {
       skip: (page - 1) * limit,
       take: limit,
     });
-    return { data, total, page, limit };
+    // Decorate with the author's display name for the remarks timeline.
+    const authorIds = [...new Set(data.map((r) => r.authoredBy).filter(Boolean))] as string[];
+    const authors: Array<{ id: string; fullName: string | null }> = authorIds.length
+      ? await this.repo.query(
+          `SELECT id::text AS id,
+                  NULLIF(TRIM(CONCAT_WS(' ', first_name, NULLIF(middle_name, ''), last_name)), '') AS "fullName"
+             FROM users WHERE id::text = ANY($1::text[])`,
+          [authorIds],
+        )
+      : [];
+    return {
+      data: data.map((r) => ({
+        ...r,
+        authorName: authors.find((a) => a.id === r.authoredBy)?.fullName ?? null,
+      })),
+      total,
+      page,
+      limit,
+    };
   }
 
   async add(beneficiaryId: string, body: { remark: string }, actorId: string) {

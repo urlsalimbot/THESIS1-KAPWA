@@ -23,10 +23,10 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { setBreadcrumbLabel } from '@/lib/breadcrumbs';
-import { api, uploadReceipt } from "../lib/api";
-import { INTERVENTION_TYPES } from "../lib/constants";
+import { api } from "../lib/api";
 import { queryKeys } from "../lib/query-keys";
 import { FamilyGraph } from "../components/family/FamilyGraph";
+import { RemarksHistoryCard } from "../components/beneficiaries/RemarksHistoryCard";
 import { ConsentManager } from "../components/consent/ConsentManager";
 import { PageShell } from "@/components/PageShell";
 import { CardGridSkeleton } from "@/components/skeletons/CardGridSkeleton";
@@ -203,18 +203,6 @@ export function BeneficiaryViewPage() {
 
   const loading = !ben && id;
 
-  const [interventionCaseId, setInterventionCaseId] = useState<string | null>(
-    null,
-  );
-  const [intForm, setIntForm] = useState({
-    programId: "",
-    interventionType: "financial_grant",
-    amount: "",
-    fundSource: "Regular",
-  });
-  const [intReceiptFile, setIntReceiptFile] = useState<File | null>(null);
-  const [intSubmitting, setIntSubmitting] = useState(false);
-  const [intError, setIntError] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [assignSuccess, setAssignSuccess] = useState("");
   const [family, setFamily] = useState<FamilyMember[]>([]);
@@ -266,10 +254,6 @@ export function BeneficiaryViewPage() {
       // The roster simply does not change; the worker can retry.
     }
   }
-
-  const { data: quickPrograms = [] } = useSWR<Array<{ id: string; name: string; category?: string; services?: string[] }>>(
-    queryKeys.programs.list(),
-  );
 
   const { data: cardSummary } = useSWR<{ cardCode: string; total: number; byCategory: Record<string, number> }>(
     id && beneficiary?.accessCardCode ? queryKeys.accessCards.summary(id) : null,
@@ -345,39 +329,6 @@ export function BeneficiaryViewPage() {
       return () => clearTimeout(t);
     }
   }, [assignSuccess]);
-
-  async function handleLogIntervention(e: React.FormEvent) {
-    e.preventDefault();
-    if (!interventionCaseId) return;
-    setIntError("");
-    setIntSubmitting(true);
-    try {
-      let receiptUrl = "";
-
-      if (intReceiptFile) {
-        receiptUrl = await uploadReceipt(intReceiptFile, intReceiptFile.name);
-      }
-
-      const quickProgram = quickPrograms.find(p => p.id === intForm.programId);
-      const quickServiceLabel = t(`interventionType.${intForm.interventionType}`, intForm.interventionType);
-      await api.post(`/cases/${interventionCaseId}/interventions`, {
-        programId: intForm.programId || null,
-        interventionType: intForm.interventionType,
-        serviceName: quickProgram ? quickProgram.name : quickServiceLabel,
-        category: quickProgram?.category ?? null,
-        deliveryDate: new Date().toISOString().split('T')[0],
-        amount: parseFloat(intForm.amount) || 0,
-        fundSource: intForm.fundSource,
-      });
-
-      setInterventionCaseId(null);
-      setIntForm({ programId: "", interventionType: "financial_grant", amount: "", fundSource: "Regular" });
-      setIntReceiptFile(null);
-    } catch (err: any) {
-      setIntError(err.message || t("beneficiaries.logInterventionFailed", "Failed to log intervention"));
-    }
-    setIntSubmitting(false);
-  }
 
   async function saveNhtsPr() {
     if (!beneficiary?.id) return;
@@ -666,11 +617,6 @@ export function BeneficiaryViewPage() {
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span className="text-[10px] text-muted-foreground">{c.date}</span>
                         <StatusBadge status={c.status} />
-                        {c.status === "transitioning" && (
-                          <Button variant="default" size="sm" className="h-6 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); setInterventionCaseId(c.id === interventionCaseId ? null : c.id); }}>
-                            <ClipboardList size={10} className="mr-1" /> {t("beneficiaries.log", "Log")}
-                          </Button>
-                        )}
                       </div>
                     </div>
                   ))}
@@ -710,60 +656,7 @@ export function BeneficiaryViewPage() {
 
           </div>
 
-          {/* Intervention Form */}
-          {interventionCaseId && (
-            <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2 text-primary">
-                  <ClipboardList size={16} />
-                  <h3 className="text-xs font-semibold uppercase tracking-wider">{t("beneficiaries.logIntervention", "Log Intervention")}</h3>
-                </div>
-                <span className="text-xs text-muted-foreground">{t("beneficiaries.caseLabel", "Case: {{id}}", { id: interventionCaseId })}</span>
-              </div>
-              {intError && <div className="mb-3 rounded bg-destructive/10 p-2 text-xs text-destructive">{intError}</div>}
-              <form onSubmit={handleLogIntervention} className="space-y-3">
-                <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t("beneficiaries.program", "Program")}</label>
-                    <select className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm" value={intForm.programId} onChange={e => { const p = e.target.value; setIntForm({ ...intForm, programId: p, interventionType: p ? (quickPrograms.find(x => x.id === p)?.services?.[0] ?? intForm.interventionType) : intForm.interventionType }); }} aria-label={t("beneficiaries.program", "Program")}>
-                      <option value="">{t("beneficiaries.noProgram", "— No program —")}</option>
-                      {quickPrograms.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t("beneficiaries.type", "Service")}</label>
-                    <select className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm" value={intForm.interventionType} onChange={e => setIntForm({ ...intForm, interventionType: e.target.value })} aria-label={t("beneficiaries.interventionType", "Intervention Type")}>
-                      {(intForm.programId ? (quickPrograms.find(p => p.id === intForm.programId)?.services ?? []) : INTERVENTION_TYPES).map((code: string) => (
-                        <option key={code} value={code}>{t(`interventionType.${code}`, code)}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t("beneficiaries.amount", "Amount (₱)")}</label>
-                    <input className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm" type="number" min="0" step="0.01" value={intForm.amount} onChange={e => setIntForm({ ...intForm, amount: e.target.value })} aria-label={t("beneficiaries.amount", "Amount")} />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t("beneficiaries.fundSource", "Fund Source")}</label>
-                    <select className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm" value={intForm.fundSource} onChange={e => setIntForm({ ...intForm, fundSource: e.target.value })} aria-label={t("beneficiaries.fundSource", "Fund Source")}>
-                      <option value="Regular">{t("beneficiaries.fundRegular", "Regular")}</option><option value="PDAF">PDAF</option><option value="Legislative">{t("beneficiaries.fundLegislative", "Legislative")}</option><option value="Donation">{t("beneficiaries.fundDonation", "Donation")}</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t("beneficiaries.receiptOptional", "Receipt (optional)")}</label>
-                    <input type="file" accept="image/*" className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground" onChange={e => setIntReceiptFile(e.target.files?.[0] || null)} aria-label={t("beneficiaries.clientReceipt", "Client Receipt")} />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button type="submit" size="sm" disabled={intSubmitting}>{intSubmitting ? t("beneficiaries.saving", "Saving...") : t("beneficiaries.submitIntervention", "Submit Intervention")}</Button>
-                  <Button variant="outline" size="sm" type="button" onClick={() => { setInterventionCaseId(null); setIntError(""); setIntReceiptFile(null); }}>{t("beneficiaries.cancel", "Cancel")}</Button>
-                </div>
-                </div>
-              </form>
-            </div>
-          )}
+          {beneficiary?.id && <RemarksHistoryCard beneficiaryId={beneficiary.id} />}
         </div>
 
         {/* --- Right column (1/3) — Personal Info + IDs + Consent --- */}

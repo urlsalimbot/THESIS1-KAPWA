@@ -83,6 +83,7 @@ describe('BeneficiaryViewPage', () => {
     mockApiPatch.mockReset();
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
+      if (k.includes('remarks')) return Promise.resolve({ data: [], total: 0, page: 1, limit: 50 });
       if (k.includes('beneficiaries') && !k.includes('family')) return Promise.resolve(mockBeneficiary);
       if (k.includes('cases') && k.includes('beneficiaryId')) return Promise.resolve({ data: mockCases, total: mockCases.length });
       if (k.includes('family-graph')) return Promise.resolve(mockFamilyGraph);
@@ -90,6 +91,37 @@ describe('BeneficiaryViewPage', () => {
       return Promise.resolve(null);
     });
     await mutate(() => true, undefined, { revalidate: false });
+  });
+
+  it('shows the Remarks History card in place of the Log Intervention form', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('remarks')) {
+        return Promise.resolve({
+          data: [{
+            id: 'r1', kind: 'decision', remark: 'Same person as NORZ-2026-0001.',
+            source: 'Batch 1.xlsx', authorName: 'Juan Dela Cruz', createdAt: '2026-10-01T02:30:00Z',
+          }],
+          total: 1, page: 1, limit: 50,
+        });
+      }
+      if (k.includes('beneficiaries') && !k.includes('family')) return Promise.resolve(mockBeneficiary);
+      if (k.includes('cases') && k.includes('beneficiaryId')) return Promise.resolve({ data: mockCases, total: mockCases.length });
+      if (k.includes('family-graph')) return Promise.resolve(mockFamilyGraph);
+      if (k.includes('tracker') && k.includes('list')) return Promise.resolve(mockTrackerEntries);
+      return Promise.resolve(null);
+    });
+    renderWithSWR(
+      <MemoryRouter initialEntries={['/beneficiaries/BEN-001']}>
+        <Routes>
+          <Route path="/beneficiaries/:id" element={<BeneficiaryViewPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(await screen.findByText('Remarks History')).toBeTruthy();
+    expect(screen.queryByText(/Log Intervention/)).toBeNull();
+    expect(screen.getByText('Same person as NORZ-2026-0001.')).toBeTruthy();
+    expect(screen.getByText(/Batch 1\.xlsx · Juan Dela Cruz/)).toBeTruthy();
   });
 
   it('renders PageShell heading', async () => {
