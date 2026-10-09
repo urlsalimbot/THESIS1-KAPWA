@@ -97,6 +97,14 @@ export class BeneficiariesController {
     return this.benService.getFamilyGraph(id);
   }
 
+  // Every intervention across the beneficiary's cases, so the beneficiary view
+  // renders its card from one request instead of one per case.
+  @Get(':id/interventions')
+  @Roles('admin', 'social_worker', 'coordinator')
+  async getInterventions(@Param('id') id: string) {
+    return this.benService.getInterventions(id);
+  }
+
   @Get(':id/consent')
   @Roles('admin', 'social_worker')
   async getConsentHistory(@Param('id') id: string) {

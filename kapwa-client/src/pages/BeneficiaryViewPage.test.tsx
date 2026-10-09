@@ -84,6 +84,7 @@ describe('BeneficiaryViewPage', () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('remarks')) return Promise.resolve({ data: [], total: 0, page: 1, limit: 50 });
+      if (k.includes('beneficiaries') && k.includes('interventions')) return Promise.resolve([]);
       if (k.includes('beneficiaries') && !k.includes('family')) return Promise.resolve(mockBeneficiary);
       if (k.includes('cases') && k.includes('beneficiaryId')) return Promise.resolve({ data: mockCases, total: mockCases.length });
       if (k.includes('family-graph')) return Promise.resolve(mockFamilyGraph);
@@ -105,6 +106,7 @@ describe('BeneficiaryViewPage', () => {
           total: 1, page: 1, limit: 50,
         });
       }
+      if (k.includes('beneficiaries') && k.includes('interventions')) return Promise.resolve([]);
       if (k.includes('beneficiaries') && !k.includes('family')) return Promise.resolve(mockBeneficiary);
       if (k.includes('cases') && k.includes('beneficiaryId')) return Promise.resolve({ data: mockCases, total: mockCases.length });
       if (k.includes('family-graph')) return Promise.resolve(mockFamilyGraph);
@@ -171,6 +173,7 @@ describe('BeneficiaryViewPage', () => {
   it('renders PSGC codes in the stored address as names', async () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
+      if (k.includes('beneficiaries') && k.includes('interventions')) return Promise.resolve([]);
       if (k.includes('beneficiaries') && !k.includes('family')) {
         return Promise.resolve({
           ...mockBeneficiary,
@@ -196,6 +199,7 @@ describe('BeneficiaryViewPage', () => {
   it('issues a beneficiaryId-filtered cases request and renders the real case list', async () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
+      if (k.includes('beneficiaries') && k.includes('interventions')) return Promise.resolve([]);
       if (k.includes('beneficiaries') && !k.includes('family')) return Promise.resolve(mockBeneficiary);
       if (k.includes('cases') && k.includes('beneficiaryId')) return Promise.resolve({ data: mockCases, total: mockCases.length });
       if (k.includes('family-graph')) return Promise.resolve(mockFamilyGraph);
@@ -226,6 +230,50 @@ describe('BeneficiaryViewPage', () => {
     expect(screen.queryByText('No active cases')).toBeNull();
   });
 
+  it('aggregates case interventions into the Interventions card and drops the Client Category card', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('beneficiaries') && k.includes('interventions')) {
+        return Promise.resolve([
+          {
+            id: 'IV-1',
+            caseId: 'C-001',
+            serviceName: 'Cash grant',
+            interventionType: 'FA',
+            deliveryDate: '2026-06-02',
+            fundSource: 'MSWDO',
+          },
+        ]);
+      }
+      if (k.includes('beneficiaries') && !k.includes('family')) return Promise.resolve(mockBeneficiary);
+      if (k.includes('cases') && k.includes('beneficiaryId')) return Promise.resolve({ data: mockCases, total: mockCases.length });
+      if (k.includes('family-graph')) return Promise.resolve(mockFamilyGraph);
+      if (k.includes('remarks')) return Promise.resolve({ data: [], total: 0, page: 1, limit: 50 });
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+    renderWithSWR(
+      <MemoryRouter initialEntries={['/beneficiaries/BEN-001']}>
+        <Routes>
+          <Route path="/beneficiaries/:id" element={<BeneficiaryViewPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // The aggregated endpoint is one request for the beneficiary; its rows show
+    // in the card.
+    expect(await screen.findByText('Cash grant', {}, { timeout: 5000 })).toBeTruthy();
+    expect(mockApiGet).toHaveBeenCalledWith(
+      expect.arrayContaining(['beneficiaries', 'BEN-001', 'interventions']),
+    );
+    expect(screen.getByText('Interventions')).toBeTruthy();
+    expect(screen.getAllByText('Financial Assistance').length).toBeGreaterThan(0);
+    expect(screen.getByText('Fund: MSWDO')).toBeTruthy();
+
+    // The replaced Client Category card is gone.
+    expect(screen.queryByText('Client Category')).toBeNull();
+  });
+
   it('fetches ALL pages of beneficiary cases, not just the first', async () => {
     const page1 = Array.from({ length: 100 }, (_, i) => ({
       id: `C-P1-${i}`,
@@ -245,6 +293,7 @@ describe('BeneficiaryViewPage', () => {
     }];
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
+      if (k.includes('beneficiaries') && k.includes('interventions')) return Promise.resolve([]);
       if (k.includes('beneficiaries') && !k.includes('family')) return Promise.resolve(mockBeneficiary);
       if (k.includes('cases') && k.includes('beneficiaryId')) {
         // First page is FULL (100 === limit), so the panel must keep paging.
@@ -338,6 +387,7 @@ describe('BeneficiaryViewPage', () => {
   it('shows an inactive member as Inactive with a Reactivate action', async () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
+      if (k.includes('beneficiaries') && k.includes('interventions')) return Promise.resolve([]);
       if (k.includes('beneficiaries') && !k.includes('family')) return Promise.resolve(mockBeneficiary);
       if (k.includes('cases') && k.includes('beneficiaryId')) return Promise.resolve({ data: mockCases, total: mockCases.length });
       if (k.includes('family-graph')) {

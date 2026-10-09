@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useSWRConfig } from "swr";
 import useSWR from "swr";
 import { useTranslation } from "react-i18next";
-import { statusLabel, categoryLabel } from "@/i18n/display";
+import { statusLabel, interventionTypeLabel } from "@/i18n/display";
 import { computeAge } from "@/lib/age";
 import {
   ArrowLeft,
@@ -10,6 +10,7 @@ import {
   MapPin,
   Users as UsersIcon,
   FileText,
+  Gift,
   Plus,
   ChevronDown,
   ChevronRight,
@@ -62,10 +63,22 @@ interface BeneficiaryDetail {
     date: string;
     amount?: string;
   }[];
-  /** Client category of the latest case — drives program eligibility. */
-  latestClientCategory?: string;
-  latestControlNo?: string;
-  latestCaseStatus?: string;
+}
+
+/**
+ * A delivered case intervention. Interventions live on cases
+ * (`/cases/:caseId/interventions`), so the beneficiary view aggregates them
+ * across every case the beneficiary holds.
+ */
+interface BeneficiaryIntervention {
+  id: string;
+  caseId?: string;
+  serviceName: string;
+  interventionType?: string;
+  deliveryDate?: string;
+  fundSource?: string;
+  amount?: number | string;
+  notes?: string;
 }
 
 interface FamilyMember {
@@ -259,6 +272,12 @@ export function BeneficiaryViewPage() {
     id && beneficiary?.accessCardCode ? queryKeys.accessCards.summary(id) : null,
   );
 
+  // Interventions delivered across every one of the beneficiary's cases, newest
+  // first. One server-side aggregate request — not one request per case.
+  const { data: interventions = [], isLoading: interventionsLoading } = useSWR<BeneficiaryIntervention[]>(
+    id ? queryKeys.beneficiaries.interventions(id) : null,
+  );
+
   useEffect(() => {
     if (!id) return;
     if (ben) {
@@ -303,21 +322,6 @@ export function BeneficiaryViewPage() {
               : "",
           };
         }),
-        // Most recently created case drives the client category shown beside the
-        // case list. Mirrors the "Client Category" column on the beneficiaries
-        // list, so both surfaces agree.
-        ...(() => {
-          const latest = [...beneficiaryCases].sort(
-            (a, b) =>
-              new Date((b.createdAt as string) || 0).getTime() -
-              new Date((a.createdAt as string) || 0).getTime(),
-          )[0];
-          return {
-            latestClientCategory: (latest?.clientCategory as string) || (b.category as string) || "",
-            latestControlNo: (latest?.controlNo as string) || "",
-            latestCaseStatus: (latest?.status as string) || "",
-          };
-        })(),
       });
     }
     if (famGraph?.members) setFamily(famGraph.members);
@@ -626,31 +630,34 @@ export function BeneficiaryViewPage() {
 
             <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
               <div className="flex items-center gap-2 text-primary mb-3">
-                <Tag size={16} />
-                <h3 className="text-xs font-semibold uppercase tracking-wider">{t("beneficiaries.clientCategory", "Client Category")}</h3>
+                <Gift size={16} />
+                <h3 className="text-xs font-semibold uppercase tracking-wider">{t("beneficiaries.interventions", "Interventions")}</h3>
               </div>
-              <div className="space-y-2">
-                <p className={`text-sm font-medium ${beneficiary.latestClientCategory ? "text-foreground" : "text-muted-foreground"}`}>
-                  {beneficiary.latestClientCategory
-                    ? categoryLabel(t, beneficiary.latestClientCategory)
-                    : t("beneficiaries.noCategory", "No category recorded")}
-                </p>
-                {beneficiary.latestControlNo && (
-                  <p className="text-xs text-muted-foreground">
-                    {t("beneficiaries.latestCase", "Latest case: {{controlNo}}", { controlNo: beneficiary.latestControlNo })}
-                  </p>
-                )}
-                {beneficiary.latestCaseStatus && (
-                  <div className="pt-1">
-                    <StatusBadge status={beneficiary.latestCaseStatus} />
-                  </div>
-                )}
-                {!beneficiary.latestClientCategory && !beneficiary.latestControlNo && (
-                  <p className="text-xs text-muted-foreground">
-                    {t("beneficiaries.categoryAfterAssessment", "Set during the case assessment.")}
-                  </p>
-                )}
-              </div>
+              {interventionsLoading ? (
+                <p className="text-sm text-muted-foreground">{t("beneficiaries.loading", "Loading…")}</p>
+              ) : interventions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t("beneficiaries.noInterventions", "No interventions recorded")}</p>
+              ) : (
+                <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                  {interventions.map((intv) => (
+                    <div key={intv.id} className="rounded bg-muted/50 px-2.5 py-2 text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-medium text-foreground truncate">{intv.serviceName}</p>
+                        {intv.deliveryDate && (
+                          <span className="text-[10px] text-muted-foreground shrink-0">{formatDate(intv.deliveryDate)}</span>
+                        )}
+                      </div>
+                      {intv.interventionType && (
+                        <p className="text-xs text-muted-foreground">{interventionTypeLabel(t, intv.interventionType)}</p>
+                      )}
+                      {intv.fundSource && (
+                        <p className="text-xs font-medium text-primary">{t("beneficiaries.fundLabel", "Fund: {{source}}", { source: intv.fundSource })}</p>
+                      )}
+                      {intv.notes && <p className="text-xs text-muted-foreground">{intv.notes}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
 

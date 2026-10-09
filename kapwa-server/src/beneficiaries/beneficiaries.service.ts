@@ -230,6 +230,32 @@ export class BeneficiariesService {
     return ben;
   }
 
+  /**
+   * Every intervention delivered across a beneficiary's cases, newest first.
+   * The beneficiary view renders one aggregated card; without this endpoint it
+   * had to fan out one request per case (an N+1).
+   */
+  async getInterventions(beneficiaryId: string) {
+    const ben = await this.benRepo.findOne({ where: { id: beneficiaryId }, select: ['id'] });
+    if (!ben) throw new NotFoundException('Beneficiary not found');
+    // case_interventions.case_id is TEXT while cases.id is UUID, hence the cast.
+    return this.caseRepo.manager.query(
+      `SELECT ci.id,
+              ci.case_id AS "caseId",
+              ci.service_name AS "serviceName",
+              ci.intervention_type AS "interventionType",
+              ci.delivery_date AS "deliveryDate",
+              ci.amount,
+              ci.fund_source AS "fundSource",
+              ci.notes
+         FROM case_interventions ci
+         JOIN cases c ON c.id::text = ci.case_id
+        WHERE c.beneficiary_id = $1
+        ORDER BY ci.delivery_date DESC NULLS LAST, ci.created_at DESC`,
+      [beneficiaryId],
+    );
+  }
+
   async getClaimant(beneficiaryId: string): Promise<{ person: Person; relationship: string } | null> {
     const ben = await this.benRepo.findOne({ where: { id: beneficiaryId }, select: ['id', 'personId'] });
     if (!ben || !ben.personId) return null;

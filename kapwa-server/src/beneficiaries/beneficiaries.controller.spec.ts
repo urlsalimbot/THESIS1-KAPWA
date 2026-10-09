@@ -7,6 +7,7 @@ describe('BeneficiariesController', () => {
   let controller: BeneficiariesController;
   const svc = {
     setHouseholdNhtsPr: jest.fn(),
+    getInterventions: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -19,6 +20,7 @@ describe('BeneficiariesController', () => {
       .compile();
     controller = module.get(BeneficiariesController);
     svc.setHouseholdNhtsPr.mockReset();
+    svc.getInterventions.mockReset();
   });
 
   it('updates the household NHTS-PR reference id', async () => {
@@ -28,5 +30,13 @@ describe('BeneficiariesController', () => {
       nhtsPrId: 'NHTS-1',
     });
     expect(svc.setHouseholdNhtsPr).toHaveBeenCalledWith('ben-1', 'NHTS-1');
+  });
+
+  it('delegates the aggregated interventions lookup for a beneficiary', async () => {
+    const rows = [{ id: 'IV-1', caseId: 'C-001', serviceName: 'Cash grant' }];
+    svc.getInterventions.mockResolvedValue(rows);
+
+    await expect(controller.getInterventions('ben-1')).resolves.toEqual(rows);
+    expect(svc.getInterventions).toHaveBeenCalledWith('ben-1');
   });
 });

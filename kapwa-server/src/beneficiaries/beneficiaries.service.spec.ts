@@ -202,4 +202,29 @@ describe('BeneficiariesService', () => {
       });
     });
   });
+
+  describe('getInterventions', () => {
+    it("returns every intervention across the beneficiary's cases", async () => {
+      benRepoMock.findOne.mockResolvedValue({ id: 'ben-1' });
+      const rows = [
+        { id: 'IV-1', caseId: 'C-001', serviceName: 'Cash grant', interventionType: 'FA', deliveryDate: '2026-06-02', amount: '1500.00', fundSource: 'MSWDO', notes: null },
+      ];
+      caseRepoMock.manager.query.mockResolvedValue(rows);
+
+      const res = await service.getInterventions('ben-1');
+
+      expect(res).toEqual(rows);
+      const [sql, params] = caseRepoMock.manager.query.mock.calls[0];
+      expect(sql).toContain('case_interventions');
+      expect(sql).toContain('c.beneficiary_id = $1');
+      expect(params).toEqual(['ben-1']);
+    });
+
+    it('throws NotFoundException when the beneficiary does not exist', async () => {
+      benRepoMock.findOne.mockResolvedValue(null);
+
+      await expect(service.getInterventions('missing')).rejects.toBeInstanceOf(NotFoundException);
+      expect(caseRepoMock.manager.query).not.toHaveBeenCalled();
+    });
+  });
 });

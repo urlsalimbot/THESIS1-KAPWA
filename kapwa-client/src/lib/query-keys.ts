@@ -41,6 +41,10 @@ export const queryKeys = {
     detail: (id: string) => memo(`beneficiaries.detail.${id}`, () => ['beneficiaries', id] as const),
     familyGraph: (id: string) =>
       memo(`beneficiaries.familyGraph.${id}`, () => ['beneficiaries', id, 'family-graph'] as const),
+    // Every intervention across the beneficiary's cases. A server-side aggregate
+    // so the beneficiary view issues one request instead of one per case.
+    interventions: (id: string) =>
+      memo(`beneficiaries.interventions.${id}`, () => ['beneficiaries', id, 'interventions'] as const),
     myAccessCard: () => memo('beneficiaries.myAccessCard', () => ['beneficiaries', 'me', 'access-card'] as const),
     myServices: () => memo('beneficiaries.myServices', () => ['beneficiaries', 'me', 'services'] as const),
     myConsent: () => memo('beneficiaries.myConsent', () => ['beneficiaries', 'me', 'consent'] as const),
