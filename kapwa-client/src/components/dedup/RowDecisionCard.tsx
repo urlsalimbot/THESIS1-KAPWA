@@ -85,12 +85,11 @@ function targetLabel(c: DedupCandidate): string {
   return 'Duplicate row in this import';
 }
 
-function decisionTitle(keep: KeepChoice, c: DedupCandidate): string {
-  if (keep === 'other_import_row') return `Keep import row ${c.pairedRow?.rowIndex ?? '?'} (B)`;
-  if (keep === 'existing_record') {
-    return c.targetType === 'household' ? 'Keep the household record' : 'Keep the existing record';
-  }
-  return c.targetType === 'import_row' ? 'Keep this row (A)' : 'Retain this row';
+function decisionTitle(keep: KeepChoice): string {
+  // The two row-level outcomes: keep this row, or deprioritize it as a
+  // duplicate of a candidate ("no matches → retain" vs "duplicate →
+  // deprioritize"); the target of the duplicate is shown in the card above.
+  return keep === 'import_row' ? 'Retain this row' : 'Duplicate & deprioritize';
 }
 
 /** Card chrome when standalone, plain spacing when embedded in a dialog. */
@@ -170,7 +169,7 @@ export function RowDecisionCard({ row, candidates, loading = false, onDecide, on
           {pending && selected && (
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>{decisionTitle(pending.keep, selected)}</DialogTitle>
+                <DialogTitle>{decisionTitle(pending.keep)}</DialogTitle>
                 <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                   <span>{targetLabel(selected)}</span>
                   <span>{Math.round(Number(selected.score) * 100)}% match</span>
@@ -226,21 +225,15 @@ function CandidateCard({
       {c.status === 'pending' ? (
         <div className="flex flex-wrap gap-2 pt-1">
           <Button size="sm" variant="outline" onClick={() => onSelect('import_row')}>
-            {c.targetType === 'import_row' ? 'Keep this row (A)' : 'Retain this row (new client)'}
+            Retain
           </Button>
-          {c.targetType === 'import_row' && (
+          {c.targetType === 'import_row' ? (
             <Button size="sm" variant="outline" onClick={() => onSelect('other_import_row')}>
-              Keep import row {c.pairedRow?.rowIndex ?? '?'} (B)
+              Duplicate — keep import row {c.pairedRow?.rowIndex ?? '?'}
             </Button>
-          )}
-          {c.targetType === 'db_person' && (
+          ) : (
             <Button size="sm" variant="outline" onClick={() => onSelect('existing_record')}>
-              Keep existing record
-            </Button>
-          )}
-          {c.targetType === 'household' && (
-            <Button size="sm" variant="outline" onClick={() => onSelect('existing_record')}>
-              Keep household record
+              Duplicate
             </Button>
           )}
         </div>

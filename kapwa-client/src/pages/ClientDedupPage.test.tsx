@@ -183,7 +183,7 @@ describe('ClientDedupPage', () => {
     expect(expandButtons).toHaveLength(1);
 
     await userEvent.click(expandButtons[0]);
-    expect(await screen.findByRole('button', { name: /keep import row 1 \(b\)/i })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /duplicate — keep import row 1/i })).toBeTruthy();
     expect(screen.getByText(/82%/)).toBeTruthy();
   });
 
@@ -192,7 +192,7 @@ describe('ClientDedupPage', () => {
     await openReview();
     await userEvent.click(await screen.findByRole('button', { name: /review matches/i }));
 
-    await userEvent.click(await screen.findByRole('button', { name: /keep import row 1 \(b\)/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /duplicate — keep import row 1/i }));
     await userEvent.type(await screen.findByPlaceholderText(/why is this a duplicate/i), 'Same person.');
     await userEvent.click(screen.getByRole('button', { name: /save decision/i }));
 
