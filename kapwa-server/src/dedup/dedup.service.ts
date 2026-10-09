@@ -6,6 +6,7 @@ import { parseImportFile, ColumnMap, ColumnMapError } from './dedup-parse.servic
 import { sweep, RowInput } from './dedup-match-sweep.service';
 import { DedupAdapter } from './dedup-adapter';
 import { ILike } from 'typeorm';
+import { v7 as uuidv7 } from 'uuid';
 
 export const DEDUP_ADAPTER = 'DEDUP_ADAPTER';
 import { Person } from '../beneficiaries/person.entity';
@@ -179,8 +180,11 @@ export class DedupService {
     const emailField = identifierOf('email');
     const philsysField = identifierOf('philsys');
 
-    const rowInputs: RowInput[] = parsed.rows.map((r) => ({
-      id: String(r.rowIndex),
+    // Real row uuids: the sweep keys candidates by input id, and those ids
+    // end up in client_import_matches.row_id (a uuid FK to client_import_rows).
+    const rowIds = parsed.rows.map(() => uuidv7());
+    const rowInputs: RowInput[] = parsed.rows.map((r, i) => ({
+      id: rowIds[i],
       rowIndex: r.rowIndex,
       lastName: r.lastName,
       firstName: r.firstName,
@@ -215,10 +219,12 @@ export class DedupService {
         countsByPerson: async (personIds) => {
           if (personIds.length === 0) return {};
           const rows: any[] = await this.rowsRepo.manager.query(
-            `SELECT i.person_id::text AS person_id, COUNT(*)::int AS count
+                        `SELECT b.person_id::text AS person_id, COUNT(*)::int AS count
                FROM case_interventions i
-              WHERE i.person_id::text = ANY($1::text[])
-              GROUP BY i.person_id`,
+               JOIN cases c ON c.id::text = i.case_id
+               JOIN beneficiaries b ON b.id = c.beneficiary_id
+              WHERE b.person_id::text = ANY($1::text[])
+              GROUP BY b.person_id`,
             [personIds],
           );
           const map: Record<string, number> = {};
@@ -228,10 +234,11 @@ export class DedupService {
       },
     });
 
-    const rowEntities = parsed.rows.map((r) => {
-      const status = result.rowStatus[String(r.rowIndex)] ?? 'pending';
-      const best = result.candidates.filter((c) => c.rowId === String(r.rowIndex)).sort((a, b) => b.score - a.score)[0];
+    const rowEntities = parsed.rows.map((r, i) => {
+      const status = result.rowStatus[rowIds[i]] ?? 'pending';
+      const best = result.candidates.filter((c) => c.rowId === rowIds[i]).sort((a, b) => b.score - a.score)[0];
       return this.rowsRepo.create({
+        id: rowIds[i],
         operationId: id,
         rowIndex: r.rowIndex,
         lastName: r.lastName,
@@ -247,12 +254,16 @@ export class DedupService {
     });
     await this.rowsRepo.save(rowEntities);
 
+    // BaseEntity's @BeforeInsert generates the id at save time, so the sweep's
+    // token ids must be remapped onto the persisted row ids before matches can
+    // reference them (row_id is a uuid FK to client_import_rows).
+    const rowIdByToken = new Map(rowInputs.map((ri, i) => [ri.id, rowEntities[i].id]));
     const matchEntities = result.candidates.map((c) =>
       this.matchesRepo.create({
-        rowId: c.rowId,
+        rowId: rowIdByToken.get(c.rowId) ?? c.rowId,
         targetType: c.targetType,
         targetPersonId: c.targetPersonId,
-        targetImportRowId: c.targetImportRowId,
+        targetImportRowId: c.targetImportRowId ? rowIdByToken.get(c.targetImportRowId) : undefined,
         targetHouseholdId: c.targetHouseholdId,
         score: c.score,
         signals: c.signals as unknown as Record<string, unknown>,
@@ -510,8 +521,11 @@ export class DedupService {
       : [];
     const interventions: any[] = identities.length
       ? await this.rowsRepo.query(
-          `SELECT i.person_id::text AS person_id, COUNT(*)::int AS count
-             FROM case_interventions i WHERE i.person_id::text = ANY($1::text[]) GROUP BY i.person_id`, [identities])
+          `SELECT b.person_id::text AS person_id, COUNT(*)::int AS count
+             FROM case_interventions i
+             JOIN cases c ON c.id::text = i.case_id
+             JOIN beneficiaries b ON b.id = c.beneficiary_id
+            WHERE b.person_id::text = ANY($1::text[]) GROUP BY b.person_id`, [identities])
       : [];
     const importRows: any[] = importRowIds.length
       ? await this.rowsRepo.query(

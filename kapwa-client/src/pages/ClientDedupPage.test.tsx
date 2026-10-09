@@ -86,12 +86,6 @@ describe('ClientDedupPage', () => {
     mockDownload.mockReset();
     mockApiGet.mockImplementation((key: unknown) => {
       const k = String(key);
-      if (k.includes('clientDedup,detail,op9')) {
-        return Promise.resolve({ id: 'op9', source: 'Batch 2.xlsx', status: 'reviewing', pending: 4, totalRows: 10 });
-      }
-      if (k.includes('clientDedup,detail,op1')) {
-        return Promise.resolve({ id: 'op1', source: 'Batch 1.xlsx', status: 'reviewing', pending: pendingCount, totalRows: 2 });
-      }
       if (k.includes('/rows') && k.includes('/matches')) {
         matchesCall += 1;
         return Promise.resolve(matchesCall === 1 ? MATCHES_PENDING : MATCHES_DECIDED);
@@ -99,6 +93,12 @@ describe('ClientDedupPage', () => {
       if (k.includes('/rows')) {
         rowsCall += 1;
         return Promise.resolve(rowsCall === 1 ? ROWS_PENDING : ROWS_DECIDED);
+      }
+      if (k.includes('/client-dedup/operations/op9')) {
+        return Promise.resolve({ id: 'op9', source: 'Batch 2.xlsx', status: 'reviewing', pending: 4, totalRows: 10 });
+      }
+      if (k.includes('/client-dedup/operations/op1')) {
+        return Promise.resolve({ id: 'op1', source: 'Batch 1.xlsx', status: 'reviewing', pending: pendingCount, totalRows: 2 });
       }
       if (k.includes('/client-dedup/operations')) return Promise.resolve(OPERATIONS_RESPONSE);
       return Promise.resolve(null);
@@ -211,9 +211,6 @@ describe('ClientDedupPage', () => {
     mockApiPost.mockResolvedValue({});
     mockApiGet.mockImplementation((key: unknown) => {
       const k = String(key);
-      if (k.includes('clientDedup,detail,op1')) {
-        return Promise.resolve({ id: 'op1', source: 'Batch 1.xlsx', status: 'reviewing', pending: 0, totalRows: 2 });
-      }
       if (k.includes('/rows') && k.includes('/matches')) {
         matchesCall += 1;
         return Promise.resolve(matchesCall === 1 ? MATCHES_DECIDED : MATCHES_PENDING);
@@ -221,6 +218,9 @@ describe('ClientDedupPage', () => {
       if (k.includes('/rows')) {
         rowsCall += 1;
         return Promise.resolve(rowsCall === 1 ? ROWS_DECIDED : ROWS_PENDING);
+      }
+      if (k.includes('/client-dedup/operations/op1')) {
+        return Promise.resolve({ id: 'op1', source: 'Batch 1.xlsx', status: 'reviewing', pending: 0, totalRows: 2 });
       }
       if (k.includes('/client-dedup/operations')) return Promise.resolve(OPERATIONS_RESPONSE);
       return Promise.resolve(null);

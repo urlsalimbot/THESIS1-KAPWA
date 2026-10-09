@@ -425,7 +425,9 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
 
-  const { data: detail } = useSWR<OperationDetail>(queryKeys.clientDedup.detail(operationId));
+  const { data: detail } = useSWR<OperationDetail>(queryKeys.clientDedup.detail(operationId), () =>
+    api.get<OperationDetail>(`/client-dedup/operations/${operationId}`),
+  );
   const { data: rowsData, isLoading } = useSWR(
     ['clientDedup', 'rows', operationId, pagination.pageIndex + 1, pagination.pageSize] as const,
     () =>
