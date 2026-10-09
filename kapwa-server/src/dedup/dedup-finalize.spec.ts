@@ -8,7 +8,7 @@ function mockRepo(over: any = {}) {
     find: jest.fn().mockResolvedValue([]),
     query: jest.fn().mockResolvedValue([]),
     count: jest.fn().mockResolvedValue(0),
-    manager: { transaction: async (fn: any) => fn() },
+    manager: { transaction: async (fn: any) => fn(), query: jest.fn().mockResolvedValue([]) },
     ...over,
   };
 }
@@ -40,9 +40,20 @@ describe('DedupService.finalize', () => {
     personRepo.save.mockResolvedValue({ id: 'p-new' });
     beneficiaryRepo.save.mockResolvedValue({ id: 'ben-new' });
 
+    rowsRepo.manager.query
+      .mockResolvedValueOnce([{ id: 'hh-1' }]) // household insert RETURNING
+      .mockResolvedValue([]);
     const result = await service.finalize('op1', 'u1');
 
     expect(result.created).toBe(1);
+    // household + membership + batch serving were recorded
+    const hhInserts = rowsRepo.manager.query.mock.calls.filter((c: any) => String(c[0]).startsWith('INSERT INTO households'));
+    const memInserts = rowsRepo.manager.query.mock.calls.filter((c: any) => String(c[0]).startsWith('INSERT INTO household_memberships'));
+    expect(hhInserts).toHaveLength(1);
+    expect(memInserts).toHaveLength(1);
+    const serving = rowsRepo.manager.query.mock.calls.filter((c: any) => String(c[0]).includes('case_interventions'));
+    expect(serving).toHaveLength(1);
+    expect(serving[0][0]).toContain("'batch'");
     const createdPerson = personRepo.create.mock.calls[0][0];
     expect(createdPerson).toMatchObject({ surname: 'Reyes', firstName: 'Pedro' });
     expect(createdPerson.gender).toBeUndefined();
@@ -57,7 +68,8 @@ describe('DedupService.finalize', () => {
     opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing', source: 'Batch 1.xlsx' });
     rowsRepo.query
       .mockResolvedValueOnce([]) // pending guard
-      .mockResolvedValueOnce([{ id: 'ben-9' }]); // beneficiary lookup
+      .mockResolvedValueOnce([]) // eligibility guard
+      .mockResolvedValue([{ id: 'ben-9' }]); // beneficiary lookup + remaining queries
     rowsRepo.find.mockResolvedValue([{ id: 'r1', rowIndex: 2, status: 'retained', matchedPersonId: 'p9', lastName: 'Reyes', firstName: 'Pedro', dob: '1988-03-21', barangay: 'Partida' }]);
     personRepo.findOne.mockResolvedValue({ id: 'p9', surname: 'Reyes', firstName: 'Pedro', addresses: [{ addressType: 'current', barangay: 'Bigte' }] });
 
@@ -81,6 +93,17 @@ describe('DedupService.finalize', () => {
     expect(result.deprioritized).toBe(1);
     expect(personRepo.create).not.toHaveBeenCalled();
     expect(beneficiaryRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('refuses to finalize while a disqualified row has no eligibility decision', async () => {
+    opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing' });
+    rowsRepo.query
+      .mockResolvedValueOnce([]) // pending guard
+      .mockResolvedValue([{ id: 'r1' }]); // eligibility guard finds an undecided row
+    rowsRepo.find.mockResolvedValue([{ id: 'r1', status: 'deprioritized', eligibility: 'disqualified' }]);
+
+    await expect(service.finalize('op1', 'u1')).rejects.toThrow(/eligibility decision/i);
+    expect(personRepo.create).not.toHaveBeenCalled();
   });
 
   it('refuses a second finalize and leaves the operation unfinalized when a save fails', async () => {

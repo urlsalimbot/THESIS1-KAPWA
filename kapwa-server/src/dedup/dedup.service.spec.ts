@@ -13,7 +13,9 @@ function mockRepo(over: any = {}) {
     save: jest.fn(async (e: any) => e),
     create: jest.fn((e: any) => e),
     findAndCount: jest.fn().mockResolvedValue([[], 0]),
+    find: jest.fn().mockResolvedValue([]),
     query: jest.fn().mockResolvedValue([]),
+    manager: { query: jest.fn().mockResolvedValue([]) },
     ...over,
   };
 }
@@ -31,12 +33,13 @@ describe('DedupService', () => {
 
   beforeEach(() => { jest.clearAllMocks(); });
 
-  it('creates an operation in the defined state', async () => {
+  it('creates an operation in the defined state with its intervention type', async () => {
     opsRepo.findOne.mockResolvedValue(null);
-    await service.create({ source: 'Batch 1.xlsx', columnMap: map }, 'user-1');
+    await service.create({ source: 'Batch 1.xlsx', columnMap: map, interventionType: 'food_pack' }, 'user-1');
     const saved = opsRepo.save.mock.calls[0][0];
     expect(saved.status).toBe('defined');
     expect(saved.source).toBe('Batch 1.xlsx');
+    expect(saved.interventionType).toBe('food_pack');
     expect(saved.createdBy).toBe('user-1');
     expect(saved.columnMap).toEqual({ ...map });
   });
@@ -111,5 +114,74 @@ describe('DedupService', () => {
     expect(d.pending).toBe(2);
     expect(d.noMatch).toBe(3);
     expect(d.totalRows).toBe(5);
+  });
+
+  it('uploads deprioritize a matched client served within the 30-day window', async () => {
+    opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'defined', columnMap: map, matchThreshold: 0.75, interventionType: 'food_pack' });
+    const recent = new Date(Date.now() - 5 * 86400000).toISOString().slice(0, 10);
+    const adapter: any = {
+      sim: (a: string, b: string) => (a === b ? 1 : 0),
+      searchSimilar: jest.fn().mockResolvedValue([
+        { id: 'p1', lastName: 'Reyes', firstName: 'Pedro', dob: '1988-03-21', barangay: 'Bigte' },
+      ]),
+    };
+    rowsRepo.manager.query
+      .mockResolvedValueOnce([]) // sweep: households by member (none)
+      .mockResolvedValueOnce([]) // eligibility: households of matched person
+      .mockResolvedValueOnce([
+        { person_id: 'p1', deliveryDate: recent, type: 'food_pack' },
+      ]);
+    const service2 = new DedupService(opsRepo as any, rowsRepo as any, matchesRepo as any, adapter as any);
+    await service2.upload('op1', Buffer.from(csv), 'list.csv', 'user-1');
+    const savedRows = (rowsRepo.save.mock.calls as any[]).flatMap((c) => c[0]);
+    expect(savedRows[0]).toMatchObject({ status: 'deprioritized', eligibility: 'disqualified' });
+    expect(savedRows[0].remarks).toContain('within the last 30 days');
+    // Allowed rows resolve at upload; a DISQUALIFIED row's matches require a
+    // decision before finalize.
+    const savedMatches = (matchesRepo.save.mock.calls as any[]).flatMap((c) => c[0]);
+    expect(savedMatches[0].status).toBe('pending');
+    expect(savedMatches[0].decidedBy).toBeUndefined();
+  });
+
+  it('rows supports the review filter for disqualified rows', async () => {
+    rowsRepo.findAndCount.mockResolvedValue([[], 0]);
+    await service.rows('op1', 1, 20, undefined, undefined, 'disqualified');
+    const [options] = rowsRepo.findAndCount.mock.calls[0] as any[];
+    expect(options.where).toMatchObject({ operationId: 'op1', eligibility: 'disqualified' });
+    expect(options.where.eligibility_decision).toBeDefined();
+  });
+
+  it('agrees a waived row into service once all its matches are decided', async () => {
+    opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing', interventionType: 'food_pack' });
+    rowsRepo.findOne.mockResolvedValue({ id: 'r1', operationId: 'op1', eligibility: 'disqualified', status: 'deprioritized' });
+    const pendingMatch = { id: 'ma1', rowId: 'r1', targetType: 'db_person', status: 'pending', score: 0.9 };
+    const waivedMatch = { ...pendingMatch, status: 'primary' };
+    matchesRepo.find
+      .mockResolvedValueOnce([pendingMatch]) // decide them all
+      .mockResolvedValueOnce([])             // nothing still pending
+      .mockResolvedValueOnce([waivedMatch]); // derive the row
+    await service.decideEligibility('op1', 'r1', 'waive', 'u1');
+    const savedMatch = matchesRepo.save.mock.calls[0][0];
+    expect(savedMatch).toMatchObject({ id: 'ma1', status: 'primary' });
+    expect(rowsRepo.save.mock.calls[0][0]).toMatchObject({ eligibilityDecision: 'waive', status: 'retained' });
+  });
+
+  it('decides a single match by id and keeps the row blocked while others are pending', async () => {
+    opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing' });
+    rowsRepo.findOne.mockResolvedValue({ id: 'r1', operationId: 'op1', eligibility: 'disqualified', status: 'deprioritized' });
+    matchesRepo.findOne.mockResolvedValue({ id: 'ma1', rowId: 'r1', targetType: 'db_person', status: 'pending' });
+    matchesRepo.find
+      .mockResolvedValueOnce([{ id: 'ma2', rowId: 'r1', status: 'pending' }]) // remaining after the single decision
+      .mockResolvedValueOnce([]);
+    await service.decideEligibility('op1', 'r1', 'confirm', 'u1', 'ma1');
+    expect(matchesRepo.save.mock.calls[0][0]).toMatchObject({ id: 'ma1', status: 'deprioritized' });
+    expect(rowsRepo.save).not.toHaveBeenCalled(); // row stays undecided
+    expect(service).toBeDefined();
+  });
+
+  it('refuses an eligibility decision for a row that is not disqualified', async () => {
+    opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing' });
+    rowsRepo.findOne.mockResolvedValue({ id: 'r1', operationId: 'op1', eligibility: 'allowed', status: 'retained' });
+    await expect(service.decideEligibility('op1', 'r1', 'waive', 'u1')).rejects.toThrow(/Only disqualified/);
   });
 });

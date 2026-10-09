@@ -5,8 +5,9 @@ import { ClientImportOperation, ClientImportRow, ClientImportMatch, BeneficiaryR
 import { parseImportFile, ColumnMap, ColumnMapError } from './dedup-parse.service';
 import { sweep, RowInput } from './dedup-match-sweep.service';
 import { DedupAdapter } from './dedup-adapter';
-import { ILike } from 'typeorm';
+import { ILike, Not, IsNull } from 'typeorm';
 import { v7 as uuidv7 } from 'uuid';
+import { computeEligibility } from './dedup-eligibility.service';
 
 export const DEDUP_ADAPTER = 'DEDUP_ADAPTER';
 import { Person } from '../beneficiaries/person.entity';
@@ -148,10 +149,11 @@ export class DedupService {
     return { row, match };
   }
 
-  async create(input: { source: string; columnMap: ColumnMap; matchThreshold?: number }, actorId: string) {
+  async create(input: { source: string; columnMap: ColumnMap; interventionType: string; matchThreshold?: number }, actorId: string) {
     const op = this.opsRepo.create({
       source: input.source,
       columnMap: input.columnMap as unknown as Record<string, unknown>,
+      interventionType: input.interventionType,
       matchThreshold: input.matchThreshold ?? 0.75,
       status: 'defined',
       createdBy: actorId,
@@ -234,13 +236,94 @@ export class DedupService {
       },
     });
 
+    // --- Eligibility stage (intervention-aware serving, spec 2026-10-09) ---
+    // Per-row evidence: best db_person match, household surfaced by a household
+    // candidate, and every matched person id for the intervention queries.
+    const candidatesByRow = new Map<string, typeof result.candidates>();
+    for (const c of result.candidates) {
+      const list = candidatesByRow.get(c.rowId) ?? [];
+      list.push(c);
+      candidatesByRow.set(c.rowId, list);
+    }
+    const perRowMatches = parsed.rows.map((r, i) => {
+      const cands = candidatesByRow.get(rowIds[i]) ?? [];
+      const personCands = cands.filter((c) => c.targetType === 'db_person' && c.targetPersonId);
+      return [...personCands].sort((a, b) => b.score - a.score)[0]?.targetPersonId;
+    });
+    // The household connection comes from the DB, not the candidate cards:
+    // households WITHOUT serving evidence surface no candidate, but the
+    // eligibility engine still needs the grouping (same-household co-applying
+    // in one list → exactly one gets through).
+    const bestPersonIds = [...new Set(perRowMatches.filter(Boolean))] as string[];
+    const rowHouseholds: Array<{ matchedPersonId: string; id: string; memberPersonIds: string[] }> =
+      bestPersonIds.length
+        ? await this.rowsRepo.manager.query(
+            `SELECT hm.person_id::text AS "matchedPersonId", h.id,
+                    (SELECT ARRAY_AGG(hm2.person_id::text)
+                       FROM household_memberships hm2 WHERE hm2.household_id = h.id) AS "memberPersonIds"
+               FROM households h
+               JOIN household_memberships hm ON hm.household_id = h.id
+              WHERE hm.person_id::text = ANY($1::text[])`,
+            [bestPersonIds],
+          )
+        : [];
+    const householdOf = new Map(rowHouseholds.map((h) => [h.matchedPersonId, h.id]));
+    const membersOf = new Map(rowHouseholds.map((h) => [h.matchedPersonId, h.memberPersonIds]));
+    const rowEvidence = parsed.rows.map((r, i) => ({
+      rowIndex: r.rowIndex,
+      personId: perRowMatches[i],
+      householdId: perRowMatches[i] ? householdOf.get(perRowMatches[i]) : undefined,
+      householdPersonIds: perRowMatches[i] ? membersOf.get(perRowMatches[i]) ?? [] : [],
+    }));
+    const personIds = [...new Set(rowEvidence.flatMap((ev) => [ev.personId, ...ev.householdPersonIds].filter(Boolean)))];
+    const interventionRows: any[] = personIds.length
+      ? await this.rowsRepo.manager.query(
+          `SELECT b.person_id::text AS person_id, to_char(i.delivery_date, 'YYYY-MM-DD') AS "deliveryDate", i.intervention_type AS type
+             FROM case_interventions i JOIN beneficiaries b ON b.id = i.beneficiary_id
+            WHERE i.beneficiary_id IS NOT NULL AND b.person_id::text = ANY($1::text[]) AND i.delivery_date IS NOT NULL
+            UNION ALL
+           SELECT b.person_id::text, to_char(i.delivery_date, 'YYYY-MM-DD'), i.intervention_type
+             FROM case_interventions i
+             JOIN cases c ON c.id::text = i.case_id
+             JOIN beneficiaries b ON b.id = c.beneficiary_id
+            WHERE i.beneficiary_id IS NULL AND b.person_id::text = ANY($1::text[]) AND i.delivery_date IS NOT NULL`,
+          [personIds])
+      : [];
+    const interventionsByPerson: Record<string, { deliveryDate: string; type: string | null }[]> = {};
+    for (const ir of interventionRows) {
+      (interventionsByPerson[ir.person_id] ??= []).push({ deliveryDate: ir.deliveryDate, type: ir.type ?? null });
+    }
+    const eligibility = computeEligibility({
+      today: new Date().toISOString().slice(0, 10),
+      rows: rowEvidence,
+      interventionsByPerson,
+    });
+
     const rowEntities = parsed.rows.map((r, i) => {
-      const status = result.rowStatus[rowIds[i]] ?? 'pending';
-      const best = result.candidates.filter((c) => c.rowId === rowIds[i]).sort((a, b) => b.score - a.score)[0];
+      const cands = candidatesByRow.get(rowIds[i]) ?? [];
+      const bestDBA = cands.some((c) => c.targetType === 'db_person');
+      const elig = eligibility[r.rowIndex] ?? { eligibility: 'allowed' as const, reason: '' };
+      // Serving status: disqualified rows ARE deprioritized (not served,
+      // pushed below the list; the reason rides in remarks); allowed rows merge
+      // into the matched existing record (retained) or come through as new
+      // clients. Disqualification stays reviewable until the operator decides
+      // (eligibility_decision NULL blocks finalize).
+      let status: ClientImportRow['status'];
+      if (elig.eligibility === 'disqualified') status = 'deprioritized';
+      else if (bestDBA) status = 'retained';
+      else if (cands.length > 0) status = 'primary';
+      else status = 'no_match';
+      const best = [...cands].sort((a, b) => b.score - a.score)[0];
+      // Persist the matched existing person NOW: with matches auto-resolved at
+      // upload there is no decide() step later to set it, and finalize's
+      // retained branch merges into this record (and records the batch
+      // serving against its beneficiary).
+      const bestPerson = [...cands].filter((c) => c.targetType === 'db_person').sort((a, b) => b.score - a.score)[0];
       return this.rowsRepo.create({
         id: rowIds[i],
         operationId: id,
         rowIndex: r.rowIndex,
+        matchedPersonId: bestPerson?.targetPersonId,
         lastName: r.lastName,
         firstName: r.firstName,
         middleName: r.middleName,
@@ -249,7 +332,12 @@ export class DedupService {
         originalRemarks: r.originalRemarks,
         extraData: r.extraData,
         status,
+        remarks: status === 'deprioritized' && elig.reason
+          ? [r.originalRemarks, `Deprioritized — ${elig.reason}`].filter(Boolean).join(' | ') || undefined
+          : undefined,
         score: best ? best.score : undefined,
+        eligibility: elig.eligibility,
+        eligibilityReason: elig.reason || undefined,
       });
     });
     await this.rowsRepo.save(rowEntities);
@@ -258,17 +346,35 @@ export class DedupService {
     // token ids must be remapped onto the persisted row ids before matches can
     // reference them (row_id is a uuid FK to client_import_rows).
     const rowIdByToken = new Map(rowInputs.map((ri, i) => [ri.id, rowEntities[i].id]));
-    const matchEntities = result.candidates.map((c) =>
-      this.matchesRepo.create({
-        rowId: rowIdByToken.get(c.rowId) ?? c.rowId,
+    // Allowed rows resolve immediately (matches are evidence). A DISQUALIFIED
+    // row keeps its matches pending: every disqualified match requires the
+    // operator's waive/confirm before finalize can run.
+    const now = new Date();
+    // Key on the PERSISTED row ids: @BeforeInsert rewrites the pre-generated
+    // token ids at save time, and the engine's outcome axis is the ROW INDEX
+    // (2-based), not the parsed-array position.
+    const persistedIdByIndex = new Map(parsed.rows.map((r, i) => [r.rowIndex, rowEntities[i].id]));
+    const disqualifiedRowIds = new Set(
+      Object.entries(eligibility)
+        .filter(([, e]) => e.eligibility === 'disqualified')
+        .map(([idx]) => persistedIdByIndex.get(Number(idx)))
+        .filter((v): v is string => Boolean(v)),
+    );
+    const matchEntities = result.candidates.map((c) => {
+      const rowId = rowIdByToken.get(c.rowId) ?? c.rowId;
+      const pending = disqualifiedRowIds.has(rowId);
+      return this.matchesRepo.create({
+        rowId,
         targetType: c.targetType,
         targetPersonId: c.targetPersonId,
         targetImportRowId: c.targetImportRowId ? rowIdByToken.get(c.targetImportRowId) : undefined,
         targetHouseholdId: c.targetHouseholdId,
         score: c.score,
         signals: c.signals as unknown as Record<string, unknown>,
-        status: 'pending',
-      }));
+        status: pending ? 'pending' : 'primary',
+        ...(pending ? {} : { decidedBy: actorId, decidedAt: now }),
+      });
+    });
     if (matchEntities.length > 0) await this.matchesRepo.save(matchEntities);
 
     op.status = 'reviewing';
@@ -328,10 +434,16 @@ export class DedupService {
     );
     const byStatus: Record<string, number> = {};
     for (const r of counts) byStatus[r.status] = Number(r.count);
+    const undecided: Array<{ n: number }> = await this.rowsRepo.query(
+      `SELECT count(*)::int AS n FROM client_import_rows
+        WHERE operation_id = $1 AND eligibility = 'disqualified' AND eligibility_decision IS NULL`,
+      [id],
+    );
     return {
       ...op,
       pending: byStatus.pending ?? 0,
       noMatch: byStatus.no_match ?? 0,
+      disqualified: Number(undecided?.[0]?.n ?? 0),
       decided: (byStatus.retained ?? 0) + (byStatus.primary ?? 0) + (byStatus.deprioritized ?? 0),
       totalRows: Object.values(byStatus).reduce((a, b) => a + b, 0),
     };
@@ -362,6 +474,15 @@ export class DedupService {
       throw new BadRequestException(`Cannot finalize: ${pending.length} match(es) are still pending`);
     }
 
+    const undecided: Array<{ id: string }> = await this.rowsRepo.query(
+      `SELECT id FROM client_import_rows
+        WHERE operation_id = $1 AND eligibility = 'disqualified' AND eligibility_decision IS NULL`,
+      [operationId],
+    );
+    if (undecided.length > 0) {
+      throw new BadRequestException(`Cannot finalize: ${undecided.length} disqualified row(s) still need an eligibility decision`);
+    }
+
     const rows = await this.rowsRepo.find({ where: { operationId }, order: { rowIndex: 'ASC' } });
     const result = { created: 0, updated: 0, deprioritized: 0, barangayUpdates: 0 };
 
@@ -389,10 +510,22 @@ export class DedupService {
           const savedBen: any = await this.beneficiaryRepo!.save(
             this.beneficiaryRepo!.create({ personId: savedPerson.id } as any),
           );
+          // A new record gets its own household (the person as primary member)
+          // so future lists can see the household grouping.
+          const hhRows: Array<{ id: string }> = await this.rowsRepo.manager.query(
+            `INSERT INTO households (id, barangay) VALUES (uuid_generate_v7(), $1) RETURNING id`,
+            [row.barangay ?? null],
+          );
+          await this.rowsRepo.manager.query(
+            `INSERT INTO household_memberships (id, person_id, household_id, relationship, is_primary)
+             VALUES (uuid_generate_v7(), $1, $2, 'Self', true)`,
+            [savedPerson.id, hhRows[0].id],
+          );
           row.matchedPersonId = savedPerson.id;
           row.beneficiaryId = savedBen.id;
           await this.rowsRepo.save(row);
           await this.recordRemark(savedBen.id, operationId, 'import', row.originalRemarks ?? 'Imported client', op.source, actorId);
+          await this.recordBatchServing(savedBen.id, op, actorId);
           result.created++;
         } else if (row.status === 'retained') {
           const person = await this.personRepo!.findOne({ where: { id: row.matchedPersonId }, relations: ['addresses'] });
@@ -438,12 +571,15 @@ export class DedupService {
             }
           }
           await this.personRepo!.save(person);
-          if (beneficiaryId) row.beneficiaryId = beneficiaryId;
+          if (beneficiaryId) {
+            row.beneficiaryId = beneficiaryId;
+            await this.recordBatchServing(beneficiaryId, op, actorId);
+          }
           await this.rowsRepo.save(row);
           result.updated++;
         } else {
-          // deprioritized: nothing is created; the decision remark was recorded
-          // against the surviving record in Task 6.
+          // deprioritized (legacy duplicates and confirmed disqualifications):
+          // nothing is created; the reason rides in remarks.
           result.deprioritized++;
         }
       }
@@ -458,11 +594,88 @@ export class DedupService {
     return result;
   }
 
+  /**
+   * Operator review of a disqualified row: 'waive' serves it after all
+   * (flipping the row into its serving status), 'confirm' keeps it out.
+   * Finalize stays blocked until every disqualified row is decided.
+   */
+  async decideEligibility(
+    operationId: string,
+    rowId: string,
+    decision: 'waive' | 'confirm',
+    actorId: string,
+    matchId?: string,
+  ) {
+    const op = await this.opsRepo.findOne({ where: { id: operationId } });
+    if (!op) throw new NotFoundException('Operation not found');
+    if (op.status !== 'reviewing') throw new BadRequestException('Operation is not in review');
+    const row = await this.rowsRepo.findOne({ where: { id: rowId, operationId } });
+    if (!row) throw new NotFoundException('Row not found');
+    if (row.eligibility !== 'disqualified') {
+      throw new BadRequestException('Only disqualified rows need an eligibility decision');
+    }
+
+    // Every disqualified MATCH requires the decision: with a matchId, decide
+    // just that match; without one, decide them all at once (the aggregate
+    // action on the row's panel).
+    const decideMatch = async (m: ClientImportMatch) => {
+      m.status = decision === 'waive' ? 'primary' : 'deprioritized';
+      m.decidedBy = actorId;
+      m.decidedAt = new Date();
+      await this.matchesRepo.save(m);
+    };
+    if (matchId) {
+      const match = await this.matchesRepo.findOne({ where: { id: matchId, rowId } });
+      if (!match) throw new NotFoundException('Match not found');
+      await decideMatch(match);
+    } else {
+      const matches = await this.matchesRepo.find({ where: { rowId } });
+      for (const m of matches) await decideMatch(m);
+    }
+
+    const remaining = await this.matchesRepo.find({ where: { rowId, status: 'pending' } });
+    if (remaining.length === 0) {
+      // The whole row is decided: any waived match means it is served.
+      const decided = await this.matchesRepo.find({ where: { rowId } });
+      const served = decided.some((m) => m.status === 'primary');
+      row.eligibilityDecision = decision;
+      row.eligibilityDecidedBy = actorId;
+      row.eligibilityDecidedAt = new Date();
+      row.status = served
+        ? decided.some((m) => m.targetType === 'db_person')
+          ? 'retained'
+          : 'primary'
+        : 'deprioritized';
+      await this.rowsRepo.save(row);
+    }
+    return { row, remaining: remaining.length };
+  }
+
+  /** Records the batch serving as a case_intervention (eligibility evidence). */
+  private async recordBatchServing(beneficiaryId: string, op: ClientImportOperation, actorId: string) {
+    await this.rowsRepo.manager.query(
+      `INSERT INTO case_interventions
+         (id, case_id, beneficiary_id, service_name, intervention_type, delivery_date, source, created_by)
+       VALUES (uuid_generate_v7(), NULL, $1, $2, $3, CURRENT_DATE, 'batch', $4)`,
+      [beneficiaryId, op.interventionType || 'Batch service', op.interventionType || null, actorId],
+    );
+  }
+
   /** Review pagination (spec §5): rows with filters, newest first by row index. */
-  async rows(operationId: string, page = 1, limit = 20, status?: string, search?: string) {
+  async rows(operationId: string, page = 1, limit = 20, status?: string, search?: string, filter?: string) {
     const where: Record<string, unknown> = { operationId };
     if (status === 'pending' || status === 'no_match' || status === 'deprioritized' || status === 'retained' || status === 'primary') {
       where.status = status;
+    }
+    // Review filter: 'matched' = rows carrying at least one candidate
+    // (anything but no_match); 'disqualified' = undecided disqualifications.
+    if (filter === 'matched') {
+      where.status = Not('no_match');
+    } else if (filter === 'no_match') {
+      where.status = 'no_match';
+    } else if (filter === 'disqualified') {
+      where.eligibility = 'disqualified';
+      where.eligibility_decision = IsNull();
     }
     if (search) where.lastName = ILike(`%${search}%`);
     const [data, total] = await this.rowsRepo.findAndCount({

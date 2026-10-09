@@ -11,7 +11,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { AuthenticatedRequest } from '../auth/types';
 import { DedupService } from './dedup.service';
-import { CreateDedupOperationSchema, CreateDedupOperationInput, DedupDecisionSchema, DedupDecisionInput } from './dto/dedup.zod';
+import { CreateDedupOperationSchema, CreateDedupOperationInput, DedupDecisionSchema, DedupDecisionInput, EligibilityDecisionSchema, EligibilityDecisionInput } from './dto/dedup.zod';
 
 @ApiTags('Client Deduplication')
 @Controller('client-dedup')
@@ -50,8 +50,8 @@ export class DedupController {
 
   @Get('operations/:id/rows')
   @ApiOperation({ summary: 'Review rows (paginated, filterable)' })
-  async rows(@Param('id') id: string, @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number, @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number, @Query('status') status?: string, @Query('search') search?: string) {
-    return this.dedup.rows(id, page, limit, status, search);
+  async rows(@Param('id') id: string, @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number, @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number, @Query('status') status?: string, @Query('search') search?: string, @Query('filter') filter?: string) {
+    return this.dedup.rows(id, page, limit, status, search, filter);
   }
 
   @Get('operations/:id/rows/:rowId/matches')
@@ -64,6 +64,17 @@ export class DedupController {
   @ApiOperation({ summary: 'Record the retain/dedupe decision for a candidate' })
   async decide(@Param('id') id: string, @Param('matchId') matchId: string, @Body(new ZodPipe(DedupDecisionSchema)) body: DedupDecisionInput, @Request() req: AuthenticatedRequest) {
     return this.dedup.decide(id, matchId, body, req.user?.id);
+  }
+
+  @Post('operations/:id/rows/:rowId/eligibility')
+  @ApiOperation({ summary: 'Operator review of a disqualified row: waive or confirm' })
+  async decideEligibility(
+    @Param('id') id: string,
+    @Param('rowId') rowId: string,
+    @Body(new ZodPipe(EligibilityDecisionSchema)) body: EligibilityDecisionInput,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.dedup.decideEligibility(id, rowId, body.decision, req.user?.id, body.matchId);
   }
 
   @Post('operations/:id/matches/:matchId/revert')

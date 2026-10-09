@@ -123,7 +123,11 @@ export async function sweep(input: SweepInput): Promise<SweepOutput> {
         if (!best) continue;
         // Rarity counts exclude the pair itself: the member and the row.
         const score = dedupScore(best.signals, weightsFor(best.id, new Set([r.id])), served);
-        if (score >= threshold) {
+        // A household candidate only surfaces when someone in the household has
+        // serving evidence — that is its only review purpose (disqualification
+        // signal). Without it, the card would parade unrelated co-residents
+        // next to the person match.
+        if (score >= threshold && served) {
           rowCands.push({
             rowId: r.id,
             targetType: 'household',

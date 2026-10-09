@@ -1233,6 +1233,20 @@ export async function migrate() {
   await q.query(`DROP POLICY IF EXISTS cases_barangay_scope ON cases`);
   await q.query(`DROP POLICY IF EXISTS consent_admin_all ON consent_ledger`);
   await q.query(`DROP POLICY IF EXISTS consent_self ON consent_ledger`);
+  // Client-dedup eligibility (intervention-aware serving) — mirrors
+  // ZAddClientDedupEligibility0000000000087: batch servings are recorded as
+  // case_interventions (source='batch', beneficiary_id set, case_id NULL) so
+  // one table carries both 'via batch' and 'via case' history.
+  await q.query(`ALTER TABLE client_import_operations ADD COLUMN IF NOT EXISTS intervention_type TEXT NOT NULL DEFAULT ''`);
+  await q.query(`ALTER TABLE client_import_rows ADD COLUMN IF NOT EXISTS eligibility TEXT`);
+  await q.query(`ALTER TABLE client_import_rows ADD COLUMN IF NOT EXISTS eligibility_reason TEXT`);
+  await q.query(`ALTER TABLE client_import_rows ADD COLUMN IF NOT EXISTS eligibility_decision TEXT`);
+  await q.query(`ALTER TABLE client_import_rows ADD COLUMN IF NOT EXISTS eligibility_decided_by UUID`);
+  await q.query(`ALTER TABLE client_import_rows ADD COLUMN IF NOT EXISTS eligibility_decided_at TIMESTAMPTZ`);
+  await q.query(`ALTER TABLE case_interventions ALTER COLUMN case_id DROP NOT NULL`);
+  await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS beneficiary_id UUID`);
+  await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'case'`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_case_interventions_beneficiary ON case_interventions (beneficiary_id)`);
 
   await q.query(`CREATE POLICY ben_admin_all ON beneficiaries FOR ALL USING (current_setting('app.current_role') = 'admin')`);
   await q.query(`CREATE POLICY ben_barangay_scope ON beneficiaries FOR ALL USING ( current_setting('app.current_role') IN ('social_worker', 'coordinator') AND (current_setting('app.current_barangay') = '' OR EXISTS (SELECT 1 FROM person_addresses pa WHERE pa.person_id = beneficiaries.person_id AND (pa.barangay ILIKE '%' || current_setting('app.current_barangay') || '%' OR pa.raw ILIKE '%' || current_setting('app.current_barangay') || '%'))) )`);

@@ -63,12 +63,14 @@ export class CaseInterventionsService {
     const saved = await this.interventionRepo.save(intervention);
 
     try {
-      await this.accessCardsService.autoLogFromIntervention({
-        caseId: saved.caseId,
-        serviceName: saved.serviceName,
-        deliveryDate: saved.deliveryDate,
-        amount: saved.amount ? Number(saved.amount) : undefined,
-      });
+      if (saved.caseId) {
+        await this.accessCardsService.autoLogFromIntervention({
+          caseId: saved.caseId,
+          serviceName: saved.serviceName,
+          deliveryDate: saved.deliveryDate,
+          amount: saved.amount ? Number(saved.amount) : undefined,
+        });
+      }
     } catch (e) {
       console.warn('Failed to auto-log intervention to access card:', e);
     }

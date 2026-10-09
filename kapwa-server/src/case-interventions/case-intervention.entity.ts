@@ -4,8 +4,17 @@ import { BaseEntity } from '../common/base.entity';
 @Entity('case_interventions')
 export class CaseIntervention extends BaseEntity {
 
-  @Column({ name: 'case_id' })
-  caseId!: string;
+  /** NULL for batch-recorded servings (source='batch'); the beneficiary_id carries the person. */
+  @Column({ name: 'case_id', nullable: true })
+  caseId?: string;
+
+  /** Set for batch servings; case interventions keep this NULL. */
+  @Column({ name: 'beneficiary_id', type: 'uuid', nullable: true })
+  beneficiaryId?: string;
+
+  /** 'case' (case-work delivery) or 'batch' (client-dedup priority list). */
+  @Column({ default: 'case' })
+  source!: string;
 
   @Column({ name: 'program_id', nullable: true })
   programId?: string;

@@ -13,6 +13,10 @@ export class ClientImportOperation extends BaseEntity {
   @Column()
   source!: string;
 
+  /** The intervention this list serves (case code or custom label). */
+  @Column({ name: 'intervention_type', default: '' })
+  interventionType!: string;
+
   @Column({ default: 'defined' })
   status!: ClientImportStatus;
 
@@ -96,6 +100,23 @@ export class ClientImportRow extends BaseEntity {
 
   @Column({ name: 'decided_at', type: 'timestamptz', nullable: true })
   decidedAt?: Date;
+
+  /** Serving outcome: allowed or disqualified (undecided until reviewed). */
+  @Column({ nullable: true })
+  eligibility?: 'allowed' | 'disqualified';
+
+  @Column({ name: 'eligibility_reason', nullable: true })
+  eligibilityReason?: string;
+
+  /** Operator review: 'waive' (serve anyway) or 'confirm' (keep disqualified). */
+  @Column({ name: 'eligibility_decision', nullable: true })
+  eligibilityDecision?: 'waive' | 'confirm';
+
+  @Column({ name: 'eligibility_decided_by', type: 'uuid', nullable: true })
+  eligibilityDecidedBy?: string;
+
+  @Column({ name: 'eligibility_decided_at', type: 'timestamptz', nullable: true })
+  eligibilityDecidedAt?: Date;
 
   @ManyToOne(() => ClientImportOperation, (o) => o.rows, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'operation_id' })

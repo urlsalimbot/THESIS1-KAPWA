@@ -15,6 +15,7 @@ const ColumnMapSchema = z.object({
 
 export const CreateDedupOperationSchema = z.object({
   source: z.string().min(1),
+  interventionType: z.string().min(1, 'An intervention type is required'),
   columnMap: ColumnMapSchema,
   matchThreshold: z.number().min(0).max(1).optional(),
 });
@@ -25,6 +26,13 @@ export const DedupDecisionSchema = z.object({
   remark: z.string().optional(),
 });
 export type DedupDecisionInput = z.infer<typeof DedupDecisionSchema>;
+
+export const EligibilityDecisionSchema = z.object({
+  decision: z.enum(['waive', 'confirm']),
+  /** Optional: decide ONE match of the row; omitted = decide all matches. */
+  matchId: z.string().optional(),
+});
+export type EligibilityDecisionInput = z.infer<typeof EligibilityDecisionSchema>;
 
 export const AddRemarkSchema = z.object({ remark: z.string().min(1) });
 export type AddRemarkInput = z.infer<typeof AddRemarkSchema>;

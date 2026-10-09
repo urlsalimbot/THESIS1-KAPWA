@@ -18,6 +18,7 @@ function statusText(row: ClientImportRow): string {
       return `Updated${barangayNote}`;
     }
     case 'deprioritized': {
+      if (row.eligibility === 'disqualified') return 'Deprioritized — disqualified';
       const m = /duplicate of ([^:]+)/.exec(row.remarks ?? '');
       return `Deprioritized — duplicate of ${m ? m[1].trim() : 'an existing record'}`;
     }
@@ -38,9 +39,10 @@ export function outputGrid(op: ClientImportOperation, rows: ClientImportRow[]): 
     ...extras,
     'Remarks', 'Status',
   ];
-  const primaries = rows.filter((r) => r.status !== 'deprioritized').sort((a, b) => a.rowIndex - b.rowIndex);
-  const deprioritized = rows.filter((r) => r.status === 'deprioritized').sort((a, b) => a.rowIndex - b.rowIndex);
-  const body = [...primaries, ...deprioritized].map((r) => [
+  const blocked = new Set(['deprioritized', 'disqualified']);
+  const primaries = rows.filter((r) => !blocked.has(r.status)).sort((a, b) => a.rowIndex - b.rowIndex);
+  const bottom = rows.filter((r) => blocked.has(r.status)).sort((a, b) => a.rowIndex - b.rowIndex);
+  const body = [...primaries, ...bottom].map((r) => [
     r.lastName ?? '',
     r.firstName ?? '',
     r.middleName ?? '',

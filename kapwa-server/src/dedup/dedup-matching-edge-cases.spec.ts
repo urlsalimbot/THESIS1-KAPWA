@@ -330,11 +330,12 @@ describe('sweep — orchestration edge cases', () => {
       sim: trigramSim,
       ...repos,
     });
-    const served = out.candidates
-      .filter((c) => c.targetType === 'household')
-      .map((c) => c.signals.householdServed)
-      .sort();
-    expect(served).toEqual([false, true]); // r1's household is unserved, r2's is served
+    const hh = out.candidates.filter((c) => c.targetType === 'household');
+    // Only the household with serving evidence surfaces a candidate; r1's
+    // untouched household shows nothing (no co-residents to parade).
+    expect(hh).toHaveLength(1);
+    expect(hh[0].signals.householdServed).toBe(true);
+    expect(hh[0].targetHouseholdId).toBe('h2');
   });
 });
 
