@@ -274,7 +274,38 @@ export class DedupService {
       skip: (page - 1) * limit,
       take: limit,
     });
-    return { data, total, page, limit };
+    // Review counts for the page's rows — the table shows pending/rows per run.
+    const ids = data.map((op) => op.id);
+    const counts: any[] = ids.length
+      ? await this.rowsRepo.query(
+          `SELECT operation_id::text AS operation_id, status, COUNT(*)::int AS count
+             FROM client_import_rows
+            WHERE operation_id::text = ANY($1::text[])
+            GROUP BY operation_id, status`,
+          [ids],
+        )
+      : [];
+    const byOperation = new Map<string, Record<string, number>>();
+    for (const row of counts) {
+      const bucket = byOperation.get(row.operation_id) ?? {};
+      bucket[row.status] = Number(row.count);
+      byOperation.set(row.operation_id, bucket);
+    }
+    return {
+      data: data.map((op) => {
+        const bucket = byOperation.get(op.id) ?? {};
+        return {
+          ...op,
+          pending: bucket.pending ?? 0,
+          noMatch: bucket.no_match ?? 0,
+          decided: (bucket.retained ?? 0) + (bucket.primary ?? 0) + (bucket.deprioritized ?? 0),
+          totalRows: Object.values(bucket).reduce((a, b) => a + b, 0),
+        };
+      }),
+      total,
+      page,
+      limit,
+    };
   }
 
   async detail(id: string) {

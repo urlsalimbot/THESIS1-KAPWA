@@ -216,6 +216,13 @@ export const queryKeys = {
       outgoing: () => memo('team.invites.outgoing', () => ['team', 'invites', 'outgoing'] as const),
     },
   },
+  clientDedup: {
+    all: ['clientDedup'] as const,
+    list: () => memo('clientDedup.list', () => ['clientDedup', 'list'] as const),
+    detail: (id: string) => memo(`clientDedup.detail.${id}`, () => ['clientDedup', 'detail', id] as const),
+    rows: (id: string) => memo(`clientDedup.rows.${id}`, () => ['clientDedup', 'rows', id] as const),
+    matches: (rowId: string) => memo(`clientDedup.matches.${rowId}`, () => ['clientDedup', 'matches', rowId] as const),
+  },
   auth: {
     me: () => memo('auth.me', () => ['auth', 'me'] as const),
   },

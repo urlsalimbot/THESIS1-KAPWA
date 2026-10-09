@@ -67,6 +67,17 @@ describe('DedupService', () => {
     expect(options.where).toMatchObject({ status: 'reviewing' });
   });
 
+  it('list carries per-operation review counts for the table', async () => {
+    opsRepo.findAndCount.mockResolvedValue([[{ id: 'op1', source: 'Batch 1.xlsx' }], 1]);
+    rowsRepo.query.mockResolvedValue([
+      { operation_id: 'op1', status: 'pending', count: '2' },
+      { operation_id: 'op1', status: 'no_match', count: '1' },
+      { operation_id: 'op1', status: 'deprioritized', count: '4' },
+    ]);
+    const out = await service.list(1, 10);
+    expect(out.data[0]).toMatchObject({ pending: 2, noMatch: 1, decided: 4, totalRows: 7 });
+  });
+
   it('returns detail counts by row status for the review header', async () => {
     opsRepo.findOne.mockResolvedValue({ id: 'op1', source: 'x' });
     rowsRepo.query.mockResolvedValue([{ status: 'pending', count: '2' }, { status: 'no_match', count: '3' }]);
