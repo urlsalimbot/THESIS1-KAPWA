@@ -455,6 +455,24 @@ export async function downloadFilingDoc(id: string, fallbackName = 'document'): 
   URL.revokeObjectURL(url);
 }
 
+// Downloads the finalized client-deduplication priority list (Task 8's stored
+// Excel) using the same Content-Disposition handling as filing documents.
+export async function downloadClientDedupOutput(operationId: string): Promise<void> {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const res = await fetch(`${API_BASE}/client-dedup/operations/${operationId}/output`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(`Priority list download failed: ${res.status}`);
+  const blob = await res.blob();
+  const filename = dispositionFilename(res, 'priority-list.xlsx');
+  const url = URL.createObjectURL(blob);
+  const a = window.document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // Issue an endorsement letter for a case: records the inter-agency referral
 // server-side and downloads the generated letter PDF. The referral step's only
 // confirmation action.

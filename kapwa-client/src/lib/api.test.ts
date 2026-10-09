@@ -7,6 +7,7 @@ import {
   dataURItoBlob,
   downloadCsrPdf,
   downloadFilingDoc,
+  downloadClientDedupOutput,
   getFilingObjectUrl,
   publicAnnouncementPhotoUrl,
   exportIrfPdf,
@@ -447,6 +448,19 @@ describe('download helpers', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonRes({})));
     await downloadFilingDoc('f1', 'fallback.pdf');
     expect(URL.createObjectURL).toHaveBeenCalled();
+  });
+
+  it('downloadClientDedupOutput fetches the stored priority list and clicks the download', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonRes({}, 200, { 'Content-Disposition': 'attachment; filename="priority-list.xlsx"' })));
+    const click = HTMLAnchorElement.prototype.click as unknown as ReturnType<typeof vi.fn>;
+    await downloadClientDedupOutput('op1');
+    expect(click).toHaveBeenCalled();
+    expect(URL.createObjectURL).toHaveBeenCalled();
+  });
+
+  it('downloadClientDedupOutput throws on failure', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonRes({}, 404)));
+    await expect(downloadClientDedupOutput('op1')).rejects.toThrow('Priority list download failed');
   });
 
   it('filingDocIdFromUrl extracts the filing id from a download URL', () => {

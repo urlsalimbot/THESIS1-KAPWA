@@ -1,13 +1,17 @@
 import { useMemo, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import type { ColumnDef } from '@tanstack/react-table';
-import { ArrowLeft, FileSpreadsheet, Plus, Trash2, Upload } from 'lucide-react';
+import { ArrowLeft, Download, FileSpreadsheet, Plus, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../lib/api';
+import { api, downloadClientDedupOutput } from '../lib/api';
 import { formatDate } from '../lib/format';
 import { queryKeys } from '../lib/query-keys';
 import { DataTable } from '@/components/data-table/DataTable';
 import { RowDecisionCard, type DedupCandidate, type DedupRow } from '@/components/dedup/RowDecisionCard';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -53,6 +57,14 @@ interface MatchesResponse {
   total: number;
   page: number;
   limit: number;
+}
+
+/** What the finalize transaction reports back. */
+interface FinalizeSummary {
+  created: number;
+  updated: number;
+  deprioritized: number;
+  barangayUpdates: number;
 }
 
 const BASELINE_FIELDS = [
@@ -409,6 +421,9 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
   const { mutate } = useSWRConfig();
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+  const [summary, setSummary] = useState<FinalizeSummary | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [finalizing, setFinalizing] = useState(false);
 
   const { data: detail } = useSWR<OperationDetail>(queryKeys.clientDedup.detail(operationId));
   const { data: rowsData, isLoading } = useSWR(
@@ -420,8 +435,28 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
   );
   const rows = rowsData?.data ?? [];
   const expandedRow = rows.find((r) => r.id === expandedRowId) ?? null;
+  const pendingCount = detail?.pending ?? 0;
 
   const refresh = () => mutate((key) => Array.isArray(key) && key[0] === 'clientDedup');
+
+  async function finalize() {
+    setFinalizing(true);
+    try {
+      const result = await api.post<FinalizeSummary>(
+        `/client-dedup/operations/${operationId}/finalize`,
+        {},
+      );
+      setSummary(result);
+      toast.success('Import finalized — the priority list is saved.');
+      await refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Finalize failed');
+    } finally {
+      setFinalizing(false);
+      setConfirmOpen(false);
+    }
+  }
+
 
   const columns = useMemo<ColumnDef<DedupRow>[]>(
     () => [
@@ -477,6 +512,12 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
     [expandedRowId],
   );
 
+  if (summary || detail?.status === 'finalized') {
+    return (
+      <OutputView operationId={operationId} summary={summary} detail={detail} onBack={onBack} />
+    );
+  }
+
   return (
     <div className="space-y-4" data-testid="review-view">
       <div className="flex items-start justify-between gap-4">
@@ -504,6 +545,107 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
       {expandedRow && (
         <ExpandedRowPanel operationId={operationId} row={expandedRow} onChanged={refresh} />
       )}
+
+      <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background/95 p-3 shadow-sm backdrop-blur">
+        <span className="text-sm text-muted-foreground">
+          {pendingCount} pending decision{pendingCount === 1 ? '' : 's'}
+        </span>
+        <Button
+          onClick={() => setConfirmOpen(true)}
+          disabled={pendingCount > 0 || finalizing}
+          title={
+            pendingCount > 0
+              ? `${pendingCount} match${pendingCount === 1 ? '' : 'es'} still pending — decide every one before finalizing`
+              : undefined
+          }
+        >
+          {finalizing ? 'Finalizing…' : 'Finalize & save priority list'}
+        </Button>
+      </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Finalize this import?</AlertDialogTitle>
+            <AlertDialogDescription>
+              New clients are saved, retained rows update the existing records, and deprioritized
+              rows create nothing. The priority list Excel is written afterwards.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={finalize}>Finalize</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+function OutputView({
+  operationId,
+  summary,
+  detail,
+  onBack,
+}: {
+  operationId: string;
+  summary: FinalizeSummary | null;
+  detail?: OperationDetail;
+  onBack: () => void;
+}) {
+  const [downloading, setDownloading] = useState(false);
+
+  async function download() {
+    setDownloading(true);
+    try {
+      await downloadClientDedupOutput(operationId);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Download failed');
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4" data-testid="output-view">
+      <Button variant="ghost" size="sm" onClick={onBack}>
+        <ArrowLeft className="mr-2 h-4 w-4" /> Back to operations
+      </Button>
+      <Card>
+        <CardHeader>
+          <CardTitle>Priority list ready</CardTitle>
+          <CardDescription>{detail?.source ?? 'Finalized import'}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {summary ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Stat label="New records saved" value={summary.created} testId="stat-created" />
+              <Stat label="Existing records updated" value={summary.updated} testId="stat-updated" />
+              <Stat label="Rows deprioritized" value={summary.deprioritized} testId="stat-deprioritized" />
+              <Stat label="Barangay updates" value={summary.barangayUpdates} testId="stat-barangay" />
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              This import was finalized earlier. Download the stored priority list below.
+            </p>
+          )}
+          <Button onClick={download} disabled={downloading}>
+            <Download className="mr-2 h-4 w-4" />
+            {downloading ? 'Preparing…' : 'Download priority list (.xlsx)'}
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function Stat({ label, value, testId }: { label: string; value: number; testId: string }) {
+  return (
+    <div className="rounded-md border p-3">
+      <div className="text-2xl font-semibold" data-testid={testId}>
+        {value}
+      </div>
+      <div className="text-xs text-muted-foreground">{label}</div>
     </div>
   );
 }

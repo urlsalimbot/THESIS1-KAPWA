@@ -5,10 +5,11 @@ import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import ClientDedupPage from './ClientDedupPage';
 
-const { mockApiGet, mockApiPost, mockApiUpload } = vi.hoisted(() => ({
+const { mockApiGet, mockApiPost, mockApiUpload, mockDownload } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
   mockApiPost: vi.fn(),
   mockApiUpload: vi.fn(),
+  mockDownload: vi.fn(),
 }));
 
 vi.mock('../lib/api', () => ({
@@ -20,6 +21,7 @@ vi.mock('../lib/api', () => ({
     patch: vi.fn(),
     upload: (...args: unknown[]) => mockApiUpload(...args),
   },
+  downloadClientDedupOutput: (...args: unknown[]) => mockDownload(...args),
 }));
 
 function renderWithSWR(ui: React.ReactNode) {
@@ -71,21 +73,24 @@ const MATCHES_DECIDED = { data: [{ ...MATCH_PAIR, status: 'deprioritized', remar
 
 let rowsCall: number;
 let matchesCall: number;
+let pendingCount: number;
 
 describe('ClientDedupPage', () => {
   beforeEach(async () => {
     rowsCall = 0;
     matchesCall = 0;
+    pendingCount = 1;
     mockApiGet.mockReset();
     mockApiPost.mockReset();
     mockApiUpload.mockReset();
+    mockDownload.mockReset();
     mockApiGet.mockImplementation((key: unknown) => {
       const k = String(key);
       if (k.includes('clientDedup,detail,op9')) {
         return Promise.resolve({ id: 'op9', source: 'Batch 2.xlsx', status: 'reviewing', pending: 4, totalRows: 10 });
       }
       if (k.includes('clientDedup,detail,op1')) {
-        return Promise.resolve({ id: 'op1', source: 'Batch 1.xlsx', status: 'reviewing', pending: 1, totalRows: 2 });
+        return Promise.resolve({ id: 'op1', source: 'Batch 1.xlsx', status: 'reviewing', pending: pendingCount, totalRows: 2 });
       }
       if (k.includes('/rows') && k.includes('/matches')) {
         matchesCall += 1;
@@ -230,5 +235,44 @@ describe('ClientDedupPage', () => {
       expect(mockApiPost).toHaveBeenCalledWith('/client-dedup/operations/op1/matches/m3/revert'),
     );
     expect(await screen.findByText(/^pending review$/i)).toBeTruthy();
+  });
+
+  it('shows the pending count on the finalize bar and blocks finalizing while decisions are pending', async () => {
+    await openReview();
+    expect(await screen.findByText(/1 pending decision/i)).toBeTruthy();
+    const finalizeBtn = screen.getByRole('button', { name: /finalize & save priority list/i }) as HTMLButtonElement;
+    expect(finalizeBtn.disabled).toBe(true);
+    expect(finalizeBtn.getAttribute('title')).toMatch(/1 match still pending/i);
+  });
+
+  it('confirms, finalizes, shows the save summary and downloads the priority list', async () => {
+    pendingCount = 0;
+    mockApiPost.mockImplementation((path: string) =>
+      path.endsWith('/finalize')
+        ? Promise.resolve({ created: 1, updated: 1, deprioritized: 2, barangayUpdates: 1 })
+        : Promise.resolve({}),
+    );
+    mockDownload.mockResolvedValue(undefined);
+
+    await openReview();
+    await userEvent.click(await screen.findByRole('button', { name: /finalize & save priority list/i }));
+    expect(await screen.findByText(/finalize this import\?/i)).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: /^finalize$/i }));
+
+    await waitFor(() =>
+      expect(mockApiPost).toHaveBeenCalledWith('/client-dedup/operations/op1/finalize', {}),
+    );
+    expect(await screen.findByTestId('output-view')).toBeTruthy();
+    expect(screen.getByTestId('stat-created').textContent).toContain('1');
+    expect(screen.getByTestId('stat-updated').textContent).toContain('1');
+    expect(screen.getByTestId('stat-deprioritized').textContent).toContain('2');
+    expect(screen.getByTestId('stat-barangay').textContent).toContain('1');
+    expect(screen.getByText(/New records saved/)).toBeTruthy();
+    expect(screen.getByText(/Existing records updated/)).toBeTruthy();
+    expect(screen.getByText(/Rows deprioritized/)).toBeTruthy();
+    expect(screen.getByText(/Barangay updates/)).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: /download priority list/i }));
+    await waitFor(() => expect(mockDownload).toHaveBeenCalledWith('op1'));
   });
 });
