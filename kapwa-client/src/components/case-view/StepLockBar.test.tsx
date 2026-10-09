@@ -97,21 +97,34 @@ describe('StepLockBar', () => {
   });
 
   it('names the lifecycle floor, not the work, when the step is not due yet', () => {
-    // A non-cancelled hearing is on file, but the case is still `in_review`:
-    // Court Hearings is implementation work, floored at `active`. "Complete this
-    // step" would send the worker back to a task they already finished, so the
-    // copy has to name the case's position instead.
+    // A non-cancelled hearing is on file, but the case is still `assessed`:
+    // Court Hearings is implementation work, floored at `in_review`. "Complete
+    // this step" would send the worker back to a task they already finished, so
+    // the copy has to name the case's position instead.
     renderBar({
       stepKey: 'court_hearings',
-      caseData: { id: 'c1', status: 'in_review' },
+      caseData: { id: 'c1', status: 'assessed' },
       opts: { courtHearingCount: 1 },
     });
 
     const lock = screen.getByRole('button', { name: /^lock$/i });
     expect(lock).toBeDisabled();
     expect(screen.queryByText(NOT_DONE_HINT)).toBeNull();
-    expect(lock).toHaveAccessibleDescription(/opens once the case reaches active/i);
-    expect(screen.getByText(/opens once the case reaches active/i)).toBeTruthy();
+    expect(lock).toHaveAccessibleDescription(/opens once the case reaches in review/i);
+    expect(screen.getByText(/opens once the case reaches in review/i)).toBeTruthy();
+  });
+
+  it('enables Lock on a recorded hearing while the case is still in review', () => {
+    // The prod case: a hearing is on file before the admin activates the case,
+    // and only `admin` can activate it. The floor must not park the Lock behind
+    // an action the worker cannot take.
+    renderBar({
+      stepKey: 'court_hearings',
+      caseData: { id: 'c1', status: 'in_review' },
+      opts: { courtHearingCount: 1 },
+    });
+
+    expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
   });
 
   // --- done -------------------------------------------------------------

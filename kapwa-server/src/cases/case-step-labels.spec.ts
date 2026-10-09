@@ -193,23 +193,26 @@ describe('template registry', () => {
         expect(typeof CASE_STEP_LABELS[k]).toBe('string');
         // Phase-In category steps (discernment, protection order, solo parent,
         // adoption) are sealable from `enrolled` — the review gate needs them.
-        // Court Hearings is implementation work: floored at `active`, so it is
-        // refused throughout Phase-In and picked back up by the
-        // `active -> transitioning` gate.
-        expect(CASE_STEP_FLOORS[k]).toBe(k === 'court_hearings' ? 3 : 0);
+        // Court Hearings is implementation work, but a hearing can be on file
+        // before the admin activates the case, so it is floored at `in_review`
+        // (still above the `assessed -> in_review` gate) and picked back up by
+        // the `active -> transitioning` gate.
+        expect(CASE_STEP_FLOORS[k]).toBe(k === 'court_hearings' ? 2 : 0);
       }
     }
   });
 
-  it('CICL due steps at enrolled hold the Phase-In work and defer court hearings to active', () => {
+  it('CICL due steps at enrolled hold the Phase-In work; hearings come due at review', () => {
     const due = stepsDueAt('enrolled', 'Children in Conflict with the Law (CICL)');
     expect(due).toEqual(['assessment', 'discernment', 'enrollments', 'interventions', 'referrals']);
     // Court hearings must not be *demanded* while they are still refusing to be
     // sealed: the `assessed -> in_review` gate reads `stepsDueAt('assessed')`,
     // so a step in that set but floored above it would be an unsatisfiable gate.
     expect(stepsDueAt('assessed', 'Children in Conflict with the Law (CICL)')).not.toContain('court_hearings');
-    expect(stepsDueAt('in_review', 'Children in Conflict with the Law (CICL)')).not.toContain('court_hearings');
-    // …and is back in the set exactly where the implementation gate fires.
+    // Sealed from `in_review` on: a hearing recorded before admin approval is
+    // sealable there, which is the prod case whose Lock stayed dead.
+    expect(stepsDueAt('in_review', 'Children in Conflict with the Law (CICL)')).toContain('court_hearings');
+    // …and is still demanded exactly where the implementation gate fires.
     expect(stepsDueAt('active', 'Children in Conflict with the Law (CICL)')).toContain('court_hearings');
     // The hearings step sits after the referral it follows, never ahead of it.
     const tpl = stepsForCategory('Children in Conflict with the Law (CICL)');
