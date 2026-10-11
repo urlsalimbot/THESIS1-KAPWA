@@ -1,5 +1,6 @@
 import { BaseEntity } from '../common/base.entity';
 import { Column, Entity, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import type { EligibilityCode } from './dedup-eligibility.service';
 
 export type ClientImportStatus = 'defined' | 'reviewing' | 'finalized';
 export type ClientImportRowStatus = 'pending' | 'no_match' | 'retained' | 'primary' | 'deprioritized';
@@ -90,7 +91,7 @@ export class ClientImportRow extends BaseEntity {
   remarks?: string;
 
   @Column({ name: 'matched_person_id', type: 'uuid', nullable: true })
-  matchedPersonId?: string;
+  matchedPersonId?: string | null;
 
   @Column({ name: 'beneficiary_id', type: 'uuid', nullable: true })
   beneficiaryId?: string;
@@ -108,9 +109,18 @@ export class ClientImportRow extends BaseEntity {
   @Column({ name: 'eligibility_reason', nullable: true })
   eligibilityReason?: string;
 
+  /**
+   * Traffic-light code the review colours from — `recent_intervention`
+   * (red), `passed_30d` (yellow), `no_intervention`/`new_client` (green),
+   * `intra_list`/`household_recent` for the rest — not derived from the
+   * reason copy on the client.
+   */
+  @Column({ name: 'eligibility_code', nullable: true })
+  eligibilityCode?: EligibilityCode | null;
+
   /** Operator review: 'waive' (serve anyway) or 'confirm' (keep disqualified). */
   @Column({ name: 'eligibility_decision', nullable: true })
-  eligibilityDecision?: 'waive' | 'confirm';
+  eligibilityDecision?: 'waive' | 'confirm' | null;
 
   @Column({ name: 'eligibility_decided_by', type: 'uuid', nullable: true })
   eligibilityDecidedBy?: string;

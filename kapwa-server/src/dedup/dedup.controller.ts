@@ -50,8 +50,8 @@ export class DedupController {
 
   @Get('operations/:id/rows')
   @ApiOperation({ summary: 'Review rows (paginated, filterable)' })
-  async rows(@Param('id') id: string, @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number, @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number, @Query('status') status?: string, @Query('search') search?: string, @Query('filter') filter?: string) {
-    return this.dedup.rows(id, page, limit, status, search, filter);
+  async rows(@Param('id') id: string, @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number, @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number, @Query('status') status?: string, @Query('search') search?: string, @Query('filter') filter?: string, @Query('phase') phase?: string) {
+    return this.dedup.rows(id, page, limit, status, search, filter, phase);
   }
 
   @Get('operations/:id/rows/:rowId/matches')
@@ -61,9 +61,16 @@ export class DedupController {
   }
 
   @Post('operations/:id/matches/:matchId/decision')
-  @ApiOperation({ summary: 'Record the retain/dedupe decision for a candidate' })
+  @ApiOperation({ summary: 'Record the match decision: same person / deprioritize or keep / new client' })
   async decide(@Param('id') id: string, @Param('matchId') matchId: string, @Body(new ZodPipe(DedupDecisionSchema)) body: DedupDecisionInput, @Request() req: AuthenticatedRequest) {
-    return this.dedup.decide(id, matchId, body, req.user?.id);
+    // The zod schema enforces keep XOR samePerson; narrow the loose DTO shape
+    // into the service's union so the two phases cannot mix.
+    const decision = body.samePerson != null
+      ? body.samePerson
+        ? { samePerson: true as const, position: body.position ?? 'keep', remark: body.remark }
+        : { samePerson: false as const, remark: body.remark }
+      : { keep: body.keep!, remark: body.remark };
+    return this.dedup.decide(id, matchId, decision, req.user?.id);
   }
 
   @Post('operations/:id/rows/:rowId/eligibility')

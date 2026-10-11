@@ -18,6 +18,25 @@
 
 export const ELIGIBILITY_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
+/**
+ * Traffic-light reason per row, structured so the review UI colours from this
+ * and not from the human-facing `reason` copy:
+ *
+ * - `recent_intervention`   matched + served within 30 days          → red
+ * - `household_recent`      household member served within 30 days   → red
+ * - `intra_list`            a duplicate of an earlier row in the list → phase 1
+ * - `passed_30d`            matched, served before, > 30 days        → yellow
+ * - `no_intervention`       matched, never served                    → green
+ * - `new_client`            no match at all                          → green
+ */
+export type EligibilityCode =
+  | 'recent_intervention'
+  | 'household_recent'
+  | 'intra_list'
+  | 'passed_30d'
+  | 'no_intervention'
+  | 'new_client';
+
 export interface EligibilityRowInput {
   rowIndex: number;
   /** Matched existing person (target of the best db_person candidate). */
@@ -43,6 +62,7 @@ export interface EligibilityInput {
 
 export interface EligibilityOutcome {
   eligibility: 'allowed' | 'disqualified';
+  code: EligibilityCode;
   reason: string;
 }
 
@@ -82,10 +102,12 @@ export function computeEligibility(input: EligibilityInput): Record<number, Elig
   for (const r of sorted) {
     let reason = '';
     let disqualified = false;
+    let code: EligibilityCode = 'new_client';
 
     const ownRecent = r.personId ? recent(r.personId) : undefined;
     if (ownRecent) {
       disqualified = true;
+      code = 'recent_intervention';
       reason = `Received ${ownRecent.type ?? 'an intervention'} on ${ownRecent.deliveryDate} — within the last 30 days`;
     }
 
@@ -96,6 +118,7 @@ export function computeEligibility(input: EligibilityInput): Record<number, Elig
         .find(Boolean);
       if (memberRecent) {
         disqualified = true;
+        code = 'household_recent';
         reason = `A household member received ${memberRecent.type ?? 'an intervention'} on ${memberRecent.deliveryDate} — within the last 30 days`;
       }
     }
@@ -123,6 +146,7 @@ export function computeEligibility(input: EligibilityInput): Record<number, Elig
       }
       if (firstIdx !== undefined && firstIdx !== r.rowIndex) {
         disqualified = true;
+        code = 'intra_list';
         reason = `Row ${firstIdx} in this list is the same ${groupKind === 'household' ? 'household' : 'person'} — only one gets through`;
       } else {
         if (r.personId && !personGroup.has(r.personId)) personGroup.set(r.personId, r.rowIndex);
@@ -134,9 +158,25 @@ export function computeEligibility(input: EligibilityInput): Record<number, Elig
       }
     }
 
+    if (!disqualified) {
+      // Allowed rows still get a code: the review needs to tell "matched but
+      // never served" (green) from "served before the window" (yellow) from
+      // "no match at all" (green, new client) — three allowed states, two
+      // colours, one label each.
+      const ids = r.personId
+        ? [r.personId, ...(r.householdPersonIds ?? [])]
+        : r.householdId
+          ? (r.householdPersonIds ?? [])
+          : [];
+      const servedBefore = ids.some((pid) => (input.interventionsByPerson[pid] ?? []).length > 0);
+      code = r.personId || r.householdId
+        ? servedBefore ? 'passed_30d' : 'no_intervention'
+        : 'new_client';
+    }
+
     outcome[r.rowIndex] = disqualified
-      ? { eligibility: 'disqualified', reason }
-      : { eligibility: 'allowed', reason: '' };
+      ? { eligibility: 'disqualified', code, reason }
+      : { eligibility: 'allowed', code, reason: '' };
   }
   return outcome;
 }

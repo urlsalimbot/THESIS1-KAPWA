@@ -51,7 +51,10 @@ function statusText(row: ClientImportRow): string {
     case 'deprioritized': {
       if (row.eligibility === 'disqualified') return 'Deprioritized — disqualified';
       const m = /duplicate of ([^:]+)/.exec(row.remarks ?? '');
-      return `Deprioritized — duplicate of ${m ? m[1].trim() : 'an existing record'}`;
+      if (m) return `Deprioritized — duplicate of ${m[1].trim()}`;
+      // Same-person deprioritization ("move to the bottom of the priority
+      // list") carries no duplicate; the bare word is the honest cell.
+      return 'Deprioritized';
     }
     default:
       return 'Pending';

@@ -31,9 +31,13 @@ describe('DedupController', () => {
     expect(dedup.upload).not.toHaveBeenCalled();
   });
 
-  it('passes the decision and actor through to the service', async () => {
-    await controller.decide('op1', 'm1', { keep: 'existing_record', remark: 'duplicate' }, req);
-    expect(dedup.decide).toHaveBeenCalledWith('op1', 'm1', { keep: 'existing_record', remark: 'duplicate' }, 'u1');
+  it('passes the phase-2 decision and actor through to the service', async () => {
+    await controller.decide('op1', 'm1', { samePerson: true, position: 'deprioritize', remark: 'recent service' }, req);
+    expect(dedup.decide).toHaveBeenCalledWith(
+      'op1', 'm1',
+      { samePerson: true, position: 'deprioritize', remark: 'recent service' },
+      'u1',
+    );
   });
 
   it('404s the output while the operation is not finalized', async () => {

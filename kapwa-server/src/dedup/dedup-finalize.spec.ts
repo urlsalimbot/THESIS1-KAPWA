@@ -64,6 +64,29 @@ describe('DedupService.finalize', () => {
     expect(savedOp).toMatchObject({ status: 'finalized', accomplisher: 'u1', outputFile: 'exports/client-dedup/op1.xlsx' });
   });
 
+  it('creates a new client for a retained row whose matched person was cleared', async () => {
+    // The sequence this guards: "not the same person" clears matchedPersonId,
+    // then "yes, keep" on another candidate leaves the row `retained` with no
+    // person. It used to hit `continue` — nothing created, nothing updated,
+    // no count — while the priority list printed "Updated" for it.
+    opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing', source: 'Batch 1.xlsx' });
+    rowsRepo.query.mockResolvedValue([]);
+    rowsRepo.find.mockResolvedValue([{
+      id: 'r1', rowIndex: 2, status: 'retained', matchedPersonId: null,
+      lastName: 'Reyes', firstName: 'Pedro', dob: '1988-03-21', barangay: 'Bigte',
+    }]);
+    personRepo.save.mockResolvedValue({ id: 'p-new' });
+    beneficiaryRepo.save.mockResolvedValue({ id: 'ben-new' });
+    rowsRepo.manager.query
+      .mockResolvedValueOnce([{ id: 'hh-1' }])
+      .mockResolvedValue([]);
+
+    const result = await service.finalize('op1', 'u1');
+
+    expect(result.created).toBe(1);
+    expect(personRepo.create).toHaveBeenCalled();
+  });
+
   it('updates the retained record and records a barangay_update remark when the barangay differs', async () => {
     opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing', source: 'Batch 1.xlsx' });
     rowsRepo.query
@@ -83,8 +106,7 @@ describe('DedupService.finalize', () => {
     expect(remarksService.append.mock.calls[0][0]).toMatchObject({ beneficiaryId: 'ben-9', kind: 'barangay_update' });
   });
 
-  it('creates nothing for a deprioritized row', async () => {
-    opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing', source: 'x' });
+  it('creates nothing for a deprioritized row', async () => {    opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing', source: 'x' });
     rowsRepo.query.mockResolvedValue([]);
     rowsRepo.find.mockResolvedValue([{ id: 'r1', status: 'deprioritized', remarks: 'Deprioritized — duplicate' }]);
 

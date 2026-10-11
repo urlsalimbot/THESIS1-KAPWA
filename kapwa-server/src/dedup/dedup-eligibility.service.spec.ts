@@ -17,7 +17,7 @@ describe('computeEligibility', () => {
       rows: [row(2, { personId: 'p1' })],
       interventionsByPerson: {},
     });
-    expect(out[2]).toEqual({ eligibility: 'allowed', reason: '' });
+    expect(out[2]).toEqual({ eligibility: 'allowed', code: 'no_intervention', reason: '' });
   });
 
   it('allows a client whose latest intervention is more than 30 days old', () => {
@@ -27,6 +27,7 @@ describe('computeEligibility', () => {
       interventionsByPerson: { p1: [recent(45), recent(60)] },
     });
     expect(out[2].eligibility).toBe('allowed');
+    expect(out[2].code).toBe('passed_30d');
   });
 
   it('disqualifies a client with an intervention within 30 days (boundary 30 = disqualified)', () => {
@@ -36,6 +37,7 @@ describe('computeEligibility', () => {
       interventionsByPerson: { p1: [recent(30)] },
     });
     expect(out[2]).toMatchObject({ eligibility: 'disqualified' });
+    expect(out[2].code).toBe('recent_intervention');
     expect(out[2].reason).toContain('within the last 30 days');
     expect(out[2].reason).toContain('food_pack');
   });
@@ -47,6 +49,7 @@ describe('computeEligibility', () => {
       interventionsByPerson: { p1: [recent(60)], p2: [recent(10, 'medical_assistance')] },
     });
     expect(out[2]).toMatchObject({ eligibility: 'disqualified' });
+    expect(out[2].code).toBe('household_recent');
     expect(out[2].reason).toContain('household member');
   });
 
@@ -57,6 +60,7 @@ describe('computeEligibility', () => {
       interventionsByPerson: { p1: [recent(60)], p2: [] },
     });
     expect(out[2].eligibility).toBe('allowed');
+    expect(out[2].code).toBe('passed_30d');
   });
 
   it('lets exactly one row through when the same person applies twice in one list', () => {
@@ -67,6 +71,7 @@ describe('computeEligibility', () => {
     });
     expect(out[3].eligibility).toBe('allowed');
     expect(out[9]).toMatchObject({ eligibility: 'disqualified' });
+    expect(out[9].code).toBe('intra_list');
     expect(out[9].reason).toContain('Row 3');
   });
 
@@ -82,6 +87,7 @@ describe('computeEligibility', () => {
     });
     expect(out[4].eligibility).toBe('allowed');
     expect(out[11]).toMatchObject({ eligibility: 'disqualified' });
+    expect(out[11].code).toBe('intra_list');
     expect(out[11].reason).toContain('household');
     expect(out[20].eligibility).toBe('allowed');
   });
@@ -94,11 +100,13 @@ describe('computeEligibility', () => {
     });
     expect(out[2].eligibility).toBe('allowed');
     expect(out[9]).toMatchObject({ eligibility: 'disqualified' });
+    expect(out[9].code).toBe('intra_list');
     expect(out[9].reason).toContain('Row 2');
   });
 
-  it('an unmatched row is always allowed', () => {
+  it('an unmatched row is always allowed, and reads as a new client', () => {
     const out = computeEligibility({ today: TODAY, rows: [row(2)], interventionsByPerson: {} });
     expect(out[2].eligibility).toBe('allowed');
+    expect(out[2].code).toBe('new_client');
   });
 });

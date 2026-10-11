@@ -21,10 +21,21 @@ export const CreateDedupOperationSchema = z.object({
 });
 export type CreateDedupOperationInput = z.infer<typeof CreateDedupOperationSchema>;
 
-export const DedupDecisionSchema = z.object({
-  keep: z.enum(['import_row', 'existing_record', 'other_import_row']),
-  remark: z.string().optional(),
-});
+/**
+ * The match decision — two shapes the controller routes by presence:
+ * phase 1 pairs use `keep`; phase 2 record/household matches use
+ * `samePerson` (+ `position` for "same person?" = yes).
+ */
+export const DedupDecisionSchema = z
+  .object({
+    keep: z.enum(['import_row', 'other_import_row']).optional(),
+    samePerson: z.boolean().optional(),
+    position: z.enum(['keep', 'deprioritize']).optional(),
+    remark: z.string().optional(),
+  })
+  .refine((b) => (b.keep != null) !== (b.samePerson != null), {
+    message: 'Either keep (phase 1) or samePerson (phase 2) is required',
+  });
 export type DedupDecisionInput = z.infer<typeof DedupDecisionSchema>;
 
 export const EligibilityDecisionSchema = z.object({

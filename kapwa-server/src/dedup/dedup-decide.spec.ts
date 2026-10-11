@@ -8,6 +8,7 @@ function mockRepo(over: any = {}) {
     findAndCount: jest.fn().mockResolvedValue([[], 0]),
     query: jest.fn().mockResolvedValue([]),
     find: jest.fn().mockResolvedValue([]),
+    delete: jest.fn().mockResolvedValue({}),
     ...over,
   };
 }
@@ -21,30 +22,78 @@ describe('DedupService decisions', () => {
     service = new DedupService(opsRepo, rowsRepo, matchesRepo, stubAdapter as any, remarksService);
   });
 
-  it('requires a remark when the import row is deprioritized', async () => {
+  it('requires a remark when the row is deprioritized', async () => {
     opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing' });
     matchesRepo.findOne.mockResolvedValue({ id: 'm1', rowId: 'r1', targetType: 'db_person', targetPersonId: 'p9', status: 'pending' });
     rowsRepo.findOne.mockResolvedValue({ id: 'r1', operationId: 'op1', status: 'pending' });
-    await expect(service.decide('op1', 'm1', { keep: 'existing_record' }, 'u1')).rejects.toThrow(/remark/i);
+    await expect(
+      service.decide('op1', 'm1', { samePerson: true, position: 'deprioritize' }, 'u1'),
+    ).rejects.toThrow(/remark/i);
     expect(matchesRepo.save).not.toHaveBeenCalled();
   });
 
-  it('deprioritizes the row, stamps the decision, and records the remark on the beneficiary history', async () => {
+  it('same person + deprioritize: row moves to the bottom and the record keeps the remark', async () => {
     opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing', source: 'Batch 1.xlsx' });
     matchesRepo.findOne.mockResolvedValue({ id: 'm1', rowId: 'r1', targetType: 'db_person', targetPersonId: 'p9', status: 'pending' });
     rowsRepo.findOne.mockResolvedValue({ id: 'r1', operationId: 'op1', rowIndex: 2, status: 'pending', originalRemarks: 'AICS' });
-    matchesRepo.find.mockResolvedValue([{ id: 'm1', rowId: 'r1', status: 'deprioritized', targetType: 'db_person' }]);
+    matchesRepo.find.mockResolvedValue([
+      { id: 'm1', rowId: 'r1', status: 'deprioritized', targetType: 'db_person' },
+    ]);
     rowsRepo.query.mockResolvedValue([{ id: 'ben-9' }]);
 
-    const out = await service.decide('op1', 'm1', { keep: 'existing_record', remark: 'Same person as ben-9; duplicate listing.' }, 'u1');
+    const out = await service.decide(
+      'op1', 'm1',
+      { samePerson: true, position: 'deprioritize', remark: 'Moved to the bottom — recent service.' },
+      'u1',
+    );
     const savedMatch = matchesRepo.save.mock.calls[0][0];
     expect(savedMatch.status).toBe('deprioritized');
     expect(savedMatch.decidedBy).toBe('u1');
     expect(savedMatch.decidedAt).toBeInstanceOf(Date);
+    // The row goes to the bottom of the priority list (output grid sorts
+    // deprioritized rows last).
     expect(out.row.status).toBe('deprioritized');
-    expect(out.row.remarks).toMatch(/duplicate/i);
+    expect(out.row.remarks).toMatch(/Deprioritized/);
     const savedRemark = remarksService.append.mock.calls[0][0];
     expect(savedRemark).toMatchObject({ beneficiaryId: 'ben-9', kind: 'decision', authoredBy: 'u1' });
+  });
+
+  it('same person + keep: the row keeps its position, and a waive mirrors the keep', async () => {    opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing' });
+    matchesRepo.findOne.mockResolvedValue({ id: 'm1', rowId: 'r1', targetType: 'db_person', targetPersonId: 'p9', status: 'pending' });
+    rowsRepo.findOne.mockResolvedValue({
+      id: 'r1', operationId: 'op1', rowIndex: 2, status: 'deprioritized',
+      eligibility: 'disqualified', eligibilityDecision: null,
+    });
+    matchesRepo.find
+      .mockResolvedValueOnce([{ id: 'm1', rowId: 'r1', status: 'primary', targetType: 'db_person' }]) // deriveRowStatus: the keep made it primary
+      .mockResolvedValueOnce([]); // eligibility mirror: nothing still pending
+    matchesRepo.save.mockImplementation(async (e: any) => e);
+
+    const out = await service.decide('op1', 'm1', { samePerson: true, position: 'keep' }, 'u1');
+    expect(out.match.status).toBe('primary');
+    expect(out.row.status).toBe('retained');
+    expect(out.row.eligibilityDecision).toBe('waive');
+  });
+
+  it('not the same person: the claim is severed and the row imports as a new client', async () => {
+    opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing' });
+    matchesRepo.findOne.mockResolvedValue({ id: 'm1', rowId: 'r1', targetType: 'db_person', targetPersonId: 'p9', status: 'pending' });
+    rowsRepo.findOne.mockResolvedValue({
+      id: 'r1', operationId: 'op1', rowIndex: 2, status: 'retained',
+      matchedPersonId: 'p9', originalRemarks: 'AICS', eligibility: 'disqualified',
+    });
+    // The match is DELETED — not a match anymore — so the row derives as
+    // no_match, which finalize imports as a brand-new client.
+    matchesRepo.find.mockResolvedValue([]);
+
+    const out = await service.decide('op1', 'm1', { samePerson: false }, 'u1');
+    expect(matchesRepo.delete).toHaveBeenCalledWith({ id: 'm1' });
+    expect(out.row.matchedPersonId).toBeNull();
+    expect(out.row.eligibility).toBe('allowed');
+    expect(out.row.eligibilityCode).toBe('new_client');
+    expect(out.row.status).toBe('no_match');
+    // No remark history on the matched person — a different person.
+    expect(remarksService.append).not.toHaveBeenCalled();
   });
 
   it('marks the paired row primary when the other import row is kept', async () => {
@@ -60,6 +109,19 @@ describe('DedupService decisions', () => {
     expect(out.row.status).toBe('deprioritized');
     const primarySave = rowsRepo.save.mock.calls.find((c: any) => c[0].id === 'r1');
     expect(primarySave[0].status).toBe('primary');
+  });
+
+  it('same person + keep re-points the row at the chosen person', async () => {
+    opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing' });
+    matchesRepo.findOne.mockResolvedValue({ id: 'mb', rowId: 'r1', targetType: 'db_person', targetPersonId: 'p2', status: 'pending' });
+    rowsRepo.findOne.mockResolvedValue({ id: 'r1', operationId: 'op1', status: 'retained', matchedPersonId: null });
+    matchesRepo.find.mockResolvedValue([{ id: 'mb', rowId: 'r1', status: 'primary', targetType: 'db_person' }]);
+
+    const out = await service.decide('op1', 'mb', { samePerson: true, position: 'keep' }, 'u1');
+
+    // Without this the row stayed `retained` with a null person after the
+    // "not the same person" decision cleared it, and finalize dropped it.
+    expect(out.row.matchedPersonId).toBe('p2');
   });
 
   it('reverts a decision back to pending', async () => {

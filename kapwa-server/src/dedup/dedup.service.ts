@@ -5,7 +5,6 @@ import { ClientImportOperation, ClientImportRow, ClientImportMatch, BeneficiaryR
 import { parseImportFile, ColumnMap, ColumnMapError } from './dedup-parse.service';
 import { sweep, RowInput } from './dedup-match-sweep.service';
 import { DedupAdapter } from './dedup-adapter';
-import { ILike, Not, IsNull } from 'typeorm';
 import { v7 as uuidv7 } from 'uuid';
 import { computeEligibility } from './dedup-eligibility.service';
 
@@ -76,10 +75,27 @@ export class DedupService {
     return 'retained';
   }
 
+  /**
+   * The one decision control for a candidate match.
+   *
+   * Phase 2 (`db_person`/`household`): is it the same person?
+   *   - `samePerson: false` → different person — the claim is severed and the
+   *     row is imported as a NEW client (no record update at finalize).
+   *   - `samePerson: true` + `position: 'keep'` → same person — the existing
+   *     record is updated and the row keeps its position in the priority list.
+   *   - `samePerson: true` + `position: 'deprioritize'` (remark required) →
+   *     same person, record updated, but the row moves to the bottom of the
+   *     priority list (the output grid sorts deprioritized rows last).
+   *
+   * Phase 1 (`import_row`): the old keep vocabulary — which of the pair wins.
+   */
   async decide(
     operationId: string,
     matchId: string,
-    body: { keep: 'import_row' | 'existing_record' | 'other_import_row'; remark?: string },
+    body:
+      | { samePerson: false; remark?: string }
+      | { samePerson: true; position?: 'keep' | 'deprioritize'; remark?: string }
+      | { keep: 'import_row' | 'other_import_row'; remark?: string },
     actorId: string,
   ) {
     const op = await this.opsRepo.findOne({ where: { id: operationId } });
@@ -88,41 +104,108 @@ export class DedupService {
     const match = await this.matchesRepo.findOne({ where: { id: matchId } });
     if (!match) throw new NotFoundException('Match not found');
     const remark = (body.remark ?? '').trim();
-    if (body.keep !== 'import_row' && remark === '') {
+    if ('keep' in body && body.keep !== 'import_row' && remark === '') {
       throw new BadRequestException('A remark is required when deprioritizing a duplicate');
+    }
+    if ('samePerson' in body && body.samePerson && body.position === 'deprioritize' && remark === '') {
+      throw new BadRequestException('A remark is required when deprioritizing a row');
     }
     const row = await this.rowsRepo.findOne({ where: { id: match.rowId } });
     if (!row) throw new NotFoundException('Row not found');
 
     const now = new Date();
-    match.status = body.keep === 'import_row' ? 'primary' : 'deprioritized';
-    if (remark) match.remark = remark;
     match.decidedBy = actorId;
     match.decidedAt = now;
+
+    if ('keep' in body) {
+      // --- Phase 1: which row of the pair wins ---------------------------
+      if (match.targetType !== 'import_row') {
+        throw new BadRequestException('Use the same-person decision for record and household matches');
+      }
+      match.status = body.keep === 'import_row' ? 'primary' : 'deprioritized';
+      if (remark) match.remark = remark;
+      await this.matchesRepo.save(match);
+      row.decidedBy = actorId;
+      row.decidedAt = now;
+      if (body.keep === 'import_row') {
+        row.matchedPersonId = match.targetPersonId ?? row.matchedPersonId;
+        row.remarks = [row.originalRemarks, remark].filter(Boolean).join(' | ') || undefined;
+      } else {
+        const dupOf = `row ${match.targetImportRowId}`;
+        row.remarks = [row.originalRemarks, `Deprioritized — duplicate of ${dupOf}${remark ? `: ${remark}` : ''}`]
+          .filter(Boolean).join(' | ');
+        if (match.targetImportRowId) {
+          const paired = await this.rowsRepo.findOne({ where: { id: match.targetImportRowId } });
+          if (paired) {
+            paired.status = 'primary';
+            await this.rowsRepo.save(paired);
+          }
+        }
+      }
+      row.status = await this.deriveRowStatus(row.id);
+      await this.rowsRepo.save(row);
+      return { row, match };
+    }
+
+    // --- Phase 2: same person? -> deprioritize or keep, or a new client -----
+    if (body.samePerson === false) {
+      // A false positive: the row has nothing to do with this record. The match
+      // is deleted (it is not a match anymore), so the row's status derives as
+      // no_match and finalize imports it as a NEW client — no record update.
+      match.status = 'deprioritized';
+      if (remark) match.remark = remark;
+      await this.matchesRepo.delete({ id: matchId });
+
+      row.matchedPersonId = null;
+      row.eligibility = 'allowed';
+      row.eligibilityCode = 'new_client';
+      row.eligibilityReason = 'Not the same person — imported as a new client';
+      row.eligibilityDecision = null;
+      row.decidedBy = actorId;
+      row.decidedAt = now;
+      row.remarks = [row.originalRemarks, remark].filter(Boolean).join(' | ') || undefined;
+      row.status = await this.deriveRowStatus(row.id);
+      await this.rowsRepo.save(row);
+      // No remark history on the matched person: they are a different person.
+      return { row, match };
+    }
+
+    // Same person. The record is updated at finalize either way; the decision
+    // is where the row sits in the priority list.
+    const deprioritize = body.position === 'deprioritize';
+    match.status = deprioritize ? 'deprioritized' : 'primary';
+    if (remark) match.remark = remark;
     await this.matchesRepo.save(match);
 
     row.decidedBy = actorId;
     row.decidedAt = now;
-    if (body.keep === 'import_row') {
-      row.matchedPersonId = match.targetPersonId ?? row.matchedPersonId;
-      row.remarks = [row.originalRemarks, remark].filter(Boolean).join(' | ') || undefined;
-    } else {
-      const dupOf = match.targetType === 'import_row' ? `row ${match.targetImportRowId}` : 'an existing record';
-      row.remarks = [row.originalRemarks, `Deprioritized — duplicate of ${dupOf}${remark ? `: ${remark}` : ''}`]
-        .filter(Boolean).join(' | ');
-      if (body.keep === 'other_import_row' && match.targetImportRowId) {
-        const paired = await this.rowsRepo.findOne({ where: { id: match.targetImportRowId } });
-        if (paired) {
-          paired.status = 'primary';
-          await this.rowsRepo.save(paired);
-        }
-      }
+    // Same person: point the row at the record the operator chose. Without
+    // this, a row that first answered "not the same person" (which clears the
+    // field) and then "yes, keep" on another candidate kept a null match and
+    // was silently dropped at finalize.
+    if (match.targetPersonId) row.matchedPersonId = match.targetPersonId;
+    if (deprioritize) {
+      row.remarks = [
+        row.originalRemarks,
+        remark ? `Deprioritized — ${remark}` : 'Deprioritized',
+      ].filter(Boolean).join(' | ');
     }
     row.status = await this.deriveRowStatus(row.id);
+
+    // A disqualified row's eligibility gate is the same question the tree
+    // answers: keeping them (position unchanged) serves them — the waive; moving
+    // them to the bottom confirms. Mirror it once no match is left pending, so
+    // finalize's "disqualified awaiting decision" gate clears with the tree.
+    if (row.eligibility === 'disqualified' && !row.eligibilityDecision) {
+      const remaining = await this.matchesRepo.find({ where: { rowId: row.id, status: 'pending' } });
+      if (remaining.length === 0) {
+        row.eligibilityDecision = deprioritize ? 'confirm' : 'waive';
+      }
+    }
     await this.rowsRepo.save(row);
 
     // The decision is traceable on the record that survives.
-    if (body.keep !== 'import_row' && match.targetPersonId && this.remarksService) {
+    if (remark && match.targetPersonId && this.remarksService) {
       const bens = await this.rowsRepo.query('SELECT id FROM beneficiaries WHERE person_id = $1 LIMIT 1', [match.targetPersonId]);
       const beneficiaryId = bens?.[0]?.id;
       if (beneficiaryId) {
@@ -310,7 +393,7 @@ export class DedupService {
     const rowEntities = parsed.rows.map((r, i) => {
       const cands = candidatesByRow.get(rowIds[i]) ?? [];
       const bestDBA = cands.some((c) => c.targetType === 'db_person');
-      const elig = eligibility[r.rowIndex] ?? { eligibility: 'allowed' as const, reason: '' };
+      const elig = eligibility[r.rowIndex] ?? { eligibility: 'allowed' as const, code: 'new_client' as const, reason: '' };
       // Serving status: disqualified rows ARE deprioritized (not served,
       // pushed below the list; the reason rides in remarks); allowed rows merge
       // into the matched existing record (retained) or come through as new
@@ -345,6 +428,7 @@ export class DedupService {
           : undefined,
         score: best ? best.score : undefined,
         eligibility: elig.eligibility,
+        eligibilityCode: elig.code,
         eligibilityReason: elig.reason || undefined,
       });
     });
@@ -496,7 +580,12 @@ export class DedupService {
 
     await this.rowsRepo.manager.transaction(async () => {
       for (const row of rows) {
-        if (row.status === 'no_match' || row.status === 'primary') {
+        // A `retained` row with no matched person is a row whose claim was
+        // severed ("not the same person") and never re-pointed: treat it as a
+        // new client rather than skipping it — the old `continue` below made it
+        // vanish from the batch while the priority list still printed "Updated".
+        const retainedWithPerson = row.status === 'retained' && !!row.matchedPersonId;
+        if (row.status === 'no_match' || row.status === 'primary' || (row.status === 'retained' && !row.matchedPersonId)) {
           // Gender is optional in the schema and usually absent from an import;
           // the person is created without it (own insert, not createBeneficiary).
           const person: any = this.personRepo!.create({
@@ -535,8 +624,8 @@ export class DedupService {
           await this.recordRemark(savedBen.id, operationId, 'import', row.originalRemarks ?? 'Imported client', op.source, actorId);
           await this.recordBatchServing(savedBen.id, op, actorId);
           result.created++;
-        } else if (row.status === 'retained') {
-          const person = await this.personRepo!.findOne({ where: { id: row.matchedPersonId }, relations: ['addresses'] });
+        } else if (retainedWithPerson) {
+          const person = await this.personRepo!.findOne({ where: { id: row.matchedPersonId as string }, relations: ['addresses'] });
           if (!person) continue;
           if (row.lastName) (person as any).surname = row.lastName;
           if (row.firstName) (person as any).firstName = row.firstName;
@@ -669,29 +758,38 @@ export class DedupService {
     );
   }
 
-  /** Review pagination (spec §5): rows with filters, newest first by row index. */
-  async rows(operationId: string, page = 1, limit = 20, status?: string, search?: string, filter?: string) {
-    const where: Record<string, unknown> = { operationId };
+  /** Review pagination (spec §5): rows with filters, oldest row first.
+   *
+   * `phase` splits the two review stages: `intra_list` — rows that matched
+   * another row of the same import (decide which one to keep) — and `db_match`
+   * — rows that matched a person or household in KAPWA. Rows can appear in
+   * both; `filter` narrows within whichever phase is selected.
+   */
+  async rows(operationId: string, page = 1, limit = 20, status?: string, search?: string, filter?: string, phase?: string) {
+    const qb = this.rowsRepo.createQueryBuilder('r').where('r.operation_id = :operationId', { operationId });
     if (status === 'pending' || status === 'no_match' || status === 'deprioritized' || status === 'retained' || status === 'primary') {
-      where.status = status;
+      qb.andWhere('r.status = :status', { status });
     }
     // Review filter: 'matched' = rows carrying at least one candidate
     // (anything but no_match); 'disqualified' = undecided disqualifications.
     if (filter === 'matched') {
-      where.status = Not('no_match');
+      qb.andWhere('r.status != :notMatched', { notMatched: 'no_match' });
     } else if (filter === 'no_match') {
-      where.status = 'no_match';
+      qb.andWhere('r.status = :notMatched', { notMatched: 'no_match' });
     } else if (filter === 'disqualified') {
-      where.eligibility = 'disqualified';
-      where.eligibility_decision = IsNull();
+      qb.andWhere('r.eligibility = :dis', { dis: 'disqualified' }).andWhere('r.eligibility_decision IS NULL');
     }
-    if (search) where.lastName = ILike(`%${search}%`);
-    const [data, total] = await this.rowsRepo.findAndCount({
-      where,
-      order: { rowIndex: 'ASC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    if (phase === 'intra_list') {
+      qb.andWhere(`EXISTS (SELECT 1 FROM client_import_matches m WHERE m.row_id = r.id AND m.target_type = 'import_row')`);
+    } else if (phase === 'db_match') {
+      qb.andWhere(`EXISTS (SELECT 1 FROM client_import_matches m WHERE m.row_id = r.id AND m.target_type IN ('db_person', 'household'))`);
+    }
+    if (search) qb.andWhere('r.last_name ILIKE :search', { search: `%${search}%` });
+    const [data, total] = await qb
+      .orderBy('r.row_index', 'ASC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
     return { data, total, page, limit };
   }
 
@@ -742,7 +840,8 @@ export class DedupService {
       : [];
     const interventions: any[] = identities.length
       ? await this.rowsRepo.query(
-          `SELECT b.person_id::text AS person_id, COUNT(*)::int AS count
+          `SELECT b.person_id::text AS person_id, COUNT(*)::int AS count,
+                  MAX(i.delivery_date)::text AS last_delivery
              FROM case_interventions i
              JOIN cases c ON c.id::text = i.case_id
              JOIN beneficiaries b ON b.id = c.beneficiary_id
@@ -787,6 +886,7 @@ export class DedupService {
     }
 
     const interventionBy = new Map(interventions.map((i) => [i.person_id, Number(i.count)]));
+    const lastDeliveryBy = new Map(interventions.map((i) => [i.person_id, i.last_delivery ?? null]));
     const memberName = (mid: string) => {
       const p = people.find((row) => row.id === mid);
       return p ? { lastName: p.lastName, firstName: p.firstName } : {};
@@ -796,6 +896,7 @@ export class DedupService {
       person: people.find((p) => p.id === m.targetPersonId) ?? null,
       remarks: remarksByPerson.get(m.targetPersonId as string) ?? [],
       interventions: interventionBy.get(m.targetPersonId as string) ?? 0,
+      lastDeliveryDate: lastDeliveryBy.get(m.targetPersonId as string) ?? null,
       cases: cases.filter((c) => c.person_id === m.targetPersonId),
       household: households.find((h) => h.id === m.targetHouseholdId)
         ? {
@@ -807,6 +908,7 @@ export class DedupService {
                 personId: mid,
                 ...memberName(mid),
                 interventions: interventionBy.get(mid) ?? 0,
+                lastDeliveryDate: lastDeliveryBy.get(mid) ?? null,
                 cases: cases.filter((c) => c.person_id === mid),
               })),
           }

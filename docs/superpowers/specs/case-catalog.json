@@ -40,5 +40,72 @@
     "counseling",
     "legal_referral",
     "disaster_relief"
-  ]
+  ],
+  "financialInterventionTypes": [
+    "financial_grant",
+    "medical_assistance",
+    "burial_assistance",
+    "transport_assistance",
+    "food_pack",
+    "educational_assistance",
+    "livelihood_seed",
+    "shelter_assistance"
+  ],
+  "programTypesByCaseCategory": {
+    "Children in Conflict with the Law (CICL)": [
+      "diversion",
+      "aftercare",
+      "counseling",
+      "family_welfare",
+      "child_welfare",
+      "medical",
+      "legal_referral"
+    ],
+    "Violence Against Women and Their Children (VAWC)": [
+      "women_welfare",
+      "shelter",
+      "counseling",
+      "legal_referral",
+      "medical",
+      "aics"
+    ],
+    "Children in Need of Special Protection (CNSP)": [
+      "child_welfare",
+      "counseling",
+      "shelter",
+      "legal_referral",
+      "medical",
+      "family_welfare",
+      "aics",
+      "aftercare"
+    ],
+    "Indigency / Court-Ordered Social Case Study": [
+      "aics",
+      "medical",
+      "shelter",
+      "disaster_relief",
+      "supplemental_feeding",
+      "social_pension",
+      "livelihood",
+      "counseling",
+      "legal_referral",
+      "aftercare"
+    ],
+    "Solo Parent": [
+      "family_welfare",
+      "aics",
+      "counseling",
+      "legal_referral",
+      "livelihood",
+      "cct",
+      "medical"
+    ],
+    "Adoption & Foster Care Case": [
+      "child_welfare",
+      "family_welfare",
+      "counseling",
+      "legal_referral",
+      "medical"
+    ]
+  }
 }

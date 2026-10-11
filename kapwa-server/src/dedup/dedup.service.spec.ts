@@ -16,7 +16,20 @@ function mockRepo(over: any = {}) {
     find: jest.fn().mockResolvedValue([]),
     query: jest.fn().mockResolvedValue([]),
     manager: { query: jest.fn().mockResolvedValue([]) },
+    createQueryBuilder: jest.fn(() => mockQB()),
     ...over,
+  };
+}
+
+/** Minimal TypeORM query-builder chain for `rows()` (EXISTS filters). */
+function mockQB() {
+  return {
+    where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    skip: jest.fn().mockReturnThis(),
+    take: jest.fn().mockReturnThis(),
+    getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
   };
 }
 
@@ -135,6 +148,7 @@ describe('DedupService', () => {
     await service2.upload('op1', Buffer.from(csv), 'list.csv', 'user-1');
     const savedRows = (rowsRepo.save.mock.calls as any[]).flatMap((c) => c[0]);
     expect(savedRows[0]).toMatchObject({ status: 'deprioritized', eligibility: 'disqualified' });
+    expect(savedRows[0].eligibilityCode).toBe('recent_intervention');
     expect(savedRows[0].remarks).toContain('within the last 30 days');
     // Allowed rows resolve at upload; a DISQUALIFIED row's matches require a
     // decision before finalize.
@@ -144,11 +158,24 @@ describe('DedupService', () => {
   });
 
   it('rows supports the review filter for disqualified rows', async () => {
-    rowsRepo.findAndCount.mockResolvedValue([[], 0]);
     await service.rows('op1', 1, 20, undefined, undefined, 'disqualified');
-    const [options] = rowsRepo.findAndCount.mock.calls[0] as any[];
-    expect(options.where).toMatchObject({ operationId: 'op1', eligibility: 'disqualified' });
-    expect(options.where.eligibility_decision).toBeDefined();
+    const qb = (rowsRepo.createQueryBuilder as jest.Mock).mock.results[0].value;
+    expect(qb.andWhere).toHaveBeenCalledWith('r.eligibility = :dis', { dis: 'disqualified' });
+    expect(qb.andWhere).toHaveBeenCalledWith('r.eligibility_decision IS NULL');
+  });
+
+  it('rows phase filter splits intra-list duplicates from db matches', async () => {
+    await service.rows('op1', 1, 20, undefined, undefined, undefined, 'intra_list');
+    let qb = (rowsRepo.createQueryBuilder as jest.Mock).mock.results[0].value;
+    expect(qb.andWhere).toHaveBeenCalledWith(
+      expect.stringContaining(`m.target_type = 'import_row'`),
+    );
+
+    await service.rows('op1', 1, 20, undefined, undefined, undefined, 'db_match');
+    qb = (rowsRepo.createQueryBuilder as jest.Mock).mock.results[1].value;
+    const clauses = qb.andWhere.mock.calls.map((c: any[]) => c[0]).join('\n');
+    expect(clauses).toContain("'db_person'");
+    expect(clauses).toContain("'household'");
   });
 
   it('upload deprioritizes the later row of an intra-list duplicate pair', async () => {
@@ -160,6 +187,7 @@ describe('DedupService', () => {
     const savedRows = (rowsRepo.save.mock.calls as any[]).flatMap((c) => c[0]);
     expect(savedRows.map((r: any) => r.status)).toEqual(['no_match', 'deprioritized']);
     expect(savedRows[1].eligibilityReason).toContain('Row 2');
+    expect(savedRows[1].eligibilityCode).toBe('intra_list');
   });
 
   it('agrees a waived row into service once all its matches are decided', async () => {
