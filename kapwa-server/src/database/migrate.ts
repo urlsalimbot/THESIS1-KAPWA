@@ -801,6 +801,14 @@ export async function migrate() {
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_contact_messages_created_at ON contact_messages (created_at DESC)`);
+  await q.query(`CREATE TABLE IF NOT EXISTS contact_message_replies (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    message_id UUID NOT NULL REFERENCES contact_messages(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    replied_by UUID,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_contact_message_replies_message ON contact_message_replies (message_id)`);
   await q.query(`INSERT INTO agencies (code, name, type, is_active) VALUES
     ('MSWDO', 'Municipal Social Welfare and Development Office', 'social_services', true),
     ('RHU', 'Rural Health Unit - Norzagaray', 'health', true),
@@ -1240,6 +1248,8 @@ export async function migrate() {
   await q.query(`ALTER TABLE client_import_operations ADD COLUMN IF NOT EXISTS intervention_type TEXT NOT NULL DEFAULT ''`);
   await q.query(`ALTER TABLE client_import_rows ADD COLUMN IF NOT EXISTS eligibility TEXT`);
   await q.query(`ALTER TABLE client_import_rows ADD COLUMN IF NOT EXISTS eligibility_reason TEXT`);
+  await q.query(`ALTER TABLE client_import_rows ADD COLUMN IF NOT EXISTS eligibility_code TEXT`);
+  await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_otp_attempts INTEGER NOT NULL DEFAULT 0`);
   await q.query(`ALTER TABLE client_import_rows ADD COLUMN IF NOT EXISTS eligibility_decision TEXT`);
   await q.query(`ALTER TABLE client_import_rows ADD COLUMN IF NOT EXISTS eligibility_decided_by UUID`);
   await q.query(`ALTER TABLE client_import_rows ADD COLUMN IF NOT EXISTS eligibility_decided_at TIMESTAMPTZ`);

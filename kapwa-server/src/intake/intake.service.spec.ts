@@ -33,6 +33,7 @@ describe('IntakeService', () => {
     query: jest.Mock;
     manager: {
       findOne: jest.Mock;
+      find: jest.Mock;
       create: jest.Mock;
       save: jest.Mock;
       update: jest.Mock;
@@ -55,6 +56,7 @@ describe('IntakeService', () => {
       query: jest.fn().mockResolvedValue(undefined),
       manager: {
         findOne: jest.fn().mockResolvedValue(null),
+        find: jest.fn().mockResolvedValue([]),
         create: jest.fn((_entity: unknown, data: unknown) => data),
         save: jest.fn().mockImplementation((entity: unknown, data?: unknown) =>
           Promise.resolve(data ?? entity),

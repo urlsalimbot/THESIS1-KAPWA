@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProgramEnrollment } from './program-enrollment.entity';
 import { Program } from '../programs/program.entity';
+import { Case } from '../cases/case.entity';
 import { CaseEnrollmentsService } from './case-enrollments.service';
 import { CaseEnrollmentsController } from './case-enrollments.controller';
 import { CasesModule } from '../cases/cases.module';
@@ -12,7 +13,7 @@ import { CasesModule } from '../cases/cases.module';
   // `ProgramEnrollment` *entity* in its `forFeature` (a registration, not an
   // import), while this module requires the cases module to reach the locks
   // service.
-  imports: [TypeOrmModule.forFeature([ProgramEnrollment, Program]), forwardRef(() => CasesModule)],
+  imports: [TypeOrmModule.forFeature([ProgramEnrollment, Program, Case]), forwardRef(() => CasesModule)],
   controllers: [CaseEnrollmentsController],
   providers: [CaseEnrollmentsService],
   exports: [CaseEnrollmentsService],

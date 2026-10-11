@@ -3,7 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ProgramEnrollment } from './program-enrollment.entity';
 import { Program } from '../programs/program.entity';
+import { Case } from '../cases/case.entity';
 import { CreateProgramEnrollmentInput, UpdateProgramEnrollmentInput } from './dto/case-enrollments.zod';
+import { programTypeAllowedForCaseCategory } from '../common/case-catalog';
 
 export interface ProgramEnrollmentView {
   id: string;
@@ -29,6 +31,8 @@ export class CaseEnrollmentsService {
     private readonly repo: Repository<ProgramEnrollment>,
     @InjectRepository(Program)
     private readonly programs: Repository<Program>,
+    @InjectRepository(Case)
+    private readonly casesRepo: Repository<Case>,
   ) {}
 
   async findByCaseId(caseId: string): Promise<ProgramEnrollmentView[]> {
@@ -40,6 +44,16 @@ export class CaseEnrollmentsService {
     const program = await this.programs.findOne({ where: { id: body.programId } });
     if (!program) {
       throw new BadRequestException('Unknown program');
+    }
+    // Programs apply per case category (catalog Appendix B): a CICL case does
+    // not enroll in Social Pension. Restrictive only — untyped/custom programs
+    // and unmapped categories pass, so local PPAs keep working.
+    const caseRow = await this.casesRepo.findOne({ where: { id: caseId } });
+    if (!caseRow) {
+      throw new NotFoundException('Case not found');
+    }
+    if (!programTypeAllowedForCaseCategory(program.programType, caseRow.caseCategory)) {
+      throw new BadRequestException('This program is not applicable to the case category of this case');
     }
     const existing = await this.repo.findOne({ where: { caseId, programId: body.programId } });
     if (existing) {

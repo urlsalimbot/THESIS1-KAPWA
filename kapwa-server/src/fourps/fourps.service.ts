@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { CaseComplianceItem, ComplianceType } from './fourps-compliance.entity';
 import { CasePayout } from './fourps-payout.entity';
 import { AccessCardsService, AccessCardCategory } from '../access-cards/access-cards.service';
+import { roundMoney } from '../common/utils';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
 
 /**
@@ -325,13 +326,13 @@ export class FourPsService {
       caseId,
       cycleNo: input.cycleNo,
       scheduledAt: input.scheduledAt,
-      amount: input.amount,
+      amount: roundMoney(input.amount),
       status: 'scheduled',
     }));
     await this.logToCard(caseId, {
       serviceRendered: `4Ps payout scheduled${input.cycleNo ? ` — ${input.cycleNo}` : ''}`,
       serviceDate: new Date(input.scheduledAt),
-      cost: input.amount,
+      cost: roundMoney(input.amount),
       category: 'payout',
     }, actor);
     return payout;

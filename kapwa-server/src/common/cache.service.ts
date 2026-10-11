@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 
 interface CacheEntry<T> {
   data: T;
@@ -6,7 +6,7 @@ interface CacheEntry<T> {
 }
 
 @Injectable()
-export class CacheService {
+export class CacheService implements OnModuleDestroy {
   private readonly logger = new Logger(CacheService.name);
   private readonly store = new Map<string, CacheEntry<unknown>>();
   private readonly defaults = { ttlMs: 60_000 };
@@ -16,6 +16,15 @@ export class CacheService {
 
   constructor() {
     this.startEviction();
+  }
+
+  /** A clean stop: the eviction timer must not keep the event loop alive. */
+  onModuleDestroy(): void {
+    if (this.interval) {
+      clearInterval(this.interval);
+      this.interval = null;
+    }
+    this.running = false;
   }
 
   get<T>(key: string): T | null {

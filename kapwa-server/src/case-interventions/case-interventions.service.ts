@@ -4,6 +4,23 @@ import { Repository } from 'typeorm';
 import { CaseIntervention } from './case-intervention.entity';
 import { CreateCaseInterventionInput, UpdateCaseInterventionInput } from './dto/case-interventions.zod';
 import { AccessCardsService } from '../access-cards/access-cards.service';
+import { isFinancialIntervention } from '../common/case-catalog';
+import { roundMoney } from '../common/utils';
+
+/**
+ * A non-financial service renders no money — amount, mode of delivery and fund
+ * source do not apply to it. Strip them on the way in (create and update), so
+ * a client that renders them away can never still persist them.
+ */
+function stripFinancialFields<T extends { interventionType?: string | null; amount?: unknown; modeOfDelivery?: unknown; fundSource?: unknown }>(data: T): T {
+  if (data.interventionType && !isFinancialIntervention(data.interventionType)) {
+    return { ...data, amount: null, modeOfDelivery: null, fundSource: null };
+  }
+  // Centavo rounding at the boundary: the form accepts "1,234.567" and
+  // numeric(12,2) then rounds it silently — better to store what was typed,
+  // rounded once, than to have the books disagree with the receipt.
+  return { ...data, amount: roundMoney(data.amount) };
+}
 
 @Injectable()
 export class CaseInterventionsService {
@@ -21,8 +38,7 @@ export class CaseInterventionsService {
     });
   }
 
-  async create(caseId: string, data: CreateCaseInterventionInput, callerId?: string) {
-    // RA 10173: a revoked consent blocks new service delivery against the
+  async create(caseId: string, data: CreateCaseInterventionInput, callerId?: string) {    // RA 10173: a revoked consent blocks new service delivery against the
     // beneficiary's case — historical records stay, new interventions stop.
     const rows = await this.interventionRepo.manager.query(
       `SELECT cl.status FROM cases c
@@ -36,24 +52,23 @@ export class CaseInterventionsService {
       throw new ForbiddenException('Beneficiary consent has been revoked — new interventions are not allowed');
     }
 
-    // The enrollment the service was delivered under, when named, must belong
-    // to this case — and, when a program is also named, must be that program's
-    // enrollment, or the service rows under the wrong program.
-    if (data.programEnrollmentId) {
-      const rows = await this.interventionRepo.manager.query(
-        `SELECT program_id FROM program_enrollments WHERE id = $1 AND case_id = $2`,
-        [data.programEnrollmentId, caseId],
+    // An intervention is a service rendered under a program ASSIGNED to the
+    // case: the enrollment is mandatory, and it has to be this case's row for
+    // this program — otherwise the service rows under the wrong program.
+    const enrollmentRows = await this.interventionRepo.manager.query(
+      `SELECT program_id FROM program_enrollments WHERE id = $1 AND case_id = $2`,
+      [data.programEnrollmentId, caseId],
+    );
+    if (enrollmentRows.length === 0) {
+      throw new NotFoundException('Program enrollment not found on this case');
+    }
+    if (data.programId && enrollmentRows[0].program_id !== data.programId) {
+      throw new ForbiddenException(
+        'The enrollment belongs to a different program than the one named on the intervention',
       );
-      if (rows.length === 0) {
-        throw new NotFoundException('Program enrollment not found on this case');
-      }
-      if (data.programId && rows[0].program_id !== data.programId) {
-        throw new ForbiddenException(
-          'The enrollment belongs to a different program than the one named on the intervention',
-        );
-      }
     }
 
+    data = stripFinancialFields(data);
     const cleaned = Object.fromEntries(
       Object.entries(data).map(([k, v]) => [k, v === null ? undefined : v]),
     );
@@ -81,7 +96,7 @@ export class CaseInterventionsService {
   async update(caseId: string, id: string, data: UpdateCaseInterventionInput) {
     const intervention = await this.interventionRepo.findOne({ where: { id, caseId } });
     if (!intervention) throw new NotFoundException('Intervention not found');
-    Object.assign(intervention, data);
+    Object.assign(intervention, stripFinancialFields(data));
     return this.interventionRepo.save(intervention);
   }
 

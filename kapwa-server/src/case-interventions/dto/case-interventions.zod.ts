@@ -2,15 +2,16 @@ import { z } from 'zod';
 import { INTERVENTION_TYPE_VALUES } from '../../common/case-catalog';
 
 export const CreateCaseInterventionSchema = z.object({
-  programId: z.string().nullable().optional(),
+  // An intervention is a service rendered under a program ASSIGNED to the case
+  // (the treatment plan), so both the program and the enrollment are required.
+  programId: z.string().uuid(),
   // Typed service from the intervention catalog (spec §4.4) — a *service
-  // rendered under a program*, so when a program is chosen the service should
-  // come from that program's `program_services` rows. Optional: legacy rows
-  // and untyped quick logs render as "uncatalogued".
+  // rendered under a program*, so the service comes from that program's
+  // `program_services` rows.
   interventionType: z.enum(INTERVENTION_TYPE_VALUES).nullable().optional(),
   // The program enrollment the service was delivered under — validated to
-  // belong to this case (and, when programId is also sent, to that program).
-  programEnrollmentId: z.string().uuid().nullable().optional(),
+  // belong to this case (and to the named program).
+  programEnrollmentId: z.string().uuid(),
   serviceName: z.string().min(1),
   category: z.string().nullable().optional(),
   deliveryDate: z.string().nullable().optional(),

@@ -18,6 +18,7 @@ describe('SlaService', () => {
     notifRepo = {
       save: jest.fn().mockResolvedValue({}),
       create: jest.fn().mockImplementation((entity: any) => entity),
+      find: jest.fn().mockResolvedValue([]),
     };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -29,6 +30,7 @@ describe('SlaService', () => {
     service = module.get<SlaService>(SlaService);
     jest.clearAllMocks();
     caseRepo.find.mockResolvedValue([]);
+    notifRepo.find.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -130,8 +132,22 @@ describe('SlaService', () => {
     expect(rows).toHaveLength(2); // two escalated cases × 1 admin
   });
 
-  it('queries admins only once across a full escalation run', async () => {
+  it('does not re-notify a case that already has its SLA notification', async () => {
     caseRepo.find
+      .mockResolvedValueOnce([{ id: 'c-1', status: CaseStatus.ACTIVE, assignedWorkerId: 'w1', createdAt: date('2026-08-31') }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    caseRepo.query.mockResolvedValue([{ id: 'admin-1' }]);
+    // An earlier 30-minute tick already wrote this escalation.
+    notifRepo.find.mockResolvedValue([{ referenceId: 'c-1', recipientId: 'admin-1' }]);
+
+    const result = await service.checkAndEscalate();
+
+    expect(result.escalated).toBe(1); // still counted as overdue
+    expect(notifRepo.save).not.toHaveBeenCalled(); // but never written twice
+  });
+
+  it('queries admins only once across a full escalation run', async () => {    caseRepo.find
       .mockResolvedValueOnce([{ id: 'c-2', status: CaseStatus.ENROLLED, assignedWorkerId: 'w1', createdAt: date('2026-09-01') }])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([{ id: 'c-3', status: CaseStatus.IN_REVIEW, createdAt: date('2026-09-01') }]);

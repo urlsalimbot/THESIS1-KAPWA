@@ -19,7 +19,7 @@ import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-refe
 import { memberToPerson } from './member-person';
 import { assessMatchCandidate, soundex } from './match-scoring';
 import { User, UserRole } from '../auth/user.entity';
-import type { IntakeInput, MatchCheckInput, MatchCandidate, ConfirmMatchInput, ConfirmMatchResponse } from './dto/intake.zod';
+import type { IntakeInput, MatchCheckInput, MatchCandidate, ConfirmMatchInput, ConfirmMatchResponse, FamilyMemberInput } from './dto/intake.zod';
 
 // Only MSWDO staff (admin / social worker) may be assigned as a case worker;
 // coordinators are not MSWDO employees and must never be assigned.
@@ -162,12 +162,41 @@ export class IntakeService {
       new Date(incoming.dob as any).toDateString();
   }
 
+  /** The exact-key identity findOrCreatePerson's no-barangay dedup branch uses. */
+  private memberDedupKey(p: { surname: string; firstName: string; dob?: Date | string | null }): string {
+    const dob = p.dob ? new Date(p.dob).toISOString().slice(0, 10) : '';
+    return `${p.surname.trim().toLowerCase()}\u0000${p.firstName.trim().toLowerCase()}\u0000${dob}`;
+  }
+
+  /**
+   * One round trip finds every family member's existing person — this used to
+   * be one query per member, inside the transaction. The predicate is exactly
+   * the dedup branch's (`surname`, `firstName`, `dob`), so a hit behaves as the
+   * per-member query would; misses still run their own find inside
+   * `findOrCreatePerson`.
+   */
+  private async memberDedupLookup(
+    queryRunner: any,
+    members: Array<Pick<FamilyMemberInput, 'surname' | 'firstName' | 'dob'>>,
+  ): Promise<Map<string, Person>> {
+    const map = new Map<string, Person>();
+    if (members.length === 0) return map;
+    const rows = (await queryRunner.manager.find(Person, {
+      where: members.map((m) => ({ surname: m.surname, firstName: m.firstName, dob: new Date(m.dob) })),
+    })) ?? [];
+    for (const r of rows) {
+      map.set(this.memberDedupKey({ surname: r.surname ?? '', firstName: r.firstName ?? '', dob: r.dob }), r);
+    }
+    return map;
+  }
+
   private async findOrCreatePerson(
     data: Partial<Person> & { surname: string; firstName: string; gender: string; dob: Date },
     queryRunner?: any,
     deduplicate = false,
     scope?: { currentAddress?: Record<string, string> },
     extras?: { phone?: string; email?: string; currentAddress?: Record<string, string> },
+    knownExistingByKey?: Map<string, Person>,
   ): Promise<Person> {
     const find = (where: any) => queryRunner
       ? queryRunner.manager.findOne(Person, { where })
@@ -208,7 +237,11 @@ export class IntakeService {
             )
             .getOne()) ?? null;
         } else {
-          existing = await find({ surname: data.surname, firstName: data.firstName, dob: data.dob });
+          // The batched member lookup (one query for the whole family) returns
+          // the same rows this find would, keyed identically; a miss falls back
+          // to the per-member query, so semantics cannot drift from the
+          // unbatched path.
+          existing = knownExistingByKey?.get(this.memberDedupKey(data)) ?? (await find({ surname: data.surname, firstName: data.firstName, dob: data.dob }));
         }
       }
       if (existing) {
@@ -442,8 +475,9 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
           }
           if (data.familyMembers && data.familyMembers.length > 0) {
             const validMembers = data.familyMembers.filter(m => m.surname && m.surname.trim().length > 0);
+            const memberKeyMap = await this.memberDedupLookup(queryRunner, validMembers);
             for (const fm of validMembers) {
-              const memberPerson = await this.findOrCreatePerson(memberToPerson(fm), queryRunner, true);
+              const memberPerson = await this.findOrCreatePerson(memberToPerson(fm), queryRunner, true, undefined, undefined, memberKeyMap);
               const existingMembership = await queryRunner.manager.findOne(HouseholdMembership, {
                 where: { personId: memberPerson.id, householdId: existingHousehold.id },
               });
@@ -953,8 +987,9 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
 
       if (data.familyMembers && data.familyMembers.length > 0) {
         const validMembers = data.familyMembers.filter(m => m.surname && m.surname.trim().length > 0);
+        const memberKeyMap = await this.memberDedupLookup(queryRunner, validMembers);
         for (const fm of validMembers) {
-          const memberPerson = await this.findOrCreatePerson(memberToPerson(fm), queryRunner, true);
+          const memberPerson = await this.findOrCreatePerson(memberToPerson(fm), queryRunner, true, undefined, undefined, memberKeyMap);
           const existingMembership = await queryRunner.manager.findOne(HouseholdMembership, {
             where: { personId: memberPerson.id, householdId },
           });

@@ -1,10 +1,12 @@
-import { PENDING_ESCALATION_DAYS, PENDING_WARNING_DAYS, REVIEW_ESCALATION_DAYS, REVIEW_WARNING_DAYS, APPROVED_ESCALATION_DAYS, APPROVED_WARNING_DAYS, SATURDAY, SUNDAY } from '../common/constants';
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Case, CaseStatus } from '../cases/case.entity';
 import { Notification, NotificationCategory } from '../notifications/notification.entity';
+import { caseStatusLabel } from '../common/status-labels';
+import { workingDaysBetween } from '../common/utils';
+import { PENDING_ESCALATION_DAYS, PENDING_WARNING_DAYS, REVIEW_ESCALATION_DAYS, REVIEW_WARNING_DAYS, APPROVED_ESCALATION_DAYS, APPROVED_WARNING_DAYS } from '../common/constants';
 
 @Injectable()
 export class SlaService {
@@ -32,7 +34,7 @@ export class SlaService {
       where: { status: CaseStatus.ENROLLED },
     });
     for (const c of pendingOverdue) {
-      const age = this.workingDays(c.createdAt, new Date());
+      const age = workingDaysBetween(c.createdAt, new Date());
       if (age >= PENDING_ESCALATION_DAYS && c.assignedWorkerId) {
         this.stageAlert(alerts, c, 'pending_assessment', 'Coordinator review required — case pending assessment > 3 days');
         escalated++;
@@ -46,7 +48,7 @@ export class SlaService {
       where: { status: CaseStatus.IN_REVIEW },
     });
     for (const c of reviewOverdue) {
-      const age = this.workingDays(c.createdAt, new Date());
+      const age = workingDaysBetween(c.createdAt, new Date());
       if (age >= REVIEW_ESCALATION_DAYS) {
         this.stageAlert(alerts, c, 'in_review', 'MSWDO Head review required — case in review > 3 days');
         escalated++;
@@ -64,7 +66,7 @@ export class SlaService {
       where: { status: CaseStatus.ACTIVE },
     });
     for (const c of activeOverdue) {
-      const age = this.workingDays(c.createdAt, new Date());
+      const age = workingDaysBetween(c.createdAt, new Date());
       if (age >= APPROVED_ESCALATION_DAYS) {
         this.stageAlert(alerts, c, 'active', `Admin attention required — case active > ${APPROVED_ESCALATION_DAYS} days without transition`);
         escalated++;
@@ -82,18 +84,6 @@ export class SlaService {
     return { escalated, warnings };
   }
 
-  private statusLabel(status: string): string {
-    const labels: Record<string, string> = {
-      enrolled: 'Enrolled',
-      assessed: 'Assessed',
-      in_review: 'In Review',
-      active: 'Active',
-      transitioning: 'Transitioning',
-      closed: 'Closed',
-    };
-    return labels[status] || status;
-  }
-
   private stageAlert(
     alerts: Array<{ c: Case; stage: string; message: string }>,
     c: Case,
@@ -107,13 +97,29 @@ export class SlaService {
     const admins = await this.caseRepo.query(
       `SELECT id FROM users WHERE role = 'admin' AND is_active = TRUE`,
     );
+    // One SLA notification per case per admin, ever. Without this the 30-minute
+    // tick re-inserted the same alert for as long as the case stayed overdue —
+    // 48 repeats a day per case per admin, and the inbox unreadable.
+    // ceiling: a DELETED notification is re-created on the next tick (there is
+    // no "already escalated" flag on the case); upgrade path: add
+    // `sla_escalated_at` to cases and set it here.
+    const caseIds = [...new Set(alerts.map((a) => a.c.id))];
+    const alreadySent = caseIds.length
+      ? await this.notifRepo.find({
+          where: { referenceId: In(caseIds), category: NotificationCategory.SLA_ESCALATION },
+          select: ['referenceId', 'recipientId'],
+        })
+      : [];
+    const sent = new Set(alreadySent.map((n) => `${n.referenceId}:${n.recipientId}`));
+
     const rows: Notification[] = [];
     for (const a of alerts) {
       for (const admin of admins) {
+        if (sent.has(`${a.c.id}:${admin.id}`)) continue;
         rows.push(this.notifRepo.create({
           recipientId: admin.id,
           title: `SLA Escalation: ${a.c.controlNo}`,
-          message: `${a.message} — Case ${a.c.controlNo} (${this.statusLabel(a.stage)})`,
+          message: `${a.message} — Case ${a.c.controlNo} (${caseStatusLabel(a.stage)})`,
           category: NotificationCategory.SLA_ESCALATION,
           referenceId: a.c.id,
         }));
@@ -124,14 +130,4 @@ export class SlaService {
     }
   }
 
-  private workingDays(start: Date, end: Date): number {
-    let count = 0;
-    const current = new Date(start);
-    while (current <= end) {
-      const day = current.getDay();
-      if (day !== SUNDAY && day !== SATURDAY) count++;
-      current.setDate(current.getDate() + 1);
-    }
-    return count;
-  }
 }

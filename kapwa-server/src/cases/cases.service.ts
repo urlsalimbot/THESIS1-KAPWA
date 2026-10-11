@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Optional, Logger } from '@nestjs/common';
 import { displayFullName } from '../common/person-name';
+import { roundMoney, workingDaysBetween } from '../common/utils';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Case, CaseStatus } from './case.entity';
@@ -107,7 +108,7 @@ export class CasesService {
           c.assistances = [
             this.caseRepo.manager.create(CaseAssistance, {
               assistanceType: 'financial',
-              amount: (data as any).amountAssistance,
+              amount: roundMoney((data as any).amountAssistance),
               mode: (data as any).modeFinancialAssistance,
               sourceOfFund: (data as any).sourceOfFund,
               legislatorSpecify: (data as any).legislatorSpecify,
@@ -365,7 +366,7 @@ export class CasesService {
   }
 
   private computeSlaOverdue(c: Case): boolean {
-    const age = this.workingDays(c.createdAt, new Date());
+    const age = workingDaysBetween(c.createdAt, new Date());
     switch (c.status) {
       case CaseStatus.ENROLLED:
         return age >= PENDING_ESCALATION_DAYS;
@@ -378,17 +379,6 @@ export class CasesService {
       default:
         return false;
     }
-  }
-
-  private workingDays(start: Date, end: Date): number {
-    let count = 0;
-    const current = new Date(start);
-    while (current <= end) {
-      const day = current.getDay();
-      if (day !== SUNDAY && day !== SATURDAY) count++;
-      current.setDate(current.getDate() + 1);
-    }
-    return count;
   }
 
   private async logHistory(caseId: string, fromStatus: CaseStatus | undefined, toStatus: CaseStatus, changedByRole?: string, changedById?: string, remarks?: string, transitionType?: 'standard' | 'override', overrideReason?: string) {
