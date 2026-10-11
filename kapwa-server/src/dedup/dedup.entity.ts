@@ -119,7 +119,7 @@ export class ClientImportRow extends BaseEntity {
   eligibilityCode?: EligibilityCode | null;
 
   /** Operator review: 'waive' (serve anyway) or 'confirm' (keep disqualified). */
-  @Column({ name: 'eligibility_decision', nullable: true })
+  @Column({ name: 'eligibility_decision', type: 'text', nullable: true })
   eligibilityDecision?: 'waive' | 'confirm' | null;
 
   @Column({ name: 'eligibility_decided_by', type: 'uuid', nullable: true })
