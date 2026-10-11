@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
-import { api, REFRESH_TOKEN_KEY } from './api';
+import { api } from './api';
 import { clearDraft } from '../hooks/useIntakeAutosave';
 import { clearPendingIdPhoto } from './intake-id-photo';
 
@@ -32,6 +32,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Track the current user id in a ref so the mount-scoped logout/storage handlers
   // (which close over first-render values) can purge the right user's intake draft.
   const userIdRef = useRef<string | null>(null);
+  /** Guards the logout call against re-entry from the 401-driven event. */
+  const loggingOutRef = useRef(false);
   useEffect(() => {
     userIdRef.current = user?.id ?? null;
   }, [user]);
@@ -100,11 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { mfaRequired: true as const, tempToken: data.tempToken };
     }
     localStorage.setItem('kapwa_token', data.accessToken);
-    // Persist the refresh token too. api.ts reads REFRESH_TOKEN_KEY on the first
-    // 401; when it is missing, refreshToken() takes its "nothing to refresh with"
-    // branch and gives up, so the session died the moment the 1 h access token
-    // expired — every later write returned 401 and a reload bounced to /login.
-    if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+    // The refresh token arrives as an httpOnly cookie, not a body field.
     setToken(data.accessToken);
     setUser(data.user);
     return data.user;
@@ -128,10 +126,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!res.ok) throw new Error('Verification failed');
     const data = await res.json();
     localStorage.setItem('kapwa_token', data.accessToken);
-    // Same as login: every issuance path goes through issueTokens, so this
-    // response carries a refresh token that must be stored or the session
-    // still dies at the access-token TTL.
-    if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
     setToken(data.accessToken);
     setUser(data.user);
     setMfaChallenge(null);
@@ -162,10 +156,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // handoff on a shared field tablet.
     if (userIdRef.current) clearDraft(userIdRef.current);
     clearPendingIdPhoto();
+    // Tell the server first: the tokenVersion bump is what actually ends the
+    // session (the cookie and any copied refresh token stop working at once).
+    // Guarded so the 401-driven logout event cannot re-enter this function.
+    if (!loggingOutRef.current) {
+      loggingOutRef.current = true;
+      void api.post('/auth/logout').catch(() => {}).finally(() => { loggingOutRef.current = false; });
+    }
     localStorage.removeItem('kapwa_token');
-    // Also drop the refresh token: leaving it behind let a background 401
-    // silently mint a new access token for an already logged-out user.
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
     setToken(null);
     setUser(null);
     // Leave the authenticated shell even when the logout came from a background

@@ -222,7 +222,6 @@ describe('uploadWithProgress (XHR)', () => {
 describe('token refresh + retry', () => {
   it('refreshes once on 401 then retries the original request', async () => {
     localStorage.setItem('kapwa_token', 'old');
-    localStorage.setItem('refresh_token', 'rt');
     let calls = 0;
     const fetchMock = vi.fn((url: string) => {
       calls++;
@@ -238,10 +237,9 @@ describe('token refresh + retry', () => {
 
   it('dispatches a logout event when refresh fails', async () => {
     localStorage.setItem('kapwa_token', 'old');
-    localStorage.setItem('refresh_token', 'rt');
     const listener = vi.fn();
     window.addEventListener(KAPWA_AUTH_LOGOUT_EVENT, listener);
-    const fetchMock = vi.fn((url: string) =>
+    const fetchMock = vi.fn((url: string, init?: RequestInit) =>
       String(url).includes('/auth/refresh')
         ? Promise.resolve(jsonRes({}, 401))
         : Promise.resolve(jsonRes({}, 401)),
@@ -249,15 +247,18 @@ describe('token refresh + retry', () => {
     vi.stubGlobal('fetch', fetchMock);
     await expect(api.get('/protected')).rejects.toBeTruthy();
     expect(listener).toHaveBeenCalled();
-    expect(localStorage.getItem('refresh_token')).toBeNull();
+    expect(localStorage.getItem('kapwa_token')).toBeNull();
+    // The refresh call relies on the httpOnly cookie; no token in the body.
+    const refreshCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('/auth/refresh'));
+    expect(refreshCall?.[1]).toMatchObject({ credentials: 'include' });
+    expect(refreshCall?.[1]?.body).toBeUndefined();
   });
 
-  it('ends the session on a 401 when no refresh token is available', async () => {
-    // A stale access token with no refresh token used to be rethrown as a plain
+  it('ends the session on a 401 when the refresh is refused', async () => {
+    // A stale access token plus a refused refresh used to be rethrown as a plain
     // 401, leaving the dead token in place so the app stayed in the
     // authenticated layout until a manual logout.
     localStorage.setItem('kapwa_token', 'stale');
-    localStorage.removeItem('refresh_token');
     const listener = vi.fn();
     window.addEventListener(KAPWA_AUTH_LOGOUT_EVENT, listener);
     const fetchMock = vi.fn(() => Promise.resolve(jsonRes({}, 401)));
@@ -271,7 +272,6 @@ describe('token refresh + retry', () => {
 
   it('ends the session when the retried request is rejected again', async () => {
     localStorage.setItem('kapwa_token', 'old');
-    localStorage.setItem('refresh_token', 'rt');
     const listener = vi.fn();
     window.addEventListener(KAPWA_AUTH_LOGOUT_EVENT, listener);
     // Refresh succeeds but every data request still 401s (account disabled).
@@ -286,7 +286,6 @@ describe('token refresh + retry', () => {
 
     expect(listener).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem('kapwa_token')).toBeNull();
-    expect(localStorage.getItem('refresh_token')).toBeNull();
   });
 
   it('retries GET on transient network errors (TypeError) then succeeds', async () => {

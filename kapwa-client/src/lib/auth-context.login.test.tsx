@@ -72,14 +72,14 @@ describe('AuthProvider — login', () => {
 
     await act(async () => { await captured!.login('a@b.com', 'pass'); });
 
-    // The server issues both tokens from issueTokens; dropping the refresh token
-    // meant refresh() found no `refresh_token`, bailed at "nothing to refresh
-    // with", and the session died the moment the access token expired.
-    expect(localStorage.getItem('refresh_token')).toBe('refresh-1');
+    // The refresh token is no longer stored in JS-reachable state: the server
+    // sets it as an httpOnly cookie, and the login response carries only the
+    // access token. Nothing named refresh_token may appear in localStorage.
+    expect(localStorage.getItem('refresh_token')).toBeNull();
     expect(localStorage.getItem('kapwa_token')).toBe('tok-1');
   });
 
-  it('resolveMfa() persists the refresh token as well as the access token', async () => {
+  it('resolveMfa() keeps the refresh token out of localStorage too', async () => {
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     fetchMock
       .mockResolvedValueOnce({
@@ -109,9 +109,9 @@ describe('AuthProvider — login', () => {
     await act(async () => { await captured!.login('a@b.com', 'pass'); });
     await act(async () => { await captured!.resolveMfa('123456'); });
 
-    // The MFA path is a second issuance route; storing only the access token there
-    // would have left the same expiry hole for every MFA-enrolled account.
-    expect(localStorage.getItem('refresh_token')).toBe('refresh-2');
+    // The MFA path is a second issuance route, and it is the same rule: the
+    // cookie carries the refresh token, nothing lands in localStorage.
+    expect(localStorage.getItem('refresh_token')).toBeNull();
     expect(localStorage.getItem('kapwa_token')).toBe('tok-2');
   });
 

@@ -4,7 +4,6 @@ import { exportFileName } from './export-filename';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 const TOKEN_KEY = 'kapwa_token';
-export const REFRESH_TOKEN_KEY = 'refresh_token';
 export const LOGOUT_REASON_KEY = 'kapwa:logout-reason';
 const TIMEOUT_MS = 10_000;
 const MAX_RETRIES = 3;
@@ -131,6 +130,7 @@ async function rawRequest<T>(
       if (csrf) headers['X-CSRF-Token'] = csrf;
     }
     const res = await fetch(url, {
+      credentials: 'include',
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -162,11 +162,8 @@ let refreshInFlight: Promise<boolean> | null = null;
  * a spurious logout.
  */
 function endSession(reason: string): void {
-  const hadToken = Boolean(
-    localStorage.getItem(TOKEN_KEY) || localStorage.getItem(REFRESH_TOKEN_KEY),
-  );
+  const hadToken = Boolean(localStorage.getItem(TOKEN_KEY));
   localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
   if (!hadToken) return;
   localStorage.setItem(LOGOUT_REASON_KEY, reason);
   window.dispatchEvent(
@@ -176,28 +173,21 @@ function endSession(reason: string): void {
 
 async function refreshToken(): Promise<boolean> {
   if (refreshInFlight) return refreshInFlight;
-  const refresh = localStorage.getItem(REFRESH_TOKEN_KEY);
-  if (!refresh) {
-    // Nothing to refresh with, so the session is already over. End it
-    // explicitly: returning false alone left a dead access token in place and
-    // the app stayed in the authenticated layout until a manual logout.
-    endSession('session_expired');
-    return false;
-  }
   refreshInFlight = (async () => {
     try {
+      // The refresh token lives in an httpOnly cookie the server sets; the
+      // browser attaches it, and `credentials: include` is what makes a
+      // cross-origin dev setup send and store it. JS can no longer read it.
       const res = await fetch(`${API_BASE}/auth/refresh`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: refresh }),
+        credentials: 'include',
       });
       if (!res.ok) {
         endSession('session_expired');
         return false;
       }
-      const data = (await res.json()) as { accessToken?: string; refreshToken?: string };
+      const data = (await res.json()) as { accessToken?: string };
       if (data.accessToken) localStorage.setItem(TOKEN_KEY, data.accessToken);
-      if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
       return true;
     } catch {
       endSession('network_error');
