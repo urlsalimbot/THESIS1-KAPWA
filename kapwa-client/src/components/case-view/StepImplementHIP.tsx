@@ -442,7 +442,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
               <Label htmlFor="intv-program">{t('caseView.implement.programService', 'Program / Service *')}</Label>
               <select
                 id="intv-program"
-                className=""
+                className="form-select"
                 value={form.programId}
                 onChange={e => setForm(f => ({ ...f, programId: e.target.value, interventionType: '' }))}
               >
@@ -451,9 +451,9 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
                 </option>
                 {/* An intervention is a service under a program ASSIGNED to this
                     case (the treatment plan): the select lists the case's
-                    enrollments, and nothing else — no re-picking from the whole
-                    catalog, no ad-hoc service. */}
-                {enrollments.map(e => (
+                    enrollments — A–Z by program name — and nothing else, no
+                    re-picking from the whole catalog, no ad-hoc service. */}
+                {[...enrollments].sort((a, b) => a.programName.localeCompare(b.programName)).map(e => (
                   <option key={e.id} value={`enr:${e.id}`}>{e.programName}</option>
                 ))}
               </select>
@@ -493,7 +493,11 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
                   })}
                 >
                   <option value="">{t('caseView.implement.selectService', '— Select the service rendered —')}</option>
-                  {serviceOptions.map((code) => (
+                  {/* Alphabetical, whatever the source order (enrollment services,
+                      program services or the full catalog). */}
+                  {[...serviceOptions].sort((a, b) =>
+                    t(`interventionType.${a}`, a).localeCompare(t(`interventionType.${b}`, b)),
+                  ).map((code) => (
                     <option key={code} value={code}>{t(`interventionType.${code}`, code)}</option>
                   ))}
                 </select>

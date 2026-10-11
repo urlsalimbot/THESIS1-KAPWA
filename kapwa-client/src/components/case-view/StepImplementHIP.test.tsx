@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import useSWR, { SWRConfig } from 'swr';
 import { StepImplementHIP } from './StepImplementHIP';
 import { formatDate } from '@/lib/format';
@@ -173,6 +174,48 @@ describe('StepImplementHIP adhoc intervention', () => {
       fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
       await screen.findByRole('dialog');
       expect(screen.getByText(/no program enrollment yet/i)).toBeTruthy();
+    });
+
+    it('lists enrolled programs A–Z and each program\x27s services A–Z within', async () => {
+      mockApiGet.mockImplementation(async (key: unknown) => {
+        const k = JSON.stringify(key);
+        if (k.includes('interventions')) return [];
+        if (k.includes('enrollments')) {
+          // Deliberately out of order: the picker must sort, not trust the API.
+          return [
+            { id: 'enr-z', programId: 'p-z', programName: 'Zambales Livelihood', services: ['home_visit', 'livelihood_seed'] },
+            { id: 'enr-a', programId: 'p-a', programName: 'AICS — Assistance to Individuals in Crisis Situation', services: ['burial_assistance', 'financial_grant', 'medical_assistance'] },
+            { id: 'enr-m', programId: 'p-m', programName: 'Medical Assistance Program', services: ['medical_assistance', 'health_checkup'] },
+          ];
+        }
+        if (k.includes('programs')) return [];
+        return [];
+      });
+      render(
+        <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0, provider: () => new Map() }}>
+          <StepImplementHIP caseId="case-1" caseData={{ status: 'enrolled' }} userRole="social_worker" />
+        </SWRConfig>,
+      );
+      fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
+      await screen.findByRole('dialog');
+
+      const programSelect = screen.getAllByRole('combobox')[0] as HTMLSelectElement;
+      const programs = [...programSelect.options].map((o) => o.textContent ?? '').slice(1);
+      expect(programs).toEqual([
+        'AICS — Assistance to Individuals in Crisis Situation',
+        'Medical Assistance Program',
+        'Zambales Livelihood',
+      ]);
+
+      // fireEvent.change never sticks on this native select (React restores the
+      // tracked value), so drive it the way a user would: userEvent.selectOptions.
+      const user = userEvent.setup();
+      await user.selectOptions(programSelect, 'enr:enr-a');
+      const serviceSelect = screen.getByLabelText('Service *') as HTMLSelectElement;
+      const services = [...serviceSelect.options].map((o) => o.textContent ?? '').slice(1);
+      expect(services).toEqual([...services].sort());
+      expect(services[0]).toBe('Burial Assistance');
+      expect(services[services.length - 1]).toBe('Medical Assistance');
     });
 
     it('shows the financial fields only for a financial service', async () => {
