@@ -127,3 +127,84 @@ describe('RowDecisionCard', () => {
     expect(screen.getByText(/no candidate matches/i)).toBeTruthy();
   });
 });
+
+describe('RowDecisionCard — traffic light and keep decision', () => {
+  it('frames a recent-intervention row red and keeps the decision on the card', () => {
+    render(
+      <RowDecisionCard
+        row={{ ...row, eligibilityCode: 'recent_intervention' }}
+        candidates={[personCandidate]}
+        onEligibility={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Served within the last 30 days')).toBeTruthy();
+    expect(screen.getByTestId('candidate-m1').className).toContain('bg-destructive');
+  });
+
+  it('frames a passed-30d match yellow and walks the same-person tree to keep it', async () => {
+    const onDecide = vi.fn().mockResolvedValue(undefined);
+    render(
+      <RowDecisionCard
+        row={{ ...row, eligibility: 'allowed', eligibilityReason: undefined, status: 'retained', eligibilityCode: 'passed_30d' }}
+        candidates={[{ ...personCandidate, status: 'pending', lastDeliveryDate: '2026-08-14' }]}
+        onDecide={onDecide}
+      />,
+    );
+    expect(screen.getByText(/passes the 30-day gate/)).toBeTruthy();
+    expect(screen.getByText(/last served/i)).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: /yes — update the record/i }));
+    await userEvent.click(screen.getByRole('button', { name: /keep — position unchanged/i }));
+    expect(onDecide).toHaveBeenCalledWith('m1', { kind: 'keep_here' });
+  });
+
+  it('requires a reason before moving a same-person row to the bottom', async () => {
+    const onDecide = vi.fn().mockResolvedValue(undefined);
+    render(
+      <RowDecisionCard
+        row={{ ...row, eligibility: 'allowed', status: 'retained', eligibilityCode: 'passed_30d' }}
+        candidates={[{ ...personCandidate, status: 'pending' }]}
+        onDecide={onDecide}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /yes — update the record/i }));
+    const bottom = screen.getByRole('button', { name: /deprioritize — move to bottom/i });
+    expect(bottom).toBeDisabled();
+    await userEvent.type(screen.getByLabelText('Deprioritize reason'), 'Recent service, basic needs covered');
+    expect(bottom).toBeEnabled();
+    await userEvent.click(bottom);
+    expect(onDecide).toHaveBeenCalledWith('m1', { kind: 'deprioritize', remark: 'Recent service, basic needs covered' });
+  });
+
+  it('declares a false positive a new client — no record update', async () => {
+    const onDecide = vi.fn().mockResolvedValue(undefined);
+    render(
+      <RowDecisionCard
+        row={{ ...row, eligibility: 'disqualified', eligibilityCode: 'recent_intervention', eligibilityDecision: undefined }}
+        candidates={[{ ...personCandidate, status: 'pending' }]}
+        onDecide={onDecide}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /no — import as new client/i }));
+    expect(onDecide).toHaveBeenCalledWith('m1', { kind: 'new_client' });
+  });
+
+  it('names the differ-only-in-barangay duplicate pair in phase 1, with keep controls', () => {
+    const dup: DedupCandidate = {
+      id: 'm3', targetType: 'import_row', score: 0.8, status: 'pending',
+      signals: { surnamePhoneticMatch: true, dobMatch: true, simSurname: 0.95, barangayMatch: false },
+      pairedRow: { id: 'r9', rowIndex: 9, lastName: 'Reyes', firstName: 'Pedro', dob: '1988-03-21', barangay: 'Poblacion' },
+    };
+    const onDecide = vi.fn();
+    render(
+      <RowDecisionCard
+        row={{ ...row, eligibility: 'disqualified', eligibilityCode: 'intra_list', eligibilityDecision: undefined }}
+        candidates={[dup]}
+        onDecide={onDecide}
+      />,
+    );
+    expect(screen.getByText(/barangay differs/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /keep this row/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /keep row 9 instead/i })).toBeTruthy();
+  });
+});

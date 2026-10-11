@@ -4,6 +4,7 @@ import useSWR, { useSWRConfig } from 'swr';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Download, FileSpreadsheet, Plus, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
+import i18n from '@/i18n';
 import { api, downloadClientDedupOutput } from '../lib/api';
 import { formatDate } from '../lib/format';
 import { INTERVENTION_TYPES } from '../lib/constants';
@@ -74,6 +75,8 @@ interface FinalizeSummary {
   barangayUpdates: number;
 }
 
+const t = i18n.t.bind(i18n);
+
 const BASELINE_FIELDS = [
   { key: 'lastName', label: 'Last Name column' },
   { key: 'firstName', label: 'First Name column' },
@@ -97,9 +100,9 @@ interface ExtraField {
 type View = { kind: 'list' } | { kind: 'define' };
 
 const STATUS_LABELS: Record<DedupOperation['status'], string> = {
-  defined: 'Defined',
-  reviewing: 'Reviewing',
-  finalized: 'Finalized',
+  defined: t('dedup.statusDefined', 'Defined'),
+  reviewing: t('dedup.statusReviewing', 'Reviewing'),
+  finalized: t('dedup.statusFinalized', 'Finalized'),
 };
 
 const STATUS_VARIANTS: Record<DedupOperation['status'], 'default' | 'secondary' | 'outline'> = {
@@ -173,7 +176,7 @@ function OperationsList({ onDefine, onOpen }: { onDefine: () => void; onOpen: (i
     () => [
       {
         accessorKey: 'source',
-        header: 'Source',
+        header: t('dedup.colSource', 'Source'),
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
@@ -183,7 +186,7 @@ function OperationsList({ onDefine, onOpen }: { onDefine: () => void; onOpen: (i
       },
       {
         accessorKey: 'status',
-        header: 'Status',
+        header: t('dedup.colStatus', 'Status'),
         cell: ({ row }) => (
           <Badge variant={STATUS_VARIANTS[row.original.status]}>
             {STATUS_LABELS[row.original.status]}
@@ -192,7 +195,7 @@ function OperationsList({ onDefine, onOpen }: { onDefine: () => void; onOpen: (i
       },
       {
         id: 'progress',
-        header: 'Progress',
+        header: t('dedup.colProgress', 'Progress'),
         cell: ({ row }) => (
           <div className="text-sm text-muted-foreground">
             <div>{row.original.pending ?? 0} pending</div>
@@ -202,7 +205,7 @@ function OperationsList({ onDefine, onOpen }: { onDefine: () => void; onOpen: (i
       },
       {
         accessorKey: 'createdAt',
-        header: 'Created',
+        header: t('dedup.colCreated', 'Created'),
         cell: ({ row }) => formatDate(row.original.createdAt),
       },
       {
@@ -210,7 +213,7 @@ function OperationsList({ onDefine, onOpen }: { onDefine: () => void; onOpen: (i
         header: '',
         cell: ({ row }) => (
           <Button size="sm" variant="outline" onClick={() => onOpen(row.original.id)}>
-            {row.original.status === 'finalized' ? 'View output' : 'Review'}
+            {row.original.status === 'finalized' ? t('dedup.viewOutput', 'View output') : t('dedup.review', 'Review')}
           </Button>
         ),
       },
@@ -224,8 +227,7 @@ function OperationsList({ onDefine, onOpen }: { onDefine: () => void; onOpen: (i
       description="Import a client list, review candidate matches, and export the priority list."
       actions={
         <Button onClick={onDefine}>
-          <Plus className="mr-2 h-4 w-4" /> New deduplication
-        </Button>
+          <Plus className="mr-2 h-4 w-4" />{t('dedup.newOperation', 'New deduplication')}</Button>
       }
     >
       <DataTable
@@ -266,15 +268,15 @@ function DefineUploadView({
 
   async function handleCreateAndUpload() {
     if (draft.source.trim() === '') {
-      toast.error('Name this list — e.g. the file name or the batch it came from.');
+      toast.error(t('dedup.nameListHint', 'Name this list — e.g. the file name or the batch it came from.'));
       return;
     }
     if (effectiveInterventionType === '') {
-      toast.error('Pick the intervention type this list serves.');
+      toast.error(t('dedup.pickType', 'Pick the intervention type this list serves.'));
       return;
     }
     if (!file) {
-      toast.error('Choose the client list file to upload.');
+      toast.error(t('dedup.pickFile', 'Choose the client list file to upload.'));
       return;
     }
     setBusy(true);
@@ -300,10 +302,10 @@ function DefineUploadView({
       const formData = new FormData();
       formData.append('file', file);
       await api.upload(`/client-dedup/operations/${operationId}/upload`, formData);
-      toast.success('Client list uploaded — review the candidate matches.');
+      toast.success(t('dedup.uploaded', 'Client list uploaded — review the candidate matches.'));
       onUploaded(operationId);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Upload failed');
+      toast.error(err instanceof Error ? err.message : t('dedup.uploadFailed', 'Upload failed'));
     } finally {
       setBusy(false);
     }
@@ -311,13 +313,13 @@ function DefineUploadView({
 
   return (
     <PageShell
-      title="New deduplication"
+      title={t('dedup.newOperation', 'New deduplication')}
       description="An import run is a batch serving: it declares the intervention type, then matches clients against prior servings."
-      backTo={{ label: 'Operations', onClick: onBack }}
+      backTo={{ label: t('dedup.operations', 'Operations'), onClick: onBack }}
     >
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-semibold leading-tight">Define the client list</CardTitle>
+          <CardTitle className="text-lg font-semibold leading-tight">{t('dedup.defineTitle', 'Define the client list')}</CardTitle>
           <CardDescription>
             Match each declared row to the column that carries it in the file. The six baseline
             rows are required; declare any extra field your list includes.
@@ -325,7 +327,7 @@ function DefineUploadView({
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="dedup-source">List name</Label>
+            <Label htmlFor="dedup-source">{t('dedup.listName', 'List name')}</Label>
             <Input
               id="dedup-source"
               value={draft.source}
@@ -335,14 +337,14 @@ function DefineUploadView({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="dedup-type">Intervention type</Label>
+            <Label htmlFor="dedup-type">{t('dedup.interventionType', 'Intervention type')}</Label>
             <Select
               value={draft.interventionType}
               onValueChange={(value) =>
                 setDraft((d) => ({ ...d, interventionType: value, interventionTypeCustom: '' }))
               }
             >
-              <SelectTrigger id="dedup-type" aria-label="Intervention type">
+              <SelectTrigger id="dedup-type" aria-label={t('dedup.interventionType', 'Intervention type')}>
                 <SelectValue placeholder="Pick the intervention this list serves" />
               </SelectTrigger>
               <SelectContent className="max-h-72 overflow-y-auto">
@@ -351,7 +353,7 @@ function DefineUploadView({
                     {typeLabel(code)}
                   </SelectItem>
                 ))}
-                <SelectItem value={OTHER_TYPE}>Others…</SelectItem>
+                <SelectItem value={OTHER_TYPE}>{t('dedup.others', 'Others…')}</SelectItem>
               </SelectContent>
             </Select>
             {draft.interventionType === OTHER_TYPE && (
@@ -379,7 +381,7 @@ function DefineUploadView({
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Extra fields</span>
+              <span className="text-sm font-medium">{t('dedup.extraFields', 'Extra fields')}</span>
               <Button
                 type="button"
                 variant="outline"
@@ -391,13 +393,12 @@ function DefineUploadView({
                   }))
                 }
               >
-                <Plus className="mr-2 h-4 w-4" /> Declare extra field
-              </Button>
+                <Plus className="mr-2 h-4 w-4" />{t('dedup.declareExtra', 'Declare extra field')}</Button>
             </div>
             {draft.extras.map((extra, index) => (
               <div className="grid gap-3 sm:grid-cols-4" key={index}>
                 <Input
-                  placeholder="Field name"
+                  placeholder={t('dedup.fieldName', 'Field name')}
                   value={extra.name}
                   onChange={(e) => setExtra(index, { name: e.target.value })}
                 />
@@ -409,9 +410,9 @@ function DefineUploadView({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="text">Text</SelectItem>
-                    <SelectItem value="date">Date</SelectItem>
-                    <SelectItem value="number">Number</SelectItem>
+                    <SelectItem value="text">{t('dedup.kindText', 'Text')}</SelectItem>
+                    <SelectItem value="date">{t('dedup.kindDate', 'Date')}</SelectItem>
+                    <SelectItem value="number">{t('dedup.kindNumber', 'Number')}</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select
@@ -426,15 +427,15 @@ function DefineUploadView({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Plain field</SelectItem>
-                    <SelectItem value="phone">Phone number</SelectItem>
-                    <SelectItem value="email">Email address</SelectItem>
-                    <SelectItem value="philsys">PhilSys number</SelectItem>
+                    <SelectItem value="none">{t('dedup.kindPlain', 'Plain field')}</SelectItem>
+                    <SelectItem value="phone">{t('dedup.kindPhone', 'Phone number')}</SelectItem>
+                    <SelectItem value="email">{t('dedup.kindEmail', 'Email address')}</SelectItem>
+                    <SelectItem value="philsys">{t('dedup.kindPhilSys', 'PhilSys number')}</SelectItem>
                   </SelectContent>
                 </Select>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Source column"
+                    placeholder={t('dedup.sourceColumn', 'Source column')}
                     value={extra.sourceColumn}
                     onChange={(e) => setExtra(index, { sourceColumn: e.target.value })}
                   />
@@ -442,7 +443,7 @@ function DefineUploadView({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    aria-label="Remove extra field"
+                    aria-label={t('dedup.removeExtra', 'Remove extra field')}
                     onClick={() =>
                       setDraft((d) => ({ ...d, extras: d.extras.filter((_, i) => i !== index) }))
                     }
@@ -455,21 +456,19 @@ function DefineUploadView({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="dedup-file">Client list file</Label>
+            <Label htmlFor="dedup-file">{t('dedup.fileLabel', 'Client list file')}</Label>
             <Input
               id="dedup-file"
               type="file"
               accept=".xlsx,.xls,.csv"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
-            <p className="text-xs text-muted-foreground">
-              Excel or CSV. Rows missing Last Name, First Name, or Birthday are rejected.
-            </p>
+            <p className="text-xs text-muted-foreground">{t('dedup.fileHint', 'Excel or CSV. Rows missing Last Name, First Name, or Birthday are rejected.')}</p>
           </div>
 
           <Button onClick={handleCreateAndUpload} disabled={busy}>
             <Upload className="mr-2 h-4 w-4" />
-            {busy ? 'Uploading…' : createdId ? 'Retry upload' : 'Create & upload'}
+            {busy ? t('dedup.uploading', 'Uploading…') : createdId ? t('dedup.retryUpload', 'Retry upload') : t('dedup.createUpload', 'Create & upload')}
           </Button>
         </CardContent>
       </Card>
@@ -486,16 +485,21 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
   const [reviewFilter, setReviewFilter] = useState<'all' | 'matched' | 'no_match' | 'disqualified'>('all');
+  // The two dedup stages: duplicates inside this import first, then matches
+  // with KAPWA records. Rows can belong to both — the phase just changes what
+  // is listed.
+  const [phase, setPhase] = useState<'all' | 'intra_list' | 'db_match'>('all');
 
   const { data: detail } = useSWR<OperationDetail>(queryKeys.clientDedup.detail(operationId), () =>
     api.get<OperationDetail>(`/client-dedup/operations/${operationId}`),
   );
   const { data: rowsData, isLoading } = useSWR(
-    ['clientDedup', 'rows', operationId, pagination.pageIndex + 1, pagination.pageSize, reviewFilter] as const,
+    ['clientDedup', 'rows', operationId, pagination.pageIndex + 1, pagination.pageSize, reviewFilter, phase] as const,
     () =>
       api.get<RowsResponse>(
         `/client-dedup/operations/${operationId}/rows?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}` +
-          (reviewFilter !== 'all' ? `&filter=${reviewFilter}` : ''),
+          (reviewFilter !== 'all' ? `&filter=${reviewFilter}` : '') +
+          (phase !== 'all' ? `&phase=${phase}` : ''),
       ),
   );
   const rows = rowsData?.data ?? [];
@@ -513,7 +517,7 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
         {},
       );
       setSummary(result);
-      toast.success('Import finalized — the priority list is saved.');
+      toast.success(t('dedup.finalizeToast', 'Import finalized — the priority list is saved.'));
       await refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Finalize failed');
@@ -528,12 +532,12 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
     () => [
       {
         accessorKey: 'rowIndex',
-        header: '#',
+        header: t('dedup.colIndex', '#'),
         cell: ({ row }) => <span className="text-muted-foreground">{row.original.rowIndex}</span>,
       },
       {
         id: 'client',
-        header: 'Client',
+        header: t('dedup.colClient', 'Client'),
         cell: ({ row }) => (
           <div>
             <div className="font-medium">
@@ -548,12 +552,17 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
       },
       {
         id: 'status',
-        header: 'Status',
-        cell: ({ row }) => <RowStatusChip row={row.original} />,
+        header: t('dedup.colStatus', 'Status'),
+        cell: ({ row }) => (
+          <div className="space-y-1">
+            <RowStatusChip row={row.original} />
+            <CodeChip code={row.original.eligibilityCode} />
+          </div>
+        ),
       },
       {
         id: 'remarks',
-        header: 'Remarks',
+        header: t('dedup.colRemarks', 'Remarks'),
         cell: ({ row }) => (
           <span className="text-sm text-muted-foreground">{row.original.remarks ?? '—'}</span>
         ),
@@ -581,28 +590,56 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
   return (
     <div data-testid="review-view">
       <PageShell
-        title={detail?.source ?? 'Review'}
+        title={detail?.source ?? t('dedup.review', 'Review')}
         description={detail ? `${detail.pending} pending · ${detail.totalRows} rows` : undefined}
-        backTo={{ label: 'Operations', onClick: onBack }}
+        backTo={{ label: t('dedup.operations', 'Operations'), onClick: onBack }}
       >
       <div className="flex items-center justify-between gap-3">
-        <Select
-          value={reviewFilter}
-          onValueChange={(value) => {
-            setReviewFilter(value as typeof reviewFilter);
-            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-          }}
-        >
-          <SelectTrigger aria-label="Review filter" className="w-[15rem]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All rows</SelectItem>
-            <SelectItem value="matched">With matches</SelectItem>
-            <SelectItem value="no_match">No match only</SelectItem>
-            <SelectItem value="disqualified">Disqualified — review</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Phase 1 first, phase 2 second — the process the review is named for. */}
+          <div className="flex items-center gap-1 rounded-lg border bg-muted/40 p-1" role="tablist" aria-label="Review phase">
+            {([
+              ['all', t('dedup.filterAll', 'All rows')],
+              ['intra_list', t('dedup.phaseIntra', '1 · Duplicates in this list')],
+              ['db_match', t('dedup.phaseDb', '2 · KAPWA matches')],
+            ] as const).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={phase === key}
+                onClick={() => {
+                  setPhase(key);
+                  setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+                }}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  phase === key
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <Select
+            value={reviewFilter}
+            onValueChange={(value) => {
+              setReviewFilter(value as typeof reviewFilter);
+              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+            }}
+          >
+            <SelectTrigger aria-label="Review filter" className="w-[15rem]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('dedup.filterAll', 'All rows')}</SelectItem>
+              <SelectItem value="matched">{t('dedup.filterMatched', 'With matches')}</SelectItem>
+              <SelectItem value="no_match">{t('dedup.filterNoMatch', 'No match only')}</SelectItem>
+              <SelectItem value="disqualified">{t('dedup.filterDisqualified', 'Disqualified — review')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <span className="text-xs text-muted-foreground">
           {rowsData?.total ?? 0} row{(rowsData?.total ?? 0) === 1 ? '' : 's'}
         </span>
@@ -629,7 +666,7 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
               : undefined
           }
         >
-          {finalizing ? 'Finalizing…' : 'Finalize & save priority list'}
+          {finalizing ? t('dedup.finalizing', 'Finalizing…') : t('dedup.finalize', 'Finalize & save priority list')}
         </Button>
       </div>
 
@@ -659,15 +696,15 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Finalize this import?</AlertDialogTitle>
+            <AlertDialogTitle>{t('dedup.finalizeConfirm', 'Finalize this import?')}</AlertDialogTitle>
             <AlertDialogDescription>
               New clients are saved, retained rows update the existing records, and deprioritized
               rows create nothing. The priority list Excel is written afterwards.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={finalize}>Finalize</AlertDialogAction>
+            <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={finalize}>{t('dedup.finalizeAction', 'Finalize')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -704,30 +741,30 @@ function OutputView({
     <div data-testid="output-view">
       <PageShell
         title={detail?.source ?? 'Finalized import'}
-        description="The priority list is written to Excel — download it below."
-        backTo={{ label: 'Operations', onClick: onBack }}
+        description={t('dedup.outputDesc', 'The priority list is written to Excel — download it below.')}
+        backTo={{ label: t('dedup.operations', 'Operations'), onClick: onBack }}
       >
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-semibold leading-tight">Priority list ready</CardTitle>
+          <CardTitle className="text-lg font-semibold leading-tight">{t('dedup.outputTitle', 'Priority list ready')}</CardTitle>
           <CardDescription>
             {summary
-              ? 'What this batch saved or set aside.'
-              : 'This import was finalized earlier. Download the stored priority list below.'}
+              ? t('dedup.outputSummaryDesc', 'What this batch saved or set aside.')
+              : t('dedup.outputLegacyDesc', 'This import was finalized earlier. Download the stored priority list below.')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {summary && (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Stat label="New records saved" value={summary.created} testId="stat-created" />
-              <Stat label="Existing records updated" value={summary.updated} testId="stat-updated" />
-              <Stat label="Rows deprioritized" value={summary.deprioritized} testId="stat-deprioritized" />
-              <Stat label="Barangay updates" value={summary.barangayUpdates} testId="stat-barangay" />
+              <Stat label={t('dedup.statCreated', 'New records saved')} value={summary.created} testId="stat-created" />
+              <Stat label={t('dedup.statUpdated', 'Existing records updated')} value={summary.updated} testId="stat-updated" />
+              <Stat label={t('dedup.statDeprioritized', 'Rows deprioritized')} value={summary.deprioritized} testId="stat-deprioritized" />
+              <Stat label={t('dedup.statBarangay', 'Barangay updates')} value={summary.barangayUpdates} testId="stat-barangay" />
             </div>
           )}
           <Button onClick={download} disabled={downloading}>
             <Download className="mr-2 h-4 w-4" />
-            {downloading ? 'Preparing…' : 'Download priority list (.xlsx)'}
+            {downloading ? t('dedup.preparing', 'Preparing…') : t('dedup.download', 'Download priority list (.xlsx)')}
           </Button>
         </CardContent>
       </Card>
@@ -749,25 +786,49 @@ function Stat({ label, value, testId }: { label: string; value: number; testId: 
 
 function RowStatusChip({ row }: { row: DedupRow }) {
   // A disqualification IS a deprioritization: until the operator decides, it
-  // reads 'Disqualified — review needed'; afterwards it reads 'Deprioritized'.
+  // reads t('dedup.chipDisq', 'Disqualified — review needed'); afterwards it reads 'Deprioritized'.
   const panReview =
     row.status === 'deprioritized' && row.eligibility === 'disqualified' && !row.eligibilityDecision;
   const config: Record<DedupRow['status'], { label: string; className: string }> = {
-    no_match: { label: 'No match', className: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
-    pending: { label: 'Pending review', className: 'border-slate-200 bg-slate-100 text-slate-700' },
-    retained: { label: 'Retained', className: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
-    primary: { label: 'Primary — kept', className: 'border-sky-200 bg-sky-50 text-sky-700' },
+    no_match: { label: t('dedup.chipNoMatch', 'No match'), className: 'border-success/35 bg-alert-success-bg text-success-foreground' },
+    pending: { label: t('dedup.chipPending', 'Pending review'), className: 'border-border bg-muted text-muted-foreground' },
+    retained: { label: t('dedup.chipRetained', 'Retained'), className: 'border-success/35 bg-alert-success-bg text-success-foreground' },
+    primary: { label: t('dedup.chipPrimary', 'Primary — kept'), className: 'border-badge-review-bg bg-badge-review-bg text-secondary-foreground' },
     deprioritized: {
-      label: panReview ? 'Disqualified — review needed' : 'Deprioritized',
+      label: panReview ? t('dedup.chipDisq', 'Disqualified — review needed') : 'Deprioritized',
       className: panReview
-        ? 'border-rose-200 bg-rose-50 text-rose-800'
-        : 'border-amber-200 bg-amber-50 text-amber-800',
+        ? 'border-destructive/30 bg-destructive/10 text-destructive-foreground'
+        : 'border-warning/35 bg-alert-error-bg text-warning-foreground',
     },
   };
   const { label, className } = config[row.status];
   return (
     <Badge variant="outline" className={className}>
       {label}
+    </Badge>
+  );
+}
+
+/**
+ * The traffic-light chip on every row: the same codes the candidate cards use,
+ * so the list is scannable without opening a card. Rows imported before the
+ * code existed carry none.
+ */
+function CodeChip({ code }: { code?: string | null }) {
+  if (!code) return null;
+  const meta: Record<string, { label: string; className: string }> = {
+    recent_intervention: { label: t('dedup.chipRecent', 'Served recently — review'), className: 'border-destructive/30 bg-destructive/10 text-destructive-foreground' },
+    household_recent: { label: t('dedup.chipHousehold', 'Household served recently — review'), className: 'border-destructive/30 bg-destructive/10 text-destructive-foreground' },
+    intra_list: { label: 'Duplicate in this list', className: 'border-warning/35 bg-alert-error-bg text-warning-foreground' },
+    passed_30d: { label: 'Served earlier', className: 'border-warning/35 bg-alert-error-bg text-warning-foreground' },
+    no_intervention: { label: t('dedup.chipNoIntervention', 'Matched — no prior service'), className: 'border-success/35 bg-alert-success-bg text-success-foreground' },
+    new_client: { label: t('dedup.chipNewClient', 'New client'), className: 'border-success/35 bg-alert-success-bg text-success-foreground' },
+  };
+  const m = meta[code];
+  if (!m) return null;
+  return (
+    <Badge variant="outline" className={m.className}>
+      {m.label}
     </Badge>
   );
 }
@@ -802,8 +863,8 @@ function ExpandedRowPanel({
         });
         toast.success(
           decision === 'waive'
-            ? 'Row waived — it will be served this batch.'
-            : 'Disqualification confirmed — the row stays deprioritized.',
+            ? t('dedup.waiveRow', 'Row waived — it will be served this batch.')
+            : t('dedup.confirmRow', 'Disqualification confirmed — the row stays deprioritized.'),
         );
         await onChanged();
       }}
@@ -812,7 +873,32 @@ function ExpandedRowPanel({
           decision,
           matchId,
         });
-        toast.success(decision === 'waive' ? 'Match waived.' : 'Match confirmed as disqualified.');
+        toast.success(decision === 'waive' ? t('dedup.waiveMatch', 'Match waived.') : t('dedup.confirmMatch', 'Match confirmed as disqualified.'));
+        await onChanged();
+      }}
+      onDecide={async (matchId: string, decision) => {
+        const body =
+          decision.kind === 'keep_row'
+            ? { keep: 'import_row' }
+            : decision.kind === 'keep_other_row'
+              ? { keep: 'other_import_row', remark: decision.remark }
+              : decision.kind === 'new_client'
+                ? { samePerson: false, remark: decision.remark }
+                : decision.kind === 'keep_here'
+                  ? { samePerson: true, position: 'keep' }
+                  : { samePerson: true, position: 'deprioritize', remark: decision.remark };
+        await api.post(`/client-dedup/operations/${operationId}/matches/${matchId}/decision`, body);
+        toast.success(
+          decision.kind === 'keep_row'
+            ? t('dedup.keptRow', 'This row is kept — the pair is set aside.')
+            : decision.kind === 'keep_other_row'
+              ? 'This row is set aside — the other import row is kept.'
+              : decision.kind === 'new_client'
+                ? 'Different person — the row is imported as a new client.'
+                : decision.kind === 'keep_here'
+                  ? 'Same person — the record is updated; the row keeps its position.'
+                  : 'Same person — the row moves to the bottom of the priority list.',
+        );
         await onChanged();
       }}
     />

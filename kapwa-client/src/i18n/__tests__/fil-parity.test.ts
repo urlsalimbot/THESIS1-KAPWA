@@ -137,6 +137,12 @@ const ALLOWED_IDENTICAL = new Set([
   'nav.english',
   'nav.filipino',
   'notifications.toggleAria',
+  // dedup.*: loanwords kept identical in MSWDO usage (Email, Import, Barangay,
+  // PhilSys) — same class as the allowlisted settings.email / beneficiaries.barangay.
+  'dedup.kindEmail',
+  'dedup.kindImport',
+  'dedup.sigBarangay',
+  'dedup.sigPhilSys',
   'pii.fieldAria',
   'programs.docsCount_one',
   'programs.docsCount_other',

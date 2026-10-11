@@ -311,5 +311,20 @@ describe('ClientDedupPage', () => {
     await userEvent.click(screen.getByRole('button', { name: /download priority list/i }));
     await waitFor(() => expect(mockDownload).toHaveBeenCalledWith('op1'));
   });
+
+  it('phases the review — duplicates in this list first, then KAPWA matches', async () => {
+    renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: /review/i }));
+    await screen.findByTestId('review-view');
+
+    const phaseUrls = () => mockApiGet.mock.calls.map((c) => String(c[0]));
+    expect(phaseUrls().some((u) => u.includes('/rows?') && !u.includes('&phase='))).toBe(true);
+
+    await userEvent.click(screen.getByRole('tab', { name: /1 · duplicates in this list/i }));
+    await waitFor(() => expect(phaseUrls().some((u) => u.includes('&phase=intra_list'))).toBe(true));
+
+    await userEvent.click(screen.getByRole('tab', { name: /2 · kapwa matches/i }));
+    await waitFor(() => expect(phaseUrls().some((u) => u.includes('&phase=db_match'))).toBe(true));
+  });
 });
 
