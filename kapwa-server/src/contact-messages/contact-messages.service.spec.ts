@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ContactMessagesService } from './contact-messages.service';
-import { ContactMessage } from './contact-message.entity';
+import { ContactMessage, ContactMessageReply } from './contact-message.entity';
 import { User } from '../auth/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MailerService } from '../common/mailer.service';
@@ -9,6 +9,7 @@ import { MailerService } from '../common/mailer.service';
 describe('ContactMessagesService', () => {
   let svc: ContactMessagesService;
   const repo = { save: jest.fn(), create: jest.fn(), find: jest.fn(), findOne: jest.fn(), count: jest.fn() };
+  const replyRepo = { save: jest.fn(), create: jest.fn(), find: jest.fn(), findOne: jest.fn() };
   const userRepo = { find: jest.fn() };
   const notifications = { createMany: jest.fn() };
   const mailer = { sendMail: jest.fn() };
@@ -19,6 +20,7 @@ describe('ContactMessagesService', () => {
       providers: [
         ContactMessagesService,
         { provide: getRepositoryToken(ContactMessage), useValue: repo },
+        { provide: getRepositoryToken(ContactMessageReply), useValue: replyRepo },
         { provide: getRepositoryToken(User), useValue: userRepo },
         { provide: NotificationsService, useValue: notifications },
         { provide: MailerService, useValue: mailer },
@@ -87,8 +89,9 @@ describe('ContactMessagesService', () => {
 
   it('returns newest-first listing and unread count', async () => {
     repo.find.mockResolvedValue([{ id: 'a' }]);
+    replyRepo.find.mockResolvedValue([]);
     repo.count.mockResolvedValue(3);
-    await expect(svc.findAll()).resolves.toEqual([{ id: 'a' }]);
+    await expect(svc.findAll()).resolves.toEqual([{ id: 'a', replies: [] }]);
     await expect(svc.unreadCount()).resolves.toBe(3);
   });
 
@@ -102,17 +105,23 @@ describe('ContactMessagesService', () => {
       status: 'new' as const,
     };
 
-    it('emails the reply with a re-prefixed subject and marks the message read', async () => {
+    it('emails the reply, records it against the message, and marks it read', async () => {
       repo.findOne.mockResolvedValue({ ...message });
       repo.save.mockImplementation((d) => Promise.resolve(d));
+      replyRepo.create.mockImplementation((d) => d);
+      replyRepo.save.mockImplementation((d) => Promise.resolve(d));
       mailer.sendMail.mockResolvedValue(true);
 
-      const out = await svc.reply('msg-1', 'We can help with that.');
+      const out = await svc.reply('msg-1', 'We can help with that.', 'u-staff');
 
       expect(mailer.sendMail).toHaveBeenCalledWith(
         'juan@example.com',
         'Re: Assistance request',
         'We can help with that.',
+      );
+      // The reply is stored under the message so the inbox shows the thread.
+      expect(replyRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ messageId: 'msg-1', content: 'We can help with that.', repliedBy: 'u-staff' }),
       );
       expect(out.status).toBe('read');
       expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'read' }));
@@ -138,12 +147,32 @@ describe('ContactMessagesService', () => {
       expect(mailer.sendMail).not.toHaveBeenCalled();
     });
 
-    it('surfaces a delivery failure and does not mark the message read', async () => {
+    it('surfaces a delivery failure and records nothing — not the reply, not read', async () => {
       repo.findOne.mockResolvedValue({ ...message });
       mailer.sendMail.mockResolvedValue(false);
 
       await expect(svc.reply('msg-1', 'body')).rejects.toThrow('Could not send the reply email');
+      expect(replyRepo.save).not.toHaveBeenCalled();
       expect(repo.save).not.toHaveBeenCalled();
     });
+  });
+
+  it('returns each message with its stored replies, oldest first, staff named', async () => {
+    repo.find.mockResolvedValue([
+      { id: 'msg-1', name: 'A', email: 'a@x.com', message: 'x', status: 'new' },
+      { id: 'msg-2', name: 'B', email: 'b@x.com', message: 'y', status: 'new' },
+    ]);
+    replyRepo.find.mockResolvedValue([
+      { id: 'r1', messageId: 'msg-1', content: 'First, short reply', repliedBy: 'u1', createdAt: new Date('2026-10-02T01:00:00Z') },
+      { id: 'r2', messageId: 'msg-1', content: 'Second reply', repliedBy: null, createdAt: new Date('2026-10-03T01:00:00Z') },
+    ]);
+    userRepo.find.mockResolvedValue([{ id: 'u1', firstName: 'Ana', middleName: '', lastName: 'Cruz' }]);
+
+    const out = await svc.findAll();
+
+    expect(out[0].replies).toHaveLength(2);
+    expect(out[0].replies[0]).toMatchObject({ content: 'First, short reply', repliedByName: 'Ana Cruz' });
+    expect(out[0].replies[1].repliedByName).toBeNull();
+    expect(out[1].replies).toEqual([]);
   });
 });

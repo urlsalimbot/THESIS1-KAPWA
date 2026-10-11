@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseUUIDPipe, Patch, Post, Body, UseGuards, UseInterceptors, SerializeOptions } from '@nestjs/common';
+import { Controller, Get, Param, ParseUUIDPipe, Patch, Post, Body, Request, UseGuards, UseInterceptors, SerializeOptions } from '@nestjs/common';
 import { ClassSerializerInterceptor } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -7,6 +7,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { ContactMessagesService } from './contact-messages.service';
 import { ReplyContactMessageSchema, ReplyContactMessageInput } from './dto/contact-message.zod';
+import { AuthenticatedRequest } from '../auth/types';
 
 @ApiTags('Contact Messages')
 @Controller('contact-messages')
@@ -40,11 +41,12 @@ export class ContactMessagesController {
 
   @Post(':id/reply')
   @Roles('admin', 'social_worker')
-  @ApiOperation({ summary: 'Reply to a contact message by email (staff)' })
+  @ApiOperation({ summary: 'Reply to a contact message — emailed and recorded (staff)' })
   reply(
     @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodPipe(ReplyContactMessageSchema)) body: ReplyContactMessageInput,
+    @Request() req: AuthenticatedRequest,
   ) {
-    return this.svc.reply(id, body.content);
+    return this.svc.reply(id, body.content, req.user?.id);
   }
 }

@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { ContactMessage } from './contact-message.entity';
+import { ContactMessage, ContactMessageReply } from './contact-message.entity';
 import { CreateContactMessageInput } from './dto/contact-message.zod';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationCategory, NotificationType } from '../notifications/notification.entity';
@@ -13,6 +13,8 @@ export class ContactMessagesService {
   constructor(
     @InjectRepository(ContactMessage)
     private readonly repo: Repository<ContactMessage>,
+    @InjectRepository(ContactMessageReply)
+    private readonly replyRepo: Repository<ContactMessageReply>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     private readonly notifications: NotificationsService,
@@ -52,8 +54,35 @@ export class ContactMessagesService {
     return saved;
   }
 
-  async findAll(): Promise<ContactMessage[]> {
-    return this.repo.find({ order: { createdAt: 'DESC' } });
+  async findAll(): Promise<Array<ContactMessage & { replies: Array<ContactMessageReply & { repliedByName: string | null }> }>> {
+    const messages = await this.repo.find({ order: { createdAt: 'DESC' } });
+    if (messages.length === 0) return [];
+    // One read brings every reply for the page, oldest first — the thread reads
+    // the way the conversation happened.
+    const replies = await this.replyRepo.find({
+      where: { messageId: In(messages.map((m) => m.id)) },
+      order: { createdAt: 'ASC' },
+    });
+    const byMessage = new Map<string, Array<ContactMessageReply & { repliedByName: string | null }>>();
+    for (const r of replies) {
+      const list = byMessage.get(r.messageId) ?? [];
+      list.push(r as ContactMessageReply & { repliedByName: string | null });
+      byMessage.set(r.messageId, list);
+    }
+    // Name the staff who replied — the inbox is the office's own record of who
+    // answered what.
+    const staffIds = [...new Set(replies.map((r) => r.repliedBy).filter(Boolean))] as string[];
+    const staff = staffIds.length
+      ? await this.userRepo.find({ where: { id: In(staffIds) }, select: ['id', 'firstName', 'middleName', 'lastName'] })
+      : [];
+    const nameBy = new Map(staff.map((u) => [u.id, [u.firstName, u.middleName, u.lastName].filter(Boolean).join(' ').trim()]));
+    return messages.map((m) => ({
+      ...m,
+      replies: (byMessage.get(m.id) ?? []).map((r) => ({
+        ...r,
+        repliedByName: r.repliedBy ? (nameBy.get(r.repliedBy) ?? null) : null,
+      })),
+    }));
   }
 
   async unreadCount(): Promise<number> {
@@ -68,14 +97,12 @@ export class ContactMessagesService {
   }
 
   /**
-   * Reply to a public inquiry by email.
-   *
-   * The reply is sent to the address the visitor gave, with the original subject
-   * re-prefixed so it threads on their side. Replying implies reading, so the
-   * message is marked read. A delivery failure (SMTP configured but the send
-   * rejected) surfaces as a 400; the log-only degraded mode is not a failure.
+   * Reply to a public inquiry: the reply is EMAILED to the address the visitor
+   * gave (threaded subject) AND stored under the message, so the staff inbox
+   * shows the conversation. Sent first, stored after — a rejected send records
+   * nothing. Replying implies reading, so the message is marked read.
    */
-  async reply(id: string, content: string): Promise<ContactMessage> {
+  async reply(id: string, content: string, actorId?: string): Promise<ContactMessage> {
     const message = await this.repo.findOne({ where: { id } });
     if (!message) throw new NotFoundException('Contact message not found');
 
@@ -87,6 +114,13 @@ export class ContactMessagesService {
       throw new BadRequestException('Could not send the reply email. Please try again.');
     }
 
+    await this.replyRepo.save(
+      this.replyRepo.create({
+        messageId: message.id,
+        content,
+        repliedBy: actorId ?? null,
+      }),
+    );
     message.status = 'read';
     return this.repo.save(message);
   }

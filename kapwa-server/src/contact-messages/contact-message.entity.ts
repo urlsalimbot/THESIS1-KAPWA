@@ -25,3 +25,25 @@ export class ContactMessage {
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 }
+
+/**
+ * One staff reply to a contact message: the outbound email AND its in-app
+ * record, so the inbox shows the conversation the visitor cannot see.
+ */
+@Entity('contact_message_replies')
+export class ContactMessageReply {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ name: 'message_id', type: 'uuid' })
+  messageId: string;
+
+  @Column({ type: 'text' })
+  content: string;
+
+  @Column({ name: 'replied_by', type: 'uuid', nullable: true })
+  repliedBy?: string | null;
+
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+  createdAt: Date;
+}
