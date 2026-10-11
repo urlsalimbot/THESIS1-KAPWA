@@ -147,13 +147,16 @@ if [ "$MODE" != "frontend" ]; then
   fi
 
   # ── 6. Apply schema ────────────────────────────────────────────────────────
+  # Hard gate, not a warning: a migrate failure means the DB is out of sync with
+  # the code (or at the Postgres 1600-column DDL ceiling) and the API is serving
+  # a schema it cannot evolve. Deploys must be visibly red, not quietly behind.
   step "Apply schema (bootstrap + incremental migrations, no demo data)"
   remote "cd $DEPLOY_PATH && docker exec $API_CONTAINER node dist/database/migrate.js" >/dev/null \
     && log "fresh-boot bootstrap applied (idempotent)" \
-    || log "WARNING: migrate.js failed — run manually: docker exec $API_CONTAINER node dist/database/migrate.js"
+    || die "migrate.js failed — schema out of sync or at the column ceiling; manual: docker exec $API_CONTAINER node dist/database/migrate.js"
   remote "cd $DEPLOY_PATH && docker exec $API_CONTAINER node dist/database/run-migrations.js" >/dev/null \
     && log "incremental migrations applied" \
-    || log "WARNING: incremental migrations failed — run manually: docker exec $API_CONTAINER node dist/database/run-migrations.js"
+    || die "incremental migrations failed — manual: docker exec $API_CONTAINER node dist/database/run-migrations.js"
 
   # ── 7. Seed reference data (idempotent) ────────────────────────────────────
   step "Seed reference data (programs + accounts)"
