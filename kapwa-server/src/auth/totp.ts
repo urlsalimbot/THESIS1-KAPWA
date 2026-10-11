@@ -40,25 +40,30 @@ interface TOTPVerifyOptions {
   window?: number;
 }
 
-export function verifyTOTP({ token, secret, window: w = 1 }: TOTPVerifyOptions): boolean {
+/** The RFC 6238 code for one counter value — exported so the implementation is
+ * pinned to the standard's test vectors, instead of being a private function
+ * no test can reach. */
+export function totpForCounter(secret: string, counter: number): string {
   const secretBuf = base32Decode(secret);
+  const counterBuf = Buffer.alloc(8);
+  counterBuf.writeBigUInt64BE(BigInt(counter));
+  const hmac = crypto.createHmac('sha1', secretBuf).update(counterBuf).digest();
+  const offsetBits = hmac[hmac.length - 1] & 0xf;
+  const code = ((hmac[offsetBits] & 0x7f) << 24) |
+    (hmac[offsetBits + 1] << 16) |
+    (hmac[offsetBits + 2] << 8) |
+    hmac[offsetBits + 3];
+  return String(code % 1000000).padStart(6, '0');
+}
+
+export function verifyTOTP({ token, secret, window: w = 1 }: TOTPVerifyOptions): boolean {
   const now = Math.floor(Date.now() / 1000);
   const counter = Math.floor(now / TOTP_PERIOD_SECONDS);
 
   if (token.length !== TOTP_DIGITS || !/^\d{6}$/.test(token)) return false;
 
   for (let offset = -w; offset <= w; offset++) {
-    const c = counter + offset;
-    const counterBuf = Buffer.alloc(8);
-    counterBuf.writeBigUInt64BE(BigInt(c));
-    const hmac = crypto.createHmac('sha1', secretBuf).update(counterBuf).digest();
-    const offsetBits = hmac[hmac.length - 1] & 0xf;
-    const code = ((hmac[offsetBits] & 0x7f) << 24) |
-      (hmac[offsetBits + 1] << 16) |
-      (hmac[offsetBits + 2] << 8) |
-      hmac[offsetBits + 3];
-    const totp = String(code % 1000000).padStart(6, '0');
-    if (totp === token) return true;
+    if (totpForCounter(secret, counter + offset) === token) return true;
   }
   return false;
 }

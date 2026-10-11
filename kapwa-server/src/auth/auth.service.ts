@@ -29,6 +29,11 @@ function splitFullName(name: string): { firstName?: string; middleName?: string;
   };
 }
 
+export const REFRESH_COOKIE = 'kapwa_refresh';
+export const REFRESH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+/** Pending email-OTP codes die after this many wrong guesses. */
+const OTP_MAX_ATTEMPTS = 5;
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -86,12 +91,15 @@ export class AuthService {
     const code = this.generateEmailOtpCode();
     user.emailOtpCode = this.hashEmailOtp(code);
     user.emailOtpExpiresAt = new Date(Date.now() + this.emailOtpTtlMs());
+    user.emailOtpAttempts = 0;
     await this.userRepo.save(user);
     return this.emailService.sendOtpEmail(user.email, code);
   }
 
-  // Verifies and consumes a pending code. Returns false (without saving) for
-  // a missing, expired, or mismatched code; the caller persists the user.
+  // Verifies and consumes a pending code. Wrong guesses are counted: at
+  // OTP_MAX_ATTEMPTS the code is burned, because 6 digits with no cap is
+  // brute-forceable inside its TTL (the global throttler alone allows ~600
+  // tries per window).
   private async consumeEmailOtp(user: User, code: string): Promise<boolean> {
     if (!user.emailOtpCode || !user.emailOtpExpiresAt) return false;
     if (user.emailOtpExpiresAt.getTime() < Date.now()) {
@@ -100,9 +108,19 @@ export class AuthService {
       await this.userRepo.save(user);
       return false;
     }
-    if (user.emailOtpCode !== this.hashEmailOtp(code)) return false;
+    if (user.emailOtpCode !== this.hashEmailOtp(code)) {
+      user.emailOtpAttempts = (user.emailOtpAttempts ?? 0) + 1;
+      if (user.emailOtpAttempts >= OTP_MAX_ATTEMPTS) {
+        user.emailOtpCode = null as any;
+        user.emailOtpExpiresAt = null as any;
+        user.emailOtpAttempts = 0;
+      }
+      await this.userRepo.save(user);
+      return false;
+    }
     user.emailOtpCode = null as any;
     user.emailOtpExpiresAt = null as any;
+    user.emailOtpAttempts = 0;
     return true;
   }
 
@@ -261,7 +279,7 @@ export class AuthService {
   }
 
   async findByIdWithSecret(id: string): Promise<User | null> {
-    return this.userRepo.findOne({ where: { id }, select: ['id', 'email', 'role', 'firstName', 'middleName', 'lastName', 'nameExtension', 'mfaSecret', 'mfaEnabled', 'mfaMethod', 'emailOtpCode', 'emailOtpExpiresAt', 'password', 'tokenVersion', 'emailVerified', 'isActive'] });
+    return this.userRepo.findOne({ where: { id }, select: ['id', 'email', 'role', 'firstName', 'middleName', 'lastName', 'nameExtension', 'mfaSecret', 'mfaEnabled', 'mfaMethod', 'emailOtpCode', 'emailOtpExpiresAt', 'emailOtpAttempts', 'password', 'tokenVersion', 'emailVerified', 'isActive'] });
   }
 
   async refresh(refreshToken: string) {
@@ -278,13 +296,28 @@ export class AuthService {
       // revoked the refresh tokens of every OTHER session of the same user
       // (a second tab/device was silently logged out at its next access-token
       // expiry). tokenVersion now changes only on explicit revocation
-      // (password/email change), so all sessions refresh independently.
+      // (logout, password/email change), so all sessions refresh independently.
       return this.issueTokens(user);
     } catch (e) {
       this.logger.error('Refresh token validation error:', e);
       if (e instanceof UnauthorizedException) throw e;
       throw new UnauthorizedException('Invalid refresh token');
     }
+  }
+
+  /**
+   * Ends the user's sessions: `tokenVersion` is what every access and refresh
+   * token carries, so one bump invalidates all of them at once.
+   * ceiling: this is logout-everywhere — a phone and a PC log out together.
+   * Upgrade path: one `user_tokens` row per refresh token (hashed) and delete
+   * just that row, when per-device logout is actually needed.
+   */
+  async logout(userId: string): Promise<{ message: string }> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException();
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
+    await this.userRepo.save(user);
+    return { message: 'Logged out' };
   }
 
   async setupMfa(userId: string) {

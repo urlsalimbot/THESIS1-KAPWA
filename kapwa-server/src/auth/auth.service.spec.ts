@@ -176,6 +176,51 @@ describe('AuthService', () => {
     });
   });
 
+  describe('logout', () => {
+    it('bumps tokenVersion so every token of that user dies at once', async () => {
+      const user: any = { id: 'u1', tokenVersion: 4 };
+      (repoMock.findOne as jest.Mock).mockResolvedValue(user);
+      (repoMock.save as jest.Mock).mockImplementation(async (u: any) => u);
+
+      const out = await service.logout('u1');
+
+      expect(user.tokenVersion).toBe(5);
+      expect(out.message).toMatch(/logged out/i);
+    });
+
+    it('refuses when the user is gone', async () => {
+      (repoMock.findOne as jest.Mock).mockResolvedValue(null);
+      await expect(service.logout('nope')).rejects.toThrow();
+    });
+  });
+
+  describe('email OTP attempts', () => {
+    // Six digits inside their TTL are brute-forceable with no cap; the code has
+    // to burn. consumeEmailOtp is private, so this drives it the way the MFA
+    // email verification route does.
+    it('burns the code after five wrong guesses', async () => {
+      const user: any = {
+        id: 'u1',
+        mfaEnabled: true,
+        mfaMethod: 'email',
+        emailOtpCode: require('crypto').createHash('sha256').update('123456').digest('hex'),
+        emailOtpExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        emailOtpAttempts: 0,
+      };
+      (repoMock.findOne as jest.Mock).mockResolvedValue(user);
+      (repoMock.save as jest.Mock).mockImplementation(async (u: any) => u);
+      (jwtMock.verify as jest.Mock).mockReturnValue({ sub: 'u1', mfaChallenge: true, mfaMethod: 'email' });
+
+      for (let i = 0; i < 4; i++) {
+        await expect(service.verifyEmailMfa('temp', '000000')).rejects.toThrow(/invalid or expired/i);
+      }
+      expect(user.emailOtpCode).toBeTruthy(); // still usable on the 5th try
+      await expect(service.verifyEmailMfa('temp', '000000')).rejects.toThrow(/invalid or expired/i);
+      expect(user.emailOtpCode).toBeNull(); // burned
+      expect(user.emailOtpAttempts).toBe(0);
+    });
+  });
+
   describe('login', () => {
     it('should return tokens for non-coordinator without MFA', async () => {
       const user = { id: '1', email: 'a@a.com', role: 'social_worker', fullName: 'Test', emailVerified: true } as User;

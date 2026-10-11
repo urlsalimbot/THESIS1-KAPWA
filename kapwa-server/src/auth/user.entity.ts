@@ -88,6 +88,11 @@ export class User extends BaseEntity {
   @Column({ name: 'email_otp_expires_at', type: 'timestamp', nullable: true })
   emailOtpExpiresAt?: Date | null;
 
+  /** Wrong guesses on the pending email OTP; the code burns at 5. */
+  @Exclude()
+  @Column({ name: 'email_otp_attempts', type: 'int', default: 0 })
+  emailOtpAttempts!: number;
+
   @Column({ name: 'token_version', default: 0 })
   tokenVersion!: number;
 

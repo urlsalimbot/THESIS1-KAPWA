@@ -1,14 +1,35 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Request, UnauthorizedException, BadRequestException, UseInterceptors } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, Res, UseGuards, Request, UnauthorizedException, BadRequestException, UseInterceptors } from '@nestjs/common';
 import { ClassSerializerInterceptor, SerializeOptions } from '@nestjs/common';
-import { AuthService } from './auth.service';
+import type { Response } from 'express';
+import { AuthService, REFRESH_COOKIE, REFRESH_COOKIE_MAX_AGE_MS } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { ZodPipe } from '../common/pipes/zod.pipe';
-import { UserCreateSchema, LoginSchema, RefreshTokenSchema, MfaEnableSchema, MfaDisableSchema, MfaVerifySchema, MfaResendSchema, OtpVerifySchema, UserCreateInput, ChangePasswordSchema, ChangeEmailSchema, ChangePasswordInput, ChangeEmailInput, VerifyEmailSchema, ResendVerificationSchema, ForgotPasswordSchema, ResetPasswordSchema, ConfirmEmailChangeSchema, UpdatePhoneSchema, UpdatePhoneInput, PersonLinkRequestSchema, PersonLinkVerifySchema } from './dto/auth.zod';
+import { UserCreateSchema, LoginSchema, MfaEnableSchema, MfaDisableSchema, MfaVerifySchema, MfaResendSchema, OtpVerifySchema, UserCreateInput, ChangePasswordSchema, ChangeEmailSchema, ChangePasswordInput, ChangeEmailInput, VerifyEmailSchema, ResendVerificationSchema, ForgotPasswordSchema, ResetPasswordSchema, ConfirmEmailChangeSchema, UpdatePhoneSchema, UpdatePhoneInput, PersonLinkRequestSchema, PersonLinkVerifySchema } from './dto/auth.zod';
 import { AuthenticatedRequest } from './types';
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
+
+  /**
+   * The refresh token never goes back in the body: it is set as an httpOnly,
+   * SameSite=Strict cookie, so a script injected into the page cannot read it.
+   * SameSite=Strict is also what protects this route from CSRF (no token
+   * header needed, and the guard already exempts /auth/refresh).
+   */
+  private withRefreshCookie(res: Response, result: Record<string, unknown>): Record<string, unknown> {
+    const { refreshToken, ...rest } = result as { refreshToken?: string };
+    if (refreshToken) {
+      res.cookie(REFRESH_COOKIE, refreshToken, {
+        httpOnly: true,
+        sameSite: 'strict',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: REFRESH_COOKIE_MAX_AGE_MS,
+      });
+    }
+    return rest;
+  }
 
   @Post('register')
   async register(@Body(new ZodPipe(UserCreateSchema)) body: UserCreateInput) {
@@ -17,12 +38,15 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Body(new ZodPipe(LoginSchema)) body: { email: string; password: string }) {
+  async login(
+    @Body(new ZodPipe(LoginSchema)) body: { email: string; password: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const user = await this.authService.validateUser(body.email, body.password);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    return this.authService.login(user);
+    return this.withRefreshCookie(res, await this.authService.login(user) as Record<string, unknown>);
   }
 
   @Get('me')
@@ -35,8 +59,24 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  async refresh(@Body(new ZodPipe(RefreshTokenSchema)) body: { refreshToken: string }) {
-    return this.authService.refresh(body.refreshToken);
+  async refresh(
+    @Request() req: AuthenticatedRequest & { cookies?: Record<string, string> },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    // The cookie is the only path: the browser app never sends a refresh token
+    // in a body, and JS cannot read the cookie. Non-browser callers can POST the
+    // token the way tests used to via the service directly.
+    const token = req.cookies?.[REFRESH_COOKIE];
+    if (!token) throw new UnauthorizedException('No refresh token');
+    return this.withRefreshCookie(res, await this.authService.refresh(token) as Record<string, unknown>);
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async logout(@Request() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+    res.clearCookie(REFRESH_COOKIE, { path: '/' });
+    return this.authService.logout(req.user.id);
   }
 
   @Post('mfa/setup')
@@ -59,8 +99,11 @@ export class AuthController {
 
   @Post('mfa/verify')
   @HttpCode(HttpStatus.OK)
-  async verifyMfa(@Body(new ZodPipe(MfaVerifySchema)) body: { tempToken: string; code: string }) {
-    return this.authService.verifyMfaChallenge(body.tempToken, body.code);
+  async verifyMfa(
+    @Body(new ZodPipe(MfaVerifySchema)) body: { tempToken: string; code: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.withRefreshCookie(res, await this.authService.verifyMfaChallenge(body.tempToken, body.code) as Record<string, unknown>);
   }
 
   @Post('mfa/email/setup')
@@ -83,14 +126,20 @@ export class AuthController {
 
   @Post('mfa/email/verify')
   @HttpCode(HttpStatus.OK)
-  async verifyEmailMfa(@Body(new ZodPipe(MfaVerifySchema)) body: { tempToken: string; code: string }) {
-    return this.authService.verifyEmailMfa(body.tempToken, body.code);
+  async verifyEmailMfa(
+    @Body(new ZodPipe(MfaVerifySchema)) body: { tempToken: string; code: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.withRefreshCookie(res, await this.authService.verifyEmailMfa(body.tempToken, body.code) as Record<string, unknown>);
   }
 
   @Post('login/otp-verify')
   @HttpCode(HttpStatus.OK)
-  async verifyLoginOtp(@Body(new ZodPipe(OtpVerifySchema)) body: { tempToken: string; otpCode: string }) {
-    return this.authService.verifySmsOtp(body.tempToken, body.otpCode);
+  async verifyLoginOtp(
+    @Body(new ZodPipe(OtpVerifySchema)) body: { tempToken: string; otpCode: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.withRefreshCookie(res, await this.authService.verifySmsOtp(body.tempToken, body.otpCode) as Record<string, unknown>);
   }
 
   @Post('change-password')
