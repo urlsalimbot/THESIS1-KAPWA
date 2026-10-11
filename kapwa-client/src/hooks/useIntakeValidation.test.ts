@@ -49,6 +49,23 @@ describe('validatePerson', () => {
     const errs = validatePerson({ ...validPerson, estimatedMonthlyIncome: '0' });
     expect(Object.values(errs)).not.toContain('Monthly income must be 0 or higher');
   });
+
+  it('requires contacts by default (claimant)', () => {
+    const errs = validatePerson({ ...validPerson, cellularNumber: '', email: '' });
+    expect(Object.values(errs)).toContain('Must be a valid 11-digit mobile number starting with 09');
+    expect(Object.values(errs)).toContain('Enter a valid email address');
+  });
+
+  it('allows empty contacts when not required (beneficiary claimed by another)', () => {
+    const errs = validatePerson({ ...validPerson, cellularNumber: '', email: '' }, false);
+    expect(errs).toEqual({});
+  });
+
+  it('still rejects malformed contacts when they are filled in and optional', () => {
+    const errs = validatePerson({ ...validPerson, cellularNumber: '12345', email: 'notanemail' }, false);
+    expect(Object.values(errs)).toContain('Must be a valid 11-digit mobile number starting with 09');
+    expect(Object.values(errs)).toContain('Enter a valid email address');
+  });
 });
 
 describe('validateField', () => {

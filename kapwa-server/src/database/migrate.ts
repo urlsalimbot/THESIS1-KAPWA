@@ -387,6 +387,7 @@ export async function migrate() {
   await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_bc_unique_primary ON beneficiary_claimants(beneficiary_id, claimant_id)`);
 
   await q.query(`ALTER TABLE persons ADD COLUMN IF NOT EXISTS extension TEXT`);
+  await q.query(`ALTER TABLE persons ADD COLUMN IF NOT EXISTS is_indigenous BOOLEAN NOT NULL DEFAULT FALSE`);
 
   await q.query(`CREATE TABLE IF NOT EXISTS person_contacts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
@@ -464,6 +465,7 @@ export async function migrate() {
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS closure_date DATE`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS follow_up_visits JSONB`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS approved_by_name TEXT`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS is_indigenous BOOLEAN NOT NULL DEFAULT FALSE`);
 
   await q.query(`CREATE TABLE IF NOT EXISTS case_requirements (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),

@@ -5,7 +5,7 @@ import { AbacGuard } from '../auth/guards/abac.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
-import { IntakeInputSchema, IntakeInput, MatchCheckInputSchema, MatchCheckInput, ConfirmMatchInputSchema, ConfirmMatchInput } from './dto/intake.zod';
+import { IntakeInputCheckedSchema, IntakeInput, MatchCheckInputSchema, MatchCheckInput, ConfirmMatchInputSchema, ConfirmMatchInput } from './dto/intake.zod';
 import { AuthenticatedRequest } from '../auth/types';
 
 @Controller('intake')
@@ -16,7 +16,7 @@ export class IntakeController {
   @Post()
   @Roles('admin', 'social_worker')
   async submitIntake(
-    @Body(new ZodPipe(IntakeInputSchema)) body: IntakeInput,
+    @Body(new ZodPipe(IntakeInputCheckedSchema)) body: IntakeInput,
     @Request() req: AuthenticatedRequest,
   ) {
     return this.intakeService.submitIntake(body, req.user);

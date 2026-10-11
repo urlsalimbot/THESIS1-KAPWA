@@ -1,4 +1,4 @@
-import { FamilyMemberSchema, IntakeInputSchema } from './intake.zod';
+import { FamilyMemberSchema, IntakeInputCheckedSchema, IntakeInputSchema } from './intake.zod';
 
 describe('PersonSchema (via IntakeInputSchema)', () => {
   const address = { street: '12 Probe St', barangay: 'Bigte', city: 'Norzagaray', province: 'Bulacan', region: 'Region III', postalCode: '3013' };
@@ -8,7 +8,7 @@ describe('PersonSchema (via IntakeInputSchema)', () => {
     email: 'maria@example.test', currentAddress: address, occupation: 'Vendor',
     estimatedMonthlyIncome: 5000,
   };
-  const intake = (over: Record<string, unknown>) => IntakeInputSchema.safeParse({
+  const intake = (over: Record<string, unknown>) => IntakeInputCheckedSchema.safeParse({
     beneficiary: { ...person, ...over },
     claimant: { ...person, ...over, relationshipToBeneficiary: 'Self' },
     case: {},
@@ -28,6 +28,51 @@ describe('PersonSchema (via IntakeInputSchema)', () => {
 
   it('rejects a dob more than 120 years ago', () => {
     expect(intake({ dob: '1800-01-01' }).success).toBe(false);
+  });
+
+  it('accepts a self-claim with contact details', () => {
+    expect(intake({}).success).toBe(true);
+  });
+
+  it('rejects a self-claim without beneficiary contact details', () => {
+    const r = IntakeInputCheckedSchema.safeParse({
+      beneficiary: { ...person, cellularNumber: '', email: '' },
+      claimant: { ...person, cellularNumber: '', email: '', relationshipToBeneficiary: 'Self' },
+      case: {},
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      const msgs = r.error.issues.map(i => i.message);
+      expect(msgs).toContain('Contact details are required when the beneficiary is the claimant');
+    }
+  });
+
+  it('accepts a beneficiary without contact details when a separate claimant claims for them', () => {
+    const r = IntakeInputCheckedSchema.safeParse({
+      beneficiary: { ...person, cellularNumber: '', email: '' },
+      claimant: {
+        ...person, surname: 'Dela Cruz', firstName: 'Elena',
+        relationshipToBeneficiary: 'Mother', cellularNumber: '09170000000', email: 'elena@example.test',
+      },
+      case: {},
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('rejects a claimant without contact details', () => {
+    const r = IntakeInputCheckedSchema.safeParse({
+      beneficiary: { ...person, cellularNumber: '', email: '' },
+      claimant: {
+        ...person, surname: 'Dela Cruz', firstName: 'Elena',
+        relationshipToBeneficiary: 'Mother', cellularNumber: '', email: '',
+      },
+      case: {},
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('accepts an isIndigenous flag on the beneficiary', () => {
+    expect(intake({ isIndigenous: true }).success).toBe(true);
   });
 });
 

@@ -95,6 +95,11 @@ export function StepAssessment({
         <div className="px-4 py-3 flex items-center gap-2">
           <Stethoscope size={16} className="text-primary" />
           <h3 className="text-sm font-semibold">{t('caseView.assessment.assessmentDiagnosis', 'Assessment & Diagnosis')}</h3>
+          {caseData?.isIndigenous && (
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+              {t('caseView.assessment.ipFlag', 'Indigenous Person (IP)')}
+            </span>
+          )}
           {readOnly && <Lock size={14} className="text-muted-foreground" />}
         </div>
         <Separator />

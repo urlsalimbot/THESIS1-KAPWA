@@ -22,7 +22,11 @@ const AddressSchema = z.object({
   psgcCode: z.string().optional(),
 });
 
-const PersonSchema = z.object({
+const PHONE_REGEX = /^09\d{9}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Everything but the contact details, shared by both person shapes.
+const PersonBaseSchema = z.object({
   surname: z.string().min(1, 'Surname is required'),
   firstName: z.string().min(1, 'First name is required'),
   middleName: z.string().optional(),
@@ -32,13 +36,40 @@ const PersonSchema = z.object({
   age: z.number().int().positive().optional(),
   placeOfBirth: z.string().min(1, 'Place of birth is required'),
   civilStatus: z.enum(['Single', 'Married', 'Widowed', 'Separated', 'Annulled']),
-  cellularNumber: z.string().regex(/^09\d{9}$/, 'Must be a valid 11-digit PH mobile number starting with 09'),
-  email: z.string().email('Email is required').min(1, 'Email is required'),
   currentAddress: AddressSchema,
   philsysNumber: z.string().optional(),
   occupation: z.string().min(1, 'Occupation is required'),
   estimatedMonthlyIncome: z.number().nonnegative('Monthly income must be 0 or higher'),
+  isIndigenous: z.boolean().optional(),
 });
+
+/** Contact details for a person who must be reachable — the claimant always is. */
+const PersonContactSchema = {
+  cellularNumber: z.string().regex(PHONE_REGEX, 'Must be a valid 11-digit PH mobile number starting with 09'),
+  email: z.string().email('Email is required').min(1, 'Email is required'),
+};
+
+/**
+ * The beneficiary's own contact details are optional when someone else claims
+ * for them — the claimant is the reachable person. Filled-in values still have
+ * to be well-formed.
+ */
+const PersonOptionalContactSchema = PersonBaseSchema.extend({
+  cellularNumber: z.string().refine(v => v === '' || PHONE_REGEX.test(v), 'Must be a valid 11-digit PH mobile number starting with 09'),
+  email: z.string().refine(v => v === '' || EMAIL_REGEX.test(v), 'Enter a valid email address'),
+});
+
+export const PersonSchema = PersonBaseSchema.extend(PersonContactSchema);
+
+/** The client mirrors the beneficiary into the claimant slot for a self-claim. */
+function isSelfClaim(
+  b: { surname: string; firstName: string; middleName?: string; gender: string; dob: string },
+  c: { surname: string; firstName: string; middleName?: string; gender: string; dob: string },
+): boolean {
+  return b.surname === c.surname && b.firstName === c.firstName
+    && (b.middleName ?? '') === (c.middleName ?? '')
+    && b.gender === c.gender && b.dob === c.dob;
+}
 
 export const FamilyMemberSchema = z.object({
   surname: z.string().min(1, 'Surname is required'),
@@ -60,7 +91,7 @@ export const SourceReferralSchema = z.object({
 });
 
 export const IntakeInputSchema = z.object({
-  beneficiary: PersonSchema,
+  beneficiary: PersonOptionalContactSchema,
   claimant: PersonSchema.extend({
     relationshipToBeneficiary: z.string().min(1, 'Relationship to beneficiary is required'),
   }),
@@ -76,6 +107,21 @@ export const IntakeInputSchema = z.object({
     assignedWorkerId: z.string().optional(),
   }),
 });
+
+/** Self-claims mirror the beneficiary into the claimant slot; the beneficiary is then the reachable person, so their contact details become mandatory. */
+function requireSelfClaimContacts(data: z.infer<typeof IntakeInputSchema>, ctx: z.RefinementCtx): void {
+  if (isSelfClaim(data.beneficiary, data.claimant)) {
+    if (!data.beneficiary.cellularNumber) {
+      ctx.addIssue({ code: 'custom', path: ['beneficiary', 'cellularNumber'], message: 'Contact details are required when the beneficiary is the claimant' });
+    }
+    if (!data.beneficiary.email) {
+      ctx.addIssue({ code: 'custom', path: ['beneficiary', 'email'], message: 'Contact details are required when the beneficiary is the claimant' });
+    }
+  }
+}
+
+/** IntakeInputSchema + the self-claim contact rule; what the pipes actually parse with. */
+export const IntakeInputCheckedSchema = IntakeInputSchema.superRefine(requireSelfClaimContacts);
 
 export type FamilyMemberInput = z.infer<typeof FamilyMemberSchema>;
 
@@ -160,7 +206,7 @@ export const ConfirmMatchInputSchema = IntakeInputSchema.extend({
   // double case. Defaults to the pre-existing behaviour (create, or reuse a
   // recent case).
   createCase: z.boolean().optional(),
-});
+}).superRefine(requireSelfClaimContacts);
 export type ConfirmMatchInput = z.infer<typeof ConfirmMatchInputSchema>;
 
 export interface ConfirmMatchResponse {

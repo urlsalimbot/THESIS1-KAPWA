@@ -18,6 +18,9 @@ export class Person extends BaseEntity {
   @Column({ name: 'civil_status', nullable: true }) civilStatus?: string;
   @Column({ nullable: true }) occupation?: string;
   @Column({ name: 'estimated_monthly_income', type: 'decimal', precision: 12, scale: 2, nullable: true }) estimatedMonthlyIncome?: number;
+  /** Indigenous Person (IP) declaration captured at intake; carried to the case. */
+  @Column({ name: 'is_indigenous', type: 'boolean', default: false })
+  isIndigenous!: boolean;
   @Column({ type: 'tsvector', name: 'search_vector', select: false, nullable: true }) searchVector?: string;
 
   @Exclude()

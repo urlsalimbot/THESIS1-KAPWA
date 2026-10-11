@@ -58,6 +58,16 @@ describe('StepAssessment — step completion gate and save flow', () => {
     mockPatch.mockResolvedValue({});
   });
 
+  it('shows the IP badge when the case carries the indigenous-person flag', () => {
+    renderAssessment(filledCaseData({ isIndigenous: true }));
+    expect(screen.getByText('Indigenous Person (IP)')).toBeTruthy();
+  });
+
+  it('omits the IP badge when the flag is not set', () => {
+    renderAssessment(filledCaseData());
+    expect(screen.queryByText('Indigenous Person (IP)')).toBeNull();
+  });
+
   it('has no Save button of its own — the seal bar below the card is the submit', () => {
     renderAssessment(filledCaseData(), { problemsPresented: 'x', socialWorkerAssessment: 'y', clientCategory: 'z' });
     expect(screen.queryByRole('button', { name: /Save Assessment/ })).toBeNull();

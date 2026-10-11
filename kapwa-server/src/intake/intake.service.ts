@@ -363,6 +363,7 @@ export class IntakeService {
     civilStatus?: string; cellularNumber?: string; email?: string;
     currentAddress?: Record<string, string>;
     philsysNumber?: string; occupation?: string; estimatedMonthlyIncome?: number;
+    isIndigenous?: boolean;
   }): Partial<Person> & { surname: string; firstName: string; gender: string; dob: Date } {
     return {
       surname: data.surname,
@@ -376,6 +377,7 @@ export class IntakeService {
       philsysNumber: data.philsysNumber || undefined,
       occupation: data.occupation,
       estimatedMonthlyIncome: data.estimatedMonthlyIncome,
+      isIndigenous: data.isIndigenous ?? false,
     };
   }
 
@@ -581,13 +583,15 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
       // 8. Generate controlNo
       const controlNo = await this.casesService.generateControlNo();
 
-      // 9. Create Case
+      // 9. Create Case — carries the beneficiary's IP flag so the assessment
+      // step sees it without re-asking.
       const caseEntity = this.caseRepo.create({
         controlNo,
         beneficiaryId: savedBeneficiary.id,
         renewalOfCaseId: data.renewalOfCaseId,
         status: CaseStatus.ENROLLED,
         serviceRequested: data.case.serviceRequested,
+        isIndigenous: benPerson.isIndigenous ?? false,
         assignedWorkerId: caller && isCaseWorker(caller.role) ? caller.id : undefined,
       });
       const savedCase = await queryRunner.manager.save(caseEntity);

@@ -198,6 +198,10 @@ export class Case extends BaseEntity {
   @Column({ name: 'case_category', nullable: true })
   caseCategory?: string;
 
+  /** Carried from the beneficiary's person record when the intake succeeds. */
+  @Column({ name: 'is_indigenous', type: 'boolean', default: false })
+  isIndigenous!: boolean;
+
   // Crisis mode: worker-toggled; ad-hoc services (no program) then carry their
   // intervention-anchored documentary minimums instead of none.
   @Column({ name: 'crisis_mode', type: 'boolean', default: false })

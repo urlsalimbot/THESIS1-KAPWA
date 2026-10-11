@@ -56,6 +56,7 @@ interface PersonForm {
   gender: string; dob: string; placeOfBirth: string; civilStatus: string;
   cellularNumber: string; email: string; currentAddress: AddressFields;
   philsysNumber: string; occupation: string; estimatedMonthlyIncome: string;
+  isIndigenous: boolean;
 }
 
 /** Which referral this intake was handed off from, if any. */
@@ -72,6 +73,7 @@ const emptyPerson = (): PersonForm => ({
   gender: '', dob: '', placeOfBirth: '', civilStatus: '',
   cellularNumber: '', email: '', currentAddress: { ...emptyAddress },
   philsysNumber: '', occupation: '', estimatedMonthlyIncome: '',
+  isIndigenous: false,
 });
 
 function FieldError({ error, children }: { error: string; children: React.ReactNode }) {
@@ -83,10 +85,10 @@ function FieldError({ error, children }: { error: string; children: React.ReactN
   );
 }
 
-function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge = true }: {
+function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge = true, contactRequired = true }: {
   prefix: string; form: PersonForm; onChange: (field: string, value: string) => void;
   onAddressChange: (type: 'currentAddress', field: string, value: string) => void;
-  errors: ValidationErrors; showAge?: boolean;
+  errors: ValidationErrors; showAge?: boolean; contactRequired?: boolean;
 }) {
   const { t } = useTranslation();
   function getError(field: string): string {
@@ -170,14 +172,14 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
         </FieldError>
         <FieldError error={getError('cellularNumber')}>
           <div className="space-y-2">
-            <label className="text-sm font-medium">{t('intake.cellularNumber', 'Cellular Number *')}</label>
-            <Input type="tel" required value={form.cellularNumber} onChange={e => onChange('cellularNumber', e.target.value.replace(/\D/g, ''))} aria-label={`${prefix}-cellularNumber`} className={getError('cellularNumber') ? 'border-destructive' : ''} />
+            <label className="text-sm font-medium">{contactRequired ? t('intake.cellularNumber', 'Cellular Number *') : t('intake.cellularNumberOptional', 'Cellular Number')}</label>
+            <Input type="tel" required={contactRequired} value={form.cellularNumber} onChange={e => onChange('cellularNumber', e.target.value.replace(/\D/g, ''))} aria-label={`${prefix}-cellularNumber`} className={getError('cellularNumber') ? 'border-destructive' : ''} />
           </div>
         </FieldError>
         <FieldError error={getError('email')}>
           <div className="space-y-2">
-            <label className="text-sm font-medium">{t('intake.email', 'Email *')}</label>
-            <Input type="email" value={form.email} onChange={e => onChange('email', e.target.value)} aria-label={`${prefix}-email`} placeholder="email@example.com" className={getError('email') ? 'border-destructive' : ''} />
+            <label className="text-sm font-medium">{contactRequired ? t('intake.email', 'Email *') : t('intake.emailOptional', 'Email')}</label>
+            <Input type="email" required={contactRequired} value={form.email} onChange={e => onChange('email', e.target.value)} aria-label={`${prefix}-email`} placeholder="email@example.com" className={getError('email') ? 'border-destructive' : ''} />
           </div>
         </FieldError>
       </div>
@@ -456,8 +458,10 @@ export function IntakePage() {
       region: beneficiary.currentAddress.region,
       postalCode: beneficiary.currentAddress.postalCode,
     };
-    return Object.keys(validatePerson(flat)).length === 0;
-  }, [beneficiary]);
+    // Contact details only gate the probe when the beneficiary is the
+    // claimant — the probe still runs without them for someone else's claim.
+    return Object.keys(validatePerson(flat, beneficiaryIsClaimant)).length === 0;
+  }, [beneficiary, beneficiaryIsClaimant]);
 
   function matchCheckPayload() {
     return {
@@ -571,6 +575,7 @@ export function IntakePage() {
       philsysNumber: form.philsysNumber || undefined,
       occupation: form.occupation,
       estimatedMonthlyIncome: parseFloat(form.estimatedMonthlyIncome.replace(/,/g, '')) || 0,
+      isIndigenous: form.isIndigenous,
     };
   }
 
@@ -696,7 +701,9 @@ export function IntakePage() {
     });
 
     const benVals = toValidate(beneficiary);
-    const rawBenErrs = validatePerson(benVals);
+    // The beneficiary's contacts are only mandatory for self-claims; a
+    // separate claimant is the reachable person.
+    const rawBenErrs = validatePerson(benVals, beneficiaryIsClaimant);
     const benErrs: ValidationErrors = {};
     for (const [k, v] of Object.entries(rawBenErrs)) benErrs[`ben.${k}`] = v;
     setBenErrors(benErrs);
@@ -813,7 +820,19 @@ export function IntakePage() {
             </div>
           </div>
           <div className="p-6">
-            <PersonFields prefix="ben" form={beneficiary} onChange={updateBeneficiary} onAddressChange={updateBenAddress} errors={benErrors} />
+            <PersonFields prefix="ben" form={beneficiary} onChange={updateBeneficiary} onAddressChange={updateBenAddress} errors={benErrors} contactRequired={beneficiaryIsClaimant} />
+            <div className="mt-4 flex items-center gap-2">
+              <input
+                id="ben-is-indigenous"
+                type="checkbox"
+                checked={beneficiary.isIndigenous}
+                onChange={e => setBeneficiary(prev => ({ ...prev, isIndigenous: e.target.checked }))}
+                className="rounded border-input text-primary"
+              />
+              <label htmlFor="ben-is-indigenous" className="text-sm text-muted-foreground cursor-pointer select-none">
+                {t('intake.isIndigenous', 'Is an Indigenous Person (IP)')}
+              </label>
+            </div>
           </div>
         </div>
 
