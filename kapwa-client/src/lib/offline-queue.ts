@@ -32,6 +32,41 @@ function saveQueue(queue: QueuedChange[]): void {
   localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
 }
 
+/** Synced entries are kept only for a week — the panel's history, not storage. */
+const SYNCED_KEEP_MS = 7 * 24 * 60 * 60 * 1000;
+
+function pruneSynced(queue: QueuedChange[]): QueuedChange[] {
+  return queue.filter(
+    (c) => c.status !== 'synced' || Date.now() - new Date(c.clientUpdatedAt).getTime() < SYNCED_KEEP_MS,
+  );
+}
+
+/**
+ * Multi-tab safety: each read-modify-write of the queue (or the version
+ * vectors) runs under one lock. Without it, two tabs on the same office PC
+ * overwrite each other's queued changes, because every write puts the whole
+ * array back. `navigator.locks` is native (Chrome 69+, Safari 15.4+); the
+ * fallback keeps jsdom/node test runs and old browsers on the previous
+ * behaviour rather than erroring.
+ * ceiling: a browser without `navigator.locks` still races across tabs.
+ */
+async function withQueueLock<T>(fn: () => T | Promise<T>): Promise<T> {
+  const locks = (navigator as Navigator & {
+    locks?: { request: (name: string, cb: () => T | Promise<T>) => Promise<T> };
+  }).locks;
+  if (!locks?.request) return fn();
+  return locks.request('kapwa-sync-queue', fn);
+}
+
+/** Read-modify-write of the whole queue, locked and pruned. */
+async function mutateQueue(fn: (queue: QueuedChange[]) => void): Promise<void> {
+  await withQueueLock(() => {
+    const queue = loadQueue();
+    fn(queue);
+    saveQueue(pruneSynced(queue));
+  });
+}
+
 function loadVersions(): VersionVector[] {
   const stored = localStorage.getItem(VERSION_KEY);
   return stored ? JSON.parse(stored) : [];
@@ -47,12 +82,9 @@ export async function queueChange(
   operation: SyncOperation,
   payload: Record<string, unknown>
 ): Promise<QueuedChange> {
-  const queue = loadQueue();
   const now = new Date().toISOString();
-  const id = crypto.randomUUID();
-
   const change: QueuedChange = {
-    id,
+    id: crypto.randomUUID(),
     tableName: table,
     recordId,
     operation,
@@ -63,8 +95,7 @@ export async function queueChange(
     retryCount: 0
   };
 
-  queue.push(change);
-  saveQueue(queue);
+  await mutateQueue((queue) => { queue.push(change); });
   await incrementLocalVersion(table);
 
   return change;
@@ -77,67 +108,64 @@ export async function getPendingChanges(): Promise<QueuedChange[]> {
 }
 
 export async function markSynced(id: string, serverVersion: number): Promise<void> {
-  const queue = loadQueue();
-  const change = queue.find(c => c.id === id);
-  if (change) {
+  let tableName: string | null = null;
+  await mutateQueue((queue) => {
+    const change = queue.find(c => c.id === id);
+    if (!change) return;
     change.status = 'synced';
     if (change.serverVersion === 0) change.serverVersion = serverVersion;
-    saveQueue(queue);
-    await updateServerVersion(change.tableName, serverVersion);
-  }
+    tableName = change.tableName;
+  });
+  if (tableName) await updateServerVersion(tableName, serverVersion);
 }
 
 export async function markConflict(id: string, error: string): Promise<void> {
-  const queue = loadQueue();
-  const change = queue.find(c => c.id === id);
-  if (change) {
+  await mutateQueue((queue) => {
+    const change = queue.find(c => c.id === id);
+    if (!change) return;
     change.status = 'conflict';
     change.lastError = error;
     change.retryCount++;
-    saveQueue(queue);
-  }
+  });
 }
 
 export async function markFailed(id: string, error: string): Promise<void> {
-  const queue = loadQueue();
-  const change = queue.find(c => c.id === id);
-  if (change) {
+  await mutateQueue((queue) => {
+    const change = queue.find(c => c.id === id);
+    if (!change) return;
     change.status = 'failed';
     change.lastError = error;
-    saveQueue(queue);
-  }
+  });
 }
 
 
 
 
 export async function incrementLocalVersion(table: string): Promise<void> {
-  const versions = loadVersions();
-  let vec = versions.find(v => v.tableName === table);
-  
-  if (vec) {
-    vec.localVersion++;
-  } else {
-    vec = { tableName: table, localVersion: 1, serverVersion: 0, lastSyncedAt: null };
-    versions.push(vec);
-  }
-  
-  saveVersions(versions);
+  await withQueueLock(() => {
+    const versions = loadVersions();
+    const vec = versions.find(v => v.tableName === table);
+    if (vec) {
+      vec.localVersion++;
+    } else {
+      versions.push({ tableName: table, localVersion: 1, serverVersion: 0, lastSyncedAt: null });
+    }
+    saveVersions(versions);
+  });
 }
 
 export async function updateServerVersion(table: string, version: number): Promise<void> {
-  const versions = loadVersions();
-  let vec = versions.find(v => v.tableName === table);
-  
-  if (vec) {
-    vec.serverVersion = version;
-    vec.lastSyncedAt = new Date().toISOString();
-  } else {
-    vec = { tableName: table, localVersion: 0, serverVersion: version, lastSyncedAt: new Date().toISOString() };
-    versions.push(vec);
-  }
-  
-  saveVersions(versions);
+  await withQueueLock(() => {
+    const versions = loadVersions();
+    const vec = versions.find(v => v.tableName === table);
+    if (vec) {
+      vec.serverVersion = version;
+      vec.lastSyncedAt = new Date().toISOString();
+    } else {
+      versions.push({ tableName: table, localVersion: 0, serverVersion: version, lastSyncedAt: new Date().toISOString() });
+    }
+    saveVersions(versions);
+  });
 }
 
 export async function getAllVersionVectors(): Promise<VersionVector[]> {

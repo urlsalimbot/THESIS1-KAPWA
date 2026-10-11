@@ -50,7 +50,7 @@ function FamilyMemberNode({ data }: NodeProps<FamilyFlowNode>) {
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-foreground">{member.fullName}</p>
-        <p className="truncate text-[10px] text-muted-foreground">
+        <p className="truncate text-xs text-muted-foreground">
           {member.relationship} &middot; {member.age} {t('family.yrs', 'yrs')}
         </p>
         {member.statusIncome && (
@@ -79,7 +79,7 @@ function LayerLabel({ data }: NodeProps<FamilyFlowNode>) {
     grandchildren: 'Grandchildren',
   }[layerKey] ?? '');
   return (
-    <div className="pointer-events-none select-none whitespace-nowrap text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+    <div className="pointer-events-none select-none whitespace-nowrap text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
       {caption}
     </div>
   );
@@ -139,21 +139,21 @@ export function FamilyTreeGraph({ members, primary }: FamilyTreeGraphProps) {
         <div className="rounded-lg border border-border bg-card p-3 text-sm animate-in fade-in slide-in-from-top-1 duration-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className={`flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold ${selectedMember.isPrimary ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+              <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${selectedMember.isPrimary ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
                 {selectedMember.fullName.charAt(0)}
               </div>
               <div>
                 <p className="text-xs font-semibold text-foreground">
                   {selectedMember.fullName}
-                  {selectedMember.isPrimary && <span className="ml-1.5 text-[10px] text-primary font-medium">({t('family.primary', 'Primary')})</span>}
+                  {selectedMember.isPrimary && <span className="ml-1.5 text-xs text-primary font-medium">({t('family.primary', 'Primary')})</span>}
                 </p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {selectedMember.relationship} &middot; {selectedMember.age} {t('family.yrs', 'yrs')}
                 </p>
               </div>
             </div>
             {selectedMember.statusIncome && (
-              <span className="text-[11px] text-muted-foreground">{selectedMember.statusIncome}</span>
+              <span className="text-xs text-muted-foreground">{selectedMember.statusIncome}</span>
             )}
           </div>
         </div>

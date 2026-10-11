@@ -17,7 +17,7 @@ export function SyncStatusBanner({ pendingCount, isOnline, onOpenQueue }: SyncSt
 
   const bgClass = isOnline
     ? 'bg-primary/50 text-white'
-    : 'bg-amber-500 text-white';
+    : 'bg-warning text-white';
 
   return (
     <button

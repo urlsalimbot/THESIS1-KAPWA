@@ -190,7 +190,7 @@ export function MfaSetupPage() {
                 </a>
               </div>
 
-              <div className="rounded bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-700">
+              <div className="rounded bg-alert-error-bg border border-warning/35 p-3 text-sm text-warning-foreground">
                 <strong>{t('auth.mfaStep2', 'Step 2:')}</strong> {t('auth.mfaStep2Body', 'Enter the 6-digit code from your authenticator app to verify setup.')}
               </div>
 
@@ -215,10 +215,10 @@ export function MfaSetupPage() {
           {step === 'done' && mfaEnabled && (
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <CheckCircle className="text-emerald-600" size={32} />
+                <CheckCircle className="text-success" size={32} />
                 <div>
-                  <p className="font-medium text-emerald-800">{t('auth.mfaEnabled', 'MFA is enabled')}</p>
-                  <p className="text-xs text-emerald-600">{mfaMethod === 'email' ? t('auth.mfaEnabledEmail', 'Your account is now protected with email verification codes.') : t('auth.mfaEnabledDesc', 'Your account is now protected with TOTP.')}</p>
+                  <p className="font-medium text-success-foreground">{t('auth.mfaEnabled', 'MFA is enabled')}</p>
+                  <p className="text-xs text-success">{mfaMethod === 'email' ? t('auth.mfaEnabledEmail', 'Your account is now protected with email verification codes.') : t('auth.mfaEnabledDesc', 'Your account is now protected with TOTP.')}</p>
                 </div>
               </div>
               <Button variant="outline" onClick={() => { setStep('idle'); setCode(''); }} aria-label={t('auth.done', 'Done')}>

@@ -132,7 +132,7 @@ export function AdminPage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="users" className="mt-6 space-y-4 [@media(max-height:820px)]:mt-4">
+        <TabsContent value="users" className="mt-6 space-y-4 short:mt-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <div className="rounded-full bg-primary/50/10 p-2">
@@ -147,13 +147,13 @@ export function AdminPage() {
           <UsersPanel />
         </TabsContent>
 
-        <TabsContent value="sync" className="space-y-4 mt-6 [@media(max-height:820px)]:mt-4">
+        <TabsContent value="sync" className="space-y-4 mt-6 short:mt-4">
           <Card className="shadow-sm border-border/60">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="rounded-full bg-amber-500/10 p-2">
-                    <Activity size={18} className="text-amber-600" />
+                  <div className="rounded-full bg-warning p-2">
+                    <Activity size={18} className="text-warning" />
                   </div>
                   <CardTitle className="text-sm">{t('admin.syncQueueMonitor', 'Sync Queue Monitor')}</CardTitle>
                 </div>
@@ -182,7 +182,7 @@ export function AdminPage() {
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5">{t('admin.device', 'Device: {{id}}…', { id: e.deviceId.slice(0, 8) })}</p>
                           {e.conflictReason && (
-                            <p className="text-xs text-amber-600 mt-0.5 flex items-center gap-1">
+                            <p className="text-xs text-warning mt-0.5 flex items-center gap-1">
                               <AlertCircle size={12} />
                               {e.conflictReason}
                             </p>
@@ -201,13 +201,13 @@ export function AdminPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="audit" className="space-y-4 mt-6 [@media(max-height:820px)]:mt-4">
+        <TabsContent value="audit" className="space-y-4 mt-6 short:mt-4">
           <Card className="shadow-sm border-border/60">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <div className="rounded-full bg-slate-500/10 p-2">
-                    <Database size={18} className="text-slate-600" />
+                  <div className="rounded-full bg-muted-foreground/25 p-2">
+                    <Database size={18} className="text-muted-foreground" />
                   </div>
                   <CardTitle className="text-sm">{t('admin.auditLogTitle', 'Audit Log (RA 10173 / COA)')}</CardTitle>
                 </div>

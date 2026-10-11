@@ -61,20 +61,20 @@ function BarangayMix({ entries }: { entries: BarangayMixEntry[] }) {
   const max = Math.max(1, ...entries.map(entry => mixCountValue(entry.count) ?? 0));
   return (
     <div className="pt-1">
-      <p className="text-[10px] font-medium text-muted-foreground">{t('analytics.clustering.barangayMix', 'Barangay mix')}</p>
+      <p className="text-xs font-medium text-muted-foreground">{t('analytics.clustering.barangayMix', 'Barangay mix')}</p>
       <div className="space-y-0.5">
         {entries.map(entry => {
           const count = mixCountValue(entry.count);
           return (
             <div key={entry.barangay} className="flex items-center gap-1">
-              <span className="w-20 truncate text-[10px] text-muted-foreground" title={entry.barangay}>{entry.barangay}</span>
+              <span className="w-20 truncate text-xs text-muted-foreground" title={entry.barangay}>{entry.barangay}</span>
               <span className="h-1.5 flex-1 rounded bg-muted">
                 <span
                   className="block h-1.5 rounded bg-primary"
                   style={{ width: `${count != null ? (count / max) * 100 : 0}%` }}
                 />
               </span>
-              <span className="w-6 text-right text-[10px] font-medium">{count != null ? count : '—'}</span>
+              <span className="w-6 text-right text-xs font-medium">{count != null ? count : '—'}</span>
             </div>
           );
         })}
@@ -178,7 +178,7 @@ export function ClusteringTab({ filters }: { filters: Record<string, unknown> })
               >
                 <span className="flex items-center justify-between">
                   <span>{formatDateTime(run.createdAt)}</span>
-                  <Badge variant={run.status === 'completed' ? 'default' : 'destructive'} className="text-[10px]">{run.status}</Badge>
+                  <Badge variant={run.status === 'completed' ? 'default' : 'destructive'} className="text-xs">{run.status}</Badge>
                 </span>
                 <span className="text-muted-foreground">
                   {t('analytics.clustering.chosenK', 'Chosen k')}: {(run.params as { chosen_k?: number })?.chosen_k ?? '—'}
@@ -220,7 +220,7 @@ export function ClusteringTab({ filters }: { filters: Record<string, unknown> })
                 <CardHeader className="pb-1">
                   <CardTitle className="flex items-center justify-between text-sm">
                     <span>{t('analytics.clustering.clusters', 'Segments')} #{cluster.clusterIndex + 1}</span>
-                    <Badge variant="secondary" className="text-[10px]">{cellValueText(cluster.size)}</Badge>
+                    <Badge variant="secondary" className="text-xs">{cellValueText(cluster.size)}</Badge>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-1 text-xs">

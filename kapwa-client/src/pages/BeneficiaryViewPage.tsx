@@ -118,7 +118,7 @@ function isInactiveMember(m: FamilyMember): boolean {
 function FamilyField({ label, value, className }: { label: string; value: string; className?: string }) {
   return (
     <div className={`min-w-0 ${className || ''}`}>
-      <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
       <dd className="text-xs text-foreground truncate">{value}</dd>
     </div>
   );
@@ -414,7 +414,7 @@ export function BeneficiaryViewPage() {
       backTo={{ label: t("beneficiaries.back", "Back"), onClick: () => navigate("/beneficiaries") }}
     >
       {assignSuccess && (
-        <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-sm font-medium text-emerald-700 mb-3">
+        <div className="rounded-lg bg-alert-success-bg border border-success/35 p-3 text-sm font-medium text-success-foreground mb-3">
           {assignSuccess}
         </div>
       )}
@@ -486,7 +486,7 @@ export function BeneficiaryViewPage() {
                               {m.isPrimary && <span className="rounded bg-primary/20 px-1 py-0.5 text-[9px] font-medium text-primary leading-none">{t("beneficiaries.primary", "Primary")}</span>}
                               {inactive && <Badge variant="outline" className="px-1 py-0 text-[9px] leading-none text-muted-foreground">{t("beneficiaries.inactive", "Inactive")}</Badge>}
                             </div>
-                            <p className="text-[11px] text-muted-foreground truncate">{m.relationship} &middot; {m.age} {t("beneficiaries.yearsShort", "yrs")}</p>
+                            <p className="text-xs text-muted-foreground truncate">{m.relationship} &middot; {m.age} {t("beneficiaries.yearsShort", "yrs")}</p>
                           </div>
                         </div>
                         {!m.isPrimary && (
@@ -548,7 +548,7 @@ export function BeneficiaryViewPage() {
                   <label htmlFor="deactivate-reason" className="text-xs font-medium text-muted-foreground">{t("beneficiaries.reason", "Reason")}</label>
                   <select
                     id="deactivate-reason"
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="" form-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
                     value={deactivateReason}
                     onChange={(e) => setDeactivateReason(e.target.value)}
                   >
@@ -619,7 +619,7 @@ export function BeneficiaryViewPage() {
 
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[10px] text-muted-foreground">{c.date}</span>
+                        <span className="text-xs text-muted-foreground">{c.date}</span>
                         <StatusBadge status={c.status} />
                       </div>
                     </div>
@@ -644,7 +644,7 @@ export function BeneficiaryViewPage() {
                       <div className="flex items-center justify-between gap-2">
                         <p className="font-medium text-foreground truncate">{intv.serviceName}</p>
                         {intv.deliveryDate && (
-                          <span className="text-[10px] text-muted-foreground shrink-0">{formatDate(intv.deliveryDate)}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">{formatDate(intv.deliveryDate)}</span>
                         )}
                       </div>
                       {intv.interventionType && (
@@ -755,7 +755,7 @@ export function BeneficiaryViewPage() {
                 {cardSummary && (
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {Object.entries(cardSummary.byCategory).map(([cat, count]) => (
-                      <Badge key={cat} variant="secondary" className="text-[10px]">
+                      <Badge key={cat} variant="secondary" className="text-xs">
                         {count}
                         <span className="ml-0.5 font-normal">
                           {cat === 'case_service' ? t("beneficiaries.cardCase", "Case") : cat === 'referral' ? t("beneficiaries.cardReferrals", "Referrals") : cat === 'community_service' ? t("beneficiaries.cardCommunity", "Community") : t("beneficiaries.cardSeminars", "Seminars")}

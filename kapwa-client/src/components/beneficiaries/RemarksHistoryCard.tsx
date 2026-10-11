@@ -35,10 +35,10 @@ const KIND_LABELS: Record<RemarkKind, string> = {
 };
 
 const KIND_CLASSES: Record<RemarkKind, string> = {
-  import: 'border-sky-200 bg-sky-50 text-sky-700',
-  decision: 'border-amber-200 bg-amber-50 text-amber-800',
-  barangay_update: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  manual: 'border-slate-200 bg-slate-100 text-slate-700',
+  import: 'border-badge-review-bg bg-badge-review-bg text-secondary-foreground',
+  decision: 'border-warning/35 bg-alert-error-bg text-warning-foreground',
+  barangay_update: 'border-success/35 bg-alert-success-bg text-success-foreground',
+  manual: 'border-border bg-muted text-muted-foreground',
 };
 
 const EMPTY: RemarksResponse = { data: [], total: 0, page: 1, limit: 50 };
@@ -109,7 +109,7 @@ export function RemarksHistoryCard({ beneficiaryId }: { beneficiaryId: string })
                   <Badge variant="outline" className={KIND_CLASSES[r.kind]}>
                     {KIND_LABELS[r.kind]}
                   </Badge>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     {formatDateTime(r.createdAt)}
                   </span>
                 </div>

@@ -171,7 +171,7 @@ export function StaffView({ staff, statuses, myUserId }: StaffViewProps) {
                   <p className="text-xs text-muted-foreground">{t('team.staff.noStatus')}</p>
                 )}
                 {status?.updatedAt && (
-                  <p className="truncate text-[10px] text-muted-foreground/70">
+                  <p className="truncate text-xs text-muted-foreground/70">
                     {formatUpdatedAt(status.updatedAt)}
                   </p>
                 )}
@@ -213,7 +213,7 @@ export function StaffView({ staff, statuses, myUserId }: StaffViewProps) {
                 <p className="text-lg font-bold" data-testid={`stat-${def.key}`}>
                   {selected[typeKey(def)]}
                 </p>
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   {t(def.labelKey)}
                 </p>
               </div>

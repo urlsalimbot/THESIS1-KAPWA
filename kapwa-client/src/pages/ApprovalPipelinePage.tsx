@@ -10,6 +10,7 @@ import { PageShell } from '@/components/PageShell';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/StatusBadge';
 
 /**
  * One row of `GET /cases`, as this page reads it.
@@ -92,8 +93,8 @@ export function ApprovalPipelinePage() {
   // default `/cases` list is paginated to the newest 10 and ordered by
   // createdAt, so later cases were routinely missing from their columns.
   const pipelinePhases = [
-    { key: 'phase-in', label: t('approvals.phaseIn', 'Phase-In'), statuses: ['enrolled', 'assessed', 'in_review'], steps: [0], dot: 'bg-amber-400' },
-    { key: 'implementation', label: t('approvals.phaseImplementation', 'Implementation'), statuses: ['active'], steps: [1, 2], dot: 'bg-emerald-400' },
+    { key: 'phase-in', label: t('approvals.phaseIn', 'Phase-In'), statuses: ['enrolled', 'assessed', 'in_review'], steps: [0], dot: 'bg-warning' },
+    { key: 'implementation', label: t('approvals.phaseImplementation', 'Implementation'), statuses: ['active'], steps: [1, 2], dot: 'bg-success' },
     { key: 'phase-out', label: t('approvals.phaseOut', 'Phase-Out'), statuses: ['transitioning', 'closed'], steps: [3, 4], dot: 'bg-primary/40' },
   ];
   const grouped = pipelinePhases.map(phase => ({
@@ -149,10 +150,7 @@ export function ApprovalPipelinePage() {
                         </span>
                         <p className="text-xs text-muted-foreground mt-0.5">{c.controlNo}</p>
                       </div>
-                      <Badge variant={
-                        c.status === 'in_review' ? 'secondary' :
-                        c.status === 'active' ? 'default' : 'secondary'
-                      }>{statusLabel(t, c.status)}</Badge>
+                      <StatusBadge status={c.status} label={statusLabel(t, c.status)} />
                     </div>
                     {c.serviceRequested && (
                       <div className="flex flex-wrap gap-1 mb-2">
@@ -177,14 +175,14 @@ export function ApprovalPipelinePage() {
                         <span
                           key={si}
                           title={done ? t('approvals.stepDone', 'Step done') : t('approvals.stepPending', 'Step pending')}
-                          className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${
+                          className={`flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold ${
                             done ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
                           }`}
                         >
                           {done ? <Check size={11} /> : si + 1}
                         </span>
                       ))}
-                      <span className="text-[10px] text-muted-foreground ml-1">{t('approvals.caseProgress', 'Case progress')}</span>
+                      <span className="text-xs text-muted-foreground ml-1">{t('approvals.caseProgress', 'Case progress')}</span>
                     </div>
 
                     {/* Transitions (approve / disburse) are performed in the

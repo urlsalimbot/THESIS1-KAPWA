@@ -39,11 +39,11 @@ export function AccessCard({ beneficiary, services, printable = false }: AccessC
         </p>
       </div>
       {services.length === 0 ? (
-        <p className="mt-4 text-sm text-gray-400 italic">{t('cards.noServices', 'No services logged yet')}</p>
+        <p className="mt-4 text-sm text-muted-foreground italic">{t('cards.noServices', 'No services logged yet')}</p>
       ) : (
         <table className="service-log w-full mt-4 text-sm">
           <thead>
-            <tr className="text-xs font-bold uppercase tracking-wider text-gray-500">
+            <tr className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               <th className="text-left py-2 pr-2">#</th>
               <th className="text-left py-2 pr-2">{t('cards.date', 'Date')}</th>
               <th className="text-left py-2 pr-2">{t('cards.service', 'Service')}</th>

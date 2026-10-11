@@ -140,7 +140,7 @@ export function CreateIrfPage() {
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
             <Shield size={14} className="text-accent" />
             <h2 className="text-sm font-semibold text-foreground">{t('irf.narration', 'Narration')}</h2>
-            <span className="text-[11px] text-muted-foreground ml-auto">{t('irf.encrypted', 'AES-256 encrypted at rest')}</span>
+            <span className="text-xs text-muted-foreground ml-auto">{t('irf.encrypted', 'AES-256 encrypted at rest')}</span>
           </div>
           <div className="p-4">
             <textarea

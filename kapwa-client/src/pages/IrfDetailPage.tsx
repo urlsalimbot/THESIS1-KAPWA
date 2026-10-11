@@ -19,11 +19,11 @@ import { formatDate } from '../lib/format';
 const DISPOSITION_STATES = ['Under Investigation', 'Referred to PNP', 'Referred to WCPD', 'Dismissed', 'Closed'];
 
 const DISPOSITION_COLORS: Record<string, string> = {
-  'Under Investigation': 'bg-amber-100 text-amber-800 border-amber-300',
+  'Under Investigation': 'bg-alert-error-bg text-warning-foreground border-warning/35',
   'Referred to PNP': 'bg-primary/10 text-primary border-primary/30',
   'Referred to WCPD': 'bg-violet-100 text-violet-800 border-violet-300',
   'Dismissed': 'bg-destructive/10 text-destructive border-destructive/30',
-  'Closed': 'bg-emerald-100 text-emerald-800 border-emerald-300',
+  'Closed': 'bg-alert-success-bg text-success-foreground border-success/35',
 };
 
 const LEGAL_BASIS_OPTIONS = IRF_LEGAL_BASIS_OPTIONS;
@@ -67,7 +67,7 @@ function PersonDetailCard({ title, data, icon, redacted }: {
               <span className="text-muted-foreground">{icon}</span>
               <h2 className="text-sm font-semibold">{title}</h2>
             </div>
-            <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+            <span className="inline-flex items-center gap-1 rounded bg-alert-error-bg px-2 py-0.5 text-xs font-medium text-warning-foreground">
               <EyeOff size={10} /> {t('irf.redacted', 'Redacted')}
             </span>
           </div>
@@ -75,7 +75,7 @@ function PersonDetailCard({ title, data, icon, redacted }: {
           <div className="px-4 py-8 flex flex-col items-center justify-center text-muted-foreground gap-2">
             <EyeOff size={20} className="opacity-40" />
             <p className="text-xs">{t('irf.personDetailsProtected', 'Person details are protected')}</p>
-            <p className="text-[10px] opacity-60">{t('irf.provideLegalBasis', 'Provide legal basis to unlock')}</p>
+            <p className="text-xs opacity-60">{t('irf.provideLegalBasis', 'Provide legal basis to unlock')}</p>
           </div>
         </div>
       );
@@ -147,18 +147,18 @@ function DispositionStepper({ states, currentIndex, currentState }: {
             <div className="flex flex-col items-center gap-2">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2
                 ${isCurrent ? 'bg-primary text-primary-foreground border-primary ring-2 ring-primary/30'
-                  : isPast ? 'bg-emerald-500 text-white border-emerald-500'
+                  : isPast ? 'bg-success text-white border-success/35'
                   : 'bg-muted text-muted-foreground border-border'}`}>
                 {isPast && !isCurrent ? '✓' : i + 1}
               </div>
               <span className={`text-xs font-medium whitespace-nowrap px-2 py-0.5 rounded
                 ${isCurrent ? 'bg-primary/10 text-primary font-semibold'
-                  : isPast ? 'text-emerald-700'
+                  : isPast ? 'text-success-foreground'
                   : 'text-muted-foreground'}`}>{state}</span>
             </div>
             {i < states.length - 1 && (
               <div className={`w-8 md:w-10 h-0.5 mx-1 mt-[-1.25rem]
-                ${isPast && !isCurrent ? 'bg-emerald-400' : isCurrent ? 'bg-primary/40' : 'bg-border'}`} />
+                ${isPast && !isCurrent ? 'bg-success' : isCurrent ? 'bg-primary/40' : 'bg-border'}`} />
             )}
           </div>
         );
@@ -174,12 +174,12 @@ function UnmaskBanner({ legalBasis, onLegalBasisChange, legalBasisRef, onLegalBa
 }) {
   const { t } = useTranslation();
   return (
-    <div className="rounded-lg border border-dashed border-amber-300 bg-amber-50/50 px-4 py-3">
+    <div className="rounded-lg border border-dashed border-warning/35 bg-alert-error-bg px-4 py-3">
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="flex items-center gap-2 text-amber-700 shrink-0">
+        <div className="flex items-center gap-2 text-warning-foreground shrink-0">
           <EyeOff size={16} />
           <span className="text-sm font-medium">{t('irf.personDetailsRedacted', 'Person details redacted')}</span>
-          <span className="text-xs text-amber-500">{t('irf.unlockHint', '— select legal basis & ref # to unlock both persons')}</span>
+          <span className="text-xs text-warning">{t('irf.unlockHint', '— select legal basis & ref # to unlock both persons')}</span>
         </div>
         <div className="flex flex-wrap items-center gap-2 ml-auto">
           <LegalBasisFields value={legalBasis} onChange={onLegalBasisChange}
@@ -210,10 +210,10 @@ function NarrationSection({ irf, decryptedNarration, showDecryptForm, legalBasis
           <VictimNarrationField value={decryptedNarration} readOnly isEncrypted={false} />
         ) : irf.encryptedNarration ? (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+            <div className="flex items-center gap-2 text-sm text-warning-foreground bg-alert-error-bg border border-warning/35 rounded-md px-3 py-2">
               <Lock size={14} />
               <span className="font-medium">{t('irf.aesEncrypted', 'AES-256 Encrypted')}</span>
-              <span className="text-amber-500">{t('irf.legalBasisToDecrypt', '— legal basis required to decrypt')}</span>
+              <span className="text-warning">{t('irf.legalBasisToDecrypt', '— legal basis required to decrypt')}</span>
             </div>
             {showDecryptForm ? (
               <div className="space-y-3">
@@ -414,7 +414,7 @@ export function IrfDetailPage() {
               <div><span className="text-muted-foreground text-xs">{t('irf.reported', 'Reported')}</span><p className="font-medium">{irf.datetimeReported ? formatDate(irf.datetimeReported) : '—'}</p></div>
               <div><span className="text-muted-foreground text-xs">{t('irf.incident', 'Incident')}</span><p className="font-medium">{irf.datetimeIncident ? formatDate(irf.datetimeIncident) : '—'}</p></div>
               {irf.dismissalReason && (
-                <><Separator /><div><span className="text-muted-foreground text-xs">{t('irf.dismissalReason', 'Dismissal Reason')}</span><p className="font-medium text-amber-700">{irf.dismissalReason}</p></div></>
+                <><Separator /><div><span className="text-muted-foreground text-xs">{t('irf.dismissalReason', 'Dismissal Reason')}</span><p className="font-medium text-warning-foreground">{irf.dismissalReason}</p></div></>
               )}
             </div>
           </div>

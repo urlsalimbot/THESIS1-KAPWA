@@ -127,16 +127,16 @@ export function FourPsCompliancePage() {
                           </p>
                         </div>
                         <div className="flex shrink-0 flex-wrap items-center gap-1.5">
-                          {m.age != null && <Badge variant="outline" className="text-[10px]">{t('fourps.age', '{{age}} y/o', { age: m.age })}</Badge>}
-                          {m.isPrimary && <Badge variant="secondary" className="text-[10px]">{t('fourps.primary', 'Primary')}</Badge>}
+                          {m.age != null && <Badge variant="outline" className="text-xs">{t('fourps.age', '{{age}} y/o', { age: m.age })}</Badge>}
+                          {m.isPrimary && <Badge variant="secondary" className="text-xs">{t('fourps.primary', 'Primary')}</Badge>}
                           {conditions.length > 0 ? (
                             conditions.map(condition => (
-                              <Badge key={condition} variant="outline" className="border-primary/30 text-[10px] text-primary">
+                              <Badge key={condition} variant="outline" className="border-primary/30 text-xs text-primary">
                                 {condition}
                               </Badge>
                             ))
                           ) : (
-                            <span className="text-[10px] text-muted-foreground">
+                            <span className="text-xs text-muted-foreground">
                               {t('fourps.noConditions', 'No conditions apply')}
                             </span>
                           )}

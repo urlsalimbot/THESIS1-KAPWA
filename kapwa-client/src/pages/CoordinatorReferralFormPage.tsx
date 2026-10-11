@@ -76,7 +76,7 @@ export function CoordinatorReferralFormPage() {
     <PageShell title={t('coordinator.newReferral', 'New Referral')} description={t('coordinator.formDescription', 'Refer a barangay resident to MSWDO for assessment.')}>
       {error && (
         <div className="mb-4 rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive flex items-center gap-2">
-          <span className="size-4 rounded-full bg-destructive/20 flex items-center justify-center text-[10px] font-bold shrink-0">!</span> {error}
+          <span className="size-4 rounded-full bg-destructive/20 flex items-center justify-center text-xs font-bold shrink-0">!</span> {error}
         </div>
       )}
 

@@ -121,7 +121,7 @@ export function SearchResultsPage() {
                     <div className="flex-1 min-w-0 space-y-1.5">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-semibold">{item.fullName}</p>
-                        {item.category && <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">{item.category}</span>}
+                        {item.category && <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">{item.category}</span>}
                       </div>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                         {item.controlNo && <span>{item.controlNo}</span>}

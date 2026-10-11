@@ -389,7 +389,7 @@ function ProfileTab() {
                   aria-label={t('settings.phoneNumber', 'Phone Number')}
                 />
               </div>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {t('settings.phoneHint', 'Used for SMS notifications and login OTP verification')}
               </p>
             </div>
@@ -400,7 +400,7 @@ function ProfileTab() {
           </div>
           {displayPhone && (
             <div className="mt-3 rounded-lg bg-muted/30 border border-border/60 px-3 py-2 text-sm text-muted-foreground flex items-center gap-2">
-              <CheckCircle size={14} className="text-emerald-500 shrink-0" />
+              <CheckCircle size={14} className="text-success shrink-0" />
               {t('settings.current', 'Current:')} <span className="font-medium text-foreground">{displayPhone}</span>
             </div>
           )}
@@ -648,7 +648,7 @@ function SecurityTab() {
 
               {qrDataUrl && (
                 <div className="flex justify-center">
-                  <div className="rounded-xl border bg-white p-3 shadow-sm">
+                  <div className="rounded-xl border bg-card p-3 shadow-sm">
                     <img src={qrDataUrl} alt={t('settings.mfaQrAlt', 'MFA QR Code')} className="w-48 h-48" />
                   </div>
                 </div>
@@ -666,9 +666,9 @@ function SecurityTab() {
               </div>
 
               {otpauth && (
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 space-y-1">
+                <div className="rounded-lg border border-success/35 bg-alert-success-bg p-4 text-sm text-success-foreground space-y-1">
                   <p className="font-medium">{t('settings.mfaStep2', 'Step 2: Verify setup')}</p>
-                  <p className="text-emerald-600">{t('settings.mfaEnterCode', 'Enter the 6-digit code from your authenticator app below.')}</p>
+                  <p className="text-success">{t('settings.mfaEnterCode', 'Enter the 6-digit code from your authenticator app below.')}</p>
                 </div>
               )}
 
@@ -696,12 +696,12 @@ function SecurityTab() {
 
           {step === 'done' && mfaEnabled && (
             <div className="flex flex-col items-center gap-4 py-4">
-              <div className="rounded-full bg-emerald-100 p-5">
-                <CheckCircle className="text-emerald-600" size={36} />
+              <div className="rounded-full bg-alert-success-bg p-5">
+                <CheckCircle className="text-success" size={36} />
               </div>
               <div className="text-center">
-                <p className="font-medium text-emerald-800">{t('settings.mfaEnabled', 'MFA is enabled')}</p>
-                <p className="text-sm text-emerald-600 mt-1">{t('settings.mfaEnabledDesc', 'Your account is now protected with TOTP.')}</p>
+                <p className="font-medium text-success-foreground">{t('settings.mfaEnabled', 'MFA is enabled')}</p>
+                <p className="text-sm text-success mt-1">{t('settings.mfaEnabledDesc', 'Your account is now protected with TOTP.')}</p>
               </div>
               <Button variant="outline" onClick={() => { setStep('idle'); setCode(''); }}>
                 {t('settings.done', 'Done')}
@@ -870,7 +870,7 @@ function NotificationsTab() {
                         aria-label={t('settings.toggleAria', '{{category}} {{channel}}', { category: categoryLabels[cat] ? t(categoryLabels[cat].key, categoryLabels[cat].label) : cat, channel: channelLabels[channel] ? t(channelLabels[channel].key, channelLabels[channel].label) : channel })}
                       >
                         <span
-                          className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm ring-0 transition-transform ${
+                          className={`inline-block h-5 w-5 rounded-full bg-card shadow-sm ring-0 transition-transform ${
                             isOptedIn(channel, cat) ? 'translate-x-[1.125rem]' : 'translate-x-[0.125rem]'
                           }`}
                         />

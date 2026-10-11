@@ -57,7 +57,7 @@ export function DataTablePagination<TData>({
   if (!pageSizeOptions.includes(pageSize)) pageSizeOptions.unshift(pageSize);
 
   return (
-    <div className="flex items-center justify-between gap-4 px-2 py-4 [@media(max-height:820px)]:py-2">
+    <div className="flex items-center justify-between gap-4 px-2 py-4 short:py-2">
       <div className="flex items-center gap-3">
         <p className="text-sm text-muted-foreground">
           {t('dataTable.pageInfo', 'Page {{current}} of {{total}} ({{from}}–{{to}} of {{count}} total)', {

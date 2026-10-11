@@ -48,6 +48,22 @@ export function formatDate(d: string | Date | null | undefined): string {
 }
 
 /**
+ * Peso amounts, one formatter: `Intl` currency (₱ with thousands separators,
+ * decimals only when there are any). Before this, every surface built its own
+ * `₱${n.toLocaleString()}` string and the renderings drifted.
+ */
+export function formatPeso(value: number | string | null | undefined): string {
+  const n = typeof value === 'string' ? Number(value.replace(/,/g, '')) : Number(value);
+  if (!Number.isFinite(n)) return '—';
+  return new Intl.NumberFormat(activeLocale(), {
+    style: 'currency',
+    currency: 'PHP',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(n);
+}
+
+/**
  * Today in Manila, as "YYYY-MM-DD" for an `<input type="date">` value.
  *
  * The office is UTC+8, so between 00:00 and 08:00 local the UTC date is

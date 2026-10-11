@@ -29,6 +29,11 @@ body {
 
 /* class-based dark mode: dark: utilities follow the .dark class toggled on <html> */
 @custom-variant dark (&:where(.dark, .dark *));
+/* The office-monitor density pass, one place: `short:` behaves like md:/lg:
+   and fires only under 820px of height (1366x768 screens). Previously every
+   component repeated its own `[@media(max-height:820px)]:` fragment, so a new
+   page silently missed the pass. */
+@custom-variant short (@media (max-height: 820px));
 
 
 @layer legacy {
@@ -479,6 +484,9 @@ ol[data-sonner-toaster],
 ol[data-sonner-toaster][data-sonner-theme='light'],
 ol[data-sonner-toaster][data-sonner-theme='dark'],
 ol[data-sonner-toaster][data-sonner-theme='system'] {
+  /* Wider than sonner's 356px default: these toasts carry a title *and* a
+     description, and the description is a sentence about what was written. */
+  --width: 24rem;
   --normal-bg: var(--card);
   --normal-text: var(--card-foreground);
   --normal-border: var(--border);
@@ -504,15 +512,21 @@ ol[data-sonner-toaster][data-sonner-theme='system'] {
   border-color: var(--border);
 }
 
-[data-sonner-toast][data-styled][data-type='success'] { border-left: 4px solid var(--success); }
+/* Status rides in the icon chip, not in a stripe down the card's edge: the chip
+   is the same size in every state, so a stack of toasts does not change shape
+   with the mix of outcomes, and the plate is the muted surface in both themes
+   rather than a third colour to keep in sync. */
+[data-sonner-toast][data-styled][data-type] [data-icon] {
+  background: var(--muted);
+}
+[data-sonner-toast][data-styled][data-type] [data-icon] svg {
+  width: 14px;
+  height: 14px;
+}
 [data-sonner-toast][data-styled][data-type='success'] [data-icon] { color: var(--success); }
-[data-sonner-toast][data-styled][data-type='error'] { border-left: 4px solid var(--destructive); }
 [data-sonner-toast][data-styled][data-type='error'] [data-icon] { color: var(--destructive); }
-[data-sonner-toast][data-styled][data-type='warning'] { border-left: 4px solid var(--warning); }
 [data-sonner-toast][data-styled][data-type='warning'] [data-icon] { color: var(--warning); }
-[data-sonner-toast][data-styled][data-type='info'] { border-left: 4px solid var(--primary); }
 [data-sonner-toast][data-styled][data-type='info'] [data-icon] { color: var(--primary); }
-[data-sonner-toast][data-styled][data-type='loading'] { border-left: 4px solid var(--muted-foreground); }
 [data-sonner-toast][data-styled][data-type='loading'] [data-icon] { color: var(--muted-foreground); }
 
 /* Never clip toast copy: long error messages wrap instead of truncating. */

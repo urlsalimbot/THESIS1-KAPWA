@@ -6,6 +6,20 @@ describe('offline-queue — queue', () => {
     localStorage.clear();
   });
 
+  it('prunes synced entries older than a week on the next write', async () => {
+    const weekAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+    localStorage.setItem('kapwa_sync_queue', JSON.stringify([
+      { id: 's1', tableName: 'cases', recordId: 'r', operation: 'UPDATE', payload: {}, clientUpdatedAt: weekAgo, serverVersion: 1, status: 'synced', retryCount: 0 },
+      { id: 's2', tableName: 'cases', recordId: 'r', operation: 'UPDATE', payload: {}, clientUpdatedAt: new Date().toISOString(), serverVersion: 1, status: 'synced', retryCount: 0 },
+    ]));
+
+    await queueChange('cases', 'r', 'UPDATE', { status: 'x' });
+
+    const queue = JSON.parse(localStorage.getItem('kapwa_sync_queue') || '[]');
+    expect(queue.some((c: any) => c.id === 's1')).toBe(false); // old synced gone
+    expect(queue.some((c: any) => c.id === 's2')).toBe(true);  // fresh history stays
+  });
+
   it('queueChange appends a pending change with a UUID and initial state', async () => {
     const c = await queueChange('cases', 'r1', 'UPDATE', { x: 1 });
     expect(c.id).toBeTruthy();

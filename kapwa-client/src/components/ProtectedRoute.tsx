@@ -68,7 +68,7 @@ export function ProtectedRoute({ children, roles }: { children: React.ReactNode;
   }
 
   if (loading || !token || (roleMismatch && !strandedRole) || mustChangeRedirect) {
-    return <div className="min-h-screen flex items-center justify-center text-gray-400">{t('shell.verifyingAccess', 'Verifying access...')}</div>;
+    return <div className="min-h-screen flex items-center justify-center text-muted-foreground">{t('shell.verifyingAccess', 'Verifying access...')}</div>;
   }
 
   return <>{children}</>;

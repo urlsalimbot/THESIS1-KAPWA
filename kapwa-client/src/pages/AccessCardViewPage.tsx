@@ -16,7 +16,7 @@ import { CategoryBadge } from '@/components/cards/CategoryBadge';
 import { FormError } from '@/components/FormError';
 import { ACCESS_CARD_CATEGORY_TABS, type AccessCardCategory } from '@/lib/constants';
 import { CreditCard, User, MapPin, Calendar, Phone, Users, Plus, Building2, ArrowLeftRight, Download } from 'lucide-react';
-import { formatDate, todayInManila, personFullName } from '../lib/format';
+import { formatDate, todayInManila, personFullName, formatPeso } from '../lib/format';
 import { humanizeError } from '../lib/errors';
 
 interface AccessCardService {
@@ -204,7 +204,7 @@ export function AccessCardViewPage() {
                 <p className="font-mono text-sm text-primary">{cardData.code}</p>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="default" className="text-[10px]">{t('accessCard.totalCount', '{{count}} total', { count: cardData.services.length })}</Badge>
+                <Badge variant="default" className="text-xs">{t('accessCard.totalCount', '{{count}} total', { count: cardData.services.length })}</Badge>
                 {canExportGisPdf && (
                   <Button
                     variant="outline"
@@ -234,7 +234,7 @@ export function AccessCardViewPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             {famGraph.members.map((m, i) => (
-              <Badge key={i} variant="outline" className="text-[10px]">
+              <Badge key={i} variant="outline" className="text-xs">
                 {personFullName(m.firstName, m.middleName, m.surname, m.extension) || m.fullName}
                 <span className="ml-1 text-muted-foreground">({m.relationship}, {m.age})</span>
               </Badge>
@@ -362,7 +362,7 @@ export function AccessCardViewPage() {
                     </p>
                   </div>
                   {s.cost != null && s.cost > 0 && (
-                    <span className="text-xs font-semibold shrink-0">₱{s.cost.toLocaleString()}</span>
+                    <span className="text-xs font-semibold shrink-0">{formatPeso(s.cost)}</span>
                   )}
                 </div>
               ))}
@@ -394,7 +394,7 @@ export function AccessCardViewPage() {
                   </p>
                 </div>
                 {s.cost != null && s.cost > 0 && (
-                  <span className="text-xs font-semibold shrink-0">₱{s.cost.toLocaleString()}</span>
+                  <span className="text-xs font-semibold shrink-0">{formatPeso(s.cost)}</span>
                 )}
               </div>
             ))}
@@ -411,7 +411,7 @@ export function AccessCardViewPage() {
           <div className="space-y-1">
             {summary.referralHistory.map(r => (
               <div key={r.id} className="flex items-center gap-3 rounded-md border px-3 py-2 text-sm">
-                <Badge variant={r.status === 'declined' ? 'destructive' : 'secondary'} className="text-[10px]">
+                <Badge variant={r.status === 'declined' ? 'destructive' : 'secondary'} className="text-xs">
                   {referralStatusLabel(t, r.status)}
                 </Badge>
                 <div className="flex-1 min-w-0">

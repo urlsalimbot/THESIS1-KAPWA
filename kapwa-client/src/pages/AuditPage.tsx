@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Download, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
+import { formatPeso } from '../lib/format';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,7 +55,7 @@ export function AuditPage() {
           <div className="mt-4 space-y-2 text-sm">
             <div className="flex items-center gap-4">
               <span>{t('audit.totalInterventions', 'Total Interventions:')} <strong>{result.totalInterventions}</strong></span>
-              <span>{t('audit.totalAmount', 'Total Amount:')} <strong>₱{Number(result.totalAmount).toLocaleString()}</strong></span>
+              <span>{t('audit.totalAmount', 'Total Amount:')} <strong>{formatPeso(Number(result.totalAmount))}</strong></span>
               <Button variant="outline" size="sm" onClick={downloadJson}>
                 <FileText size={14} className="mr-1" /> {t('audit.downloadJson', 'Download JSON')}
               </Button>
@@ -66,7 +67,7 @@ export function AuditPage() {
                   {result.byFundSource.map((fs: any, i: number) => (
                     <div key={i} className="rounded border px-3 py-2">
                       <p className="font-medium">{fs.source}</p>
-                      <p className="text-xs text-muted-foreground">{t('audit.interventionsCount', '{{count}} interventions', { count: fs.count })} · ₱{Number(fs.amount).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">{t('audit.interventionsCount', '{{count}} interventions', { count: fs.count })} · {formatPeso(Number(fs.amount))}</p>
                     </div>
                   ))}
                 </div>

@@ -23,7 +23,7 @@ interface ConsentManagerProps {
 function StatusBadge({ status, t }: { status: string; t: TFunction }) {
   if (status === 'active') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-sm font-medium text-emerald-700">
+      <span className="inline-flex items-center gap-1 rounded-full bg-alert-success-bg px-3 py-1 text-sm font-medium text-success-foreground">
         <Check size={14} /> {t('consent.active', 'Active')}
       </span>
     );
@@ -74,15 +74,15 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
   return (
     <div className="space-y-4">
       {/* Current status */}
-      <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4">
+      <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
         <div className="flex items-center gap-3">
           {status === 'active' ? (
-            <Shield size={32} className="text-emerald-500" />
+            <Shield size={32} className="text-success" />
           ) : (
             <ShieldOff size={32} className="text-destructive" />
           )}
           <div>
-            <p className="text-sm font-medium text-gray-800">{t('consent.status', 'Consent Status')}</p>
+            <p className="text-sm font-medium text-muted-foreground">{t('consent.status', 'Consent Status')}</p>
             <StatusBadge status={status} t={t} />
           </div>
         </div>
@@ -98,11 +98,11 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
           <div className="group relative">
             <button
               disabled
-              className="cursor-not-allowed rounded-lg bg-gray-300 px-4 py-2 text-sm font-medium text-gray-500"
+              className="cursor-not-allowed rounded-lg bg-muted-foreground/25 px-4 py-2 text-sm font-medium text-muted-foreground"
             >
               {t('consent.reinstate', 'Reinstate Consent')}
             </button>
-            <div className="absolute bottom-full right-0 mb-2 hidden w-48 rounded-lg bg-gray-800 p-2 text-xs text-white shadow-lg group-hover:block">
+            <div className="absolute bottom-full right-0 mb-2 hidden w-48 rounded-lg bg-foreground p-2 text-xs text-white shadow-lg group-hover:block">
               <Info size={12} className="mr-1 inline" />
               {t('consent.contactAdmin', 'Contact Admin to reinstate consent')}
             </div>
@@ -113,7 +113,7 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
       {/* Revoke confirmation dialog */}
       {showRevokeDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+          <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2 text-destructive">
                 <AlertTriangle size={20} />
@@ -121,25 +121,25 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
               </div>
               <button
                 onClick={() => setShowRevokeDialog(false)}
-                className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-muted-foreground"
               >
                 <X size={20} />
               </button>
             </div>
 
-            <p className="mb-4 text-sm text-gray-600">
+            <p className="mb-4 text-sm text-muted-foreground">
               {t('consent.revokeDesc', 'Are you sure you want to revoke consent for this beneficiary? This will immediately mask all personal information (name, address, phone, date of birth, PhilSys number) in the system.')}
             </p>
 
             <div className="mb-4">
-              <label className="mb-1 block text-sm font-medium text-gray-700">
+              <label className="mb-1 block text-sm font-medium text-muted-foreground">
                 {t('consent.revokeReason', 'Reason for revocation (optional)')}
               </label>
               <textarea
                 value={revokeReason}
                 onChange={(e) => setRevokeReason(e.target.value)}
                 placeholder={t('consent.revokeReasonPlaceholder', 'e.g., No longer receiving services, Withdrawn request...')}
-                className="w-full rounded-lg border border-gray-300 p-3 text-sm outline-none focus:border-destructive/40 focus:ring-1 focus:ring-destructive/60"
+                className="w-full rounded-lg border border-border p-3 text-sm outline-none focus:border-destructive/40 focus:ring-1 focus:ring-destructive/60"
                 rows={3}
               />
             </div>
@@ -151,7 +151,7 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowRevokeDialog(false)}
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
               >
                 {t('consent.cancel', 'Cancel')}
               </button>
@@ -169,23 +169,23 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
       )}
 
       {/* Consent history */}
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <div className="mb-3 flex items-center gap-2 text-gray-700">
+      <div className="rounded-lg border border-border bg-card p-4">
+        <div className="mb-3 flex items-center gap-2 text-muted-foreground">
           <History size={16} />
           <h4 className="text-sm font-semibold">{t('consent.history', 'Consent History')}</h4>
         </div>
         {loadingLedger ? (
-          <div className="flex items-center justify-center py-4 text-sm text-gray-400">
+          <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
             <Loader2 size={16} className="mr-2 animate-spin" />
             {t('consent.loadingHistory', 'Loading history...')}
           </div>
         ) : ledger.length === 0 ? (
-          <p className="py-4 text-center text-sm text-gray-400">{t('consent.noHistory', 'No consent history available')}</p>
+          <p className="py-4 text-center text-sm text-muted-foreground">{t('consent.noHistory', 'No consent history available')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-gray-200 text-xs text-gray-500">
+                <tr className="border-b border-border text-xs text-muted-foreground">
                   <th className="pb-2 pr-4 font-medium">{t('consent.date', 'Date')}</th>
                   <th className="pb-2 pr-4 font-medium">{t('consent.statusCol', 'Status')}</th>
                   <th className="pb-2 pr-4 font-medium">{t('consent.purpose', 'Purpose')}</th>
@@ -194,23 +194,23 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
               </thead>
               <tbody>
                 {ledger.map((entry) => (
-                  <tr key={entry.id} className="border-b border-gray-100">
-                    <td className="py-2 pr-4 text-gray-700">
+                  <tr key={entry.id} className="border-b border-border">
+                    <td className="py-2 pr-4 text-muted-foreground">
                       {formatDate(entry.grantedAt)}
                     </td>
                     <td className="py-2 pr-4">
                       <span
                         className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
                           entry.status === 'active'
-                            ? 'bg-emerald-100 text-emerald-700'
+                            ? 'bg-alert-success-bg text-success-foreground'
                             : 'bg-destructive/10 text-destructive'
                         }`}
                       >
                         {entry.status === 'active' ? t('consent.active', 'Active') : t('consent.revoked', 'Revoked')}
                       </span>
                     </td>
-                    <td className="py-2 pr-4 text-gray-600">{entry.purpose || '—'}</td>
-                    <td className="py-2 text-gray-600">
+                    <td className="py-2 pr-4 text-muted-foreground">{entry.purpose || '—'}</td>
+                    <td className="py-2 text-muted-foreground">
                       {entry.revokedReason || (entry.status === 'revoked' ? t('consent.noReason', 'No reason provided') : '—')}
                     </td>
                   </tr>

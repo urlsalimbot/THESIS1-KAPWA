@@ -42,8 +42,8 @@ interface ChatUser {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  admin: 'bg-primary/50', social_worker: 'bg-emerald-500', coordinator: 'bg-primary/50',
-  claimant: 'bg-amber-500', mayor: 'bg-rose-500', auditor: 'bg-slate-500',
+  admin: 'bg-primary/50', social_worker: 'bg-success', coordinator: 'bg-primary/50',
+  claimant: 'bg-warning', mayor: 'bg-destructive', auditor: 'bg-muted-foreground/25',
 };
 
 const ROLE_LABELS: Record<string, { key: string; label: string }> = {
@@ -52,7 +52,7 @@ const ROLE_LABELS: Record<string, { key: string; label: string }> = {
 };
 
 function roleColor(role?: string): string {
-  return ROLE_COLORS[role || ''] || 'bg-gray-400';
+  return ROLE_COLORS[role || ''] || 'bg-muted-foreground/25';
 }
 
 function roleLabel(role?: string, t?: TFunction): string {
@@ -321,7 +321,7 @@ export function MessagesPage() {
           <div className="flex items-center justify-between border-b px-4 py-3.5">
             <div>
               <h2 className="text-sm font-semibold text-foreground">{t('messages.title', 'Messages')}</h2>
-              <p className="text-[11px] text-muted-foreground">{t('messages.conversationCount', '{{count}} conversations', { count: conversations.length })}</p>
+              <p className="text-xs text-muted-foreground">{t('messages.conversationCount', '{{count}} conversations', { count: conversations.length })}</p>
             </div>
             <Dialog open={showNewChat} onOpenChange={setShowNewChat}>
               <DialogTrigger asChild>
@@ -364,10 +364,10 @@ export function MessagesPage() {
                           </Avatar>
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium truncate">{u.fullName}</p>
-                            <p className="text-[11px] text-muted-foreground capitalize">{roleLabel(u.role, t)}</p>
+                            <p className="text-xs text-muted-foreground capitalize">{roleLabel(u.role, t)}</p>
                           </div>
                           {existingConvIds.has(u.id) && (
-                            <span className="text-[11px] text-muted-foreground/60 italic shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">{t('messages.existing', 'Existing')}</span>
+                            <span className="text-xs text-muted-foreground/60 italic shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">{t('messages.existing', 'Existing')}</span>
                           )}
                         </button>
                       ))
@@ -379,7 +379,7 @@ export function MessagesPage() {
           </div>
 
           {!hasContacts && (
-            <p className="text-[11px] text-muted-foreground px-4 py-2 border-b border-border/40 bg-muted/20">
+            <p className="text-xs text-muted-foreground px-4 py-2 border-b border-border/40 bg-muted/20">
               {t('messages.noContactsHint', 'No contacts yet — MSWDO staff will message you')}
             </p>
           )}
@@ -430,12 +430,12 @@ export function MessagesPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-sm font-medium text-foreground truncate">{conv.name}</p>
-                          <span className="text-[11px] text-muted-foreground shrink-0">{formatConversationTime(conv.lastTime.toString(), t)}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">{formatConversationTime(conv.lastTime.toString(), t)}</span>
                         </div>
                         <div className="flex items-center justify-between gap-2 mt-0.5">
                           <p className="text-xs text-muted-foreground truncate">{conv.lastMessage}</p>
                           {conv.unread > 0 && (
-                            <Badge className="shrink-0 h-5 min-w-5 px-1.5 text-[11px] font-medium flex items-center justify-center" variant="default">
+                            <Badge className="shrink-0 h-5 min-w-5 px-1.5 text-xs font-medium flex items-center justify-center" variant="default">
                               {conv.unread}
                             </Badge>
                           )}
@@ -484,7 +484,7 @@ export function MessagesPage() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-foreground truncate">{getOtherName(activeConv)}</p>
                   <p className={cn(
-                    'text-[11px]',
+                    'text-xs',
                     isTyping ? 'text-primary' : 'text-muted-foreground',
                   )}>
                     {isTyping ? t('messages.typing', 'Typing...') : roleLabel(getOtherRole(activeConv), t)}
@@ -513,7 +513,7 @@ export function MessagesPage() {
                         <div key={msg.id}>
                           {showDateSep && (
                             <div className="flex justify-center my-4">
-                              <span className="text-[11px] text-muted-foreground bg-muted/60 px-3 py-1 rounded-full">
+                              <span className="text-xs text-muted-foreground bg-muted/60 px-3 py-1 rounded-full">
                                 {getDateSeparator(msg.createdAt, t)}
                               </span>
                             </div>
@@ -532,14 +532,14 @@ export function MessagesPage() {
                                 isMine ? 'justify-end' : 'justify-start',
                               )}>
                                 <span className={cn(
-                                  'text-[10px] leading-none',
+                                  'text-xs leading-none',
                                   isMine ? 'text-primary-foreground/60' : 'text-muted-foreground',
                                 )}>
                                   {formatMessageTime(msg.createdAt, t)}
                                 </span>
                                 {isMine && (
                                   msg.id.startsWith('pending-')
-                                    ? <span className="text-[10px] text-primary-foreground/50">{t('messages.sending', 'Sending')}</span>
+                                    ? <span className="text-xs text-primary-foreground/50">{t('messages.sending', 'Sending')}</span>
                                     : msg.isRead
                                       ? <CheckCheck size={12} className="text-primary-foreground/60 shrink-0" />
                                       : <Check size={12} className="text-primary-foreground/60 shrink-0" />
@@ -581,7 +581,7 @@ export function MessagesPage() {
                       className="h-11 pr-12 rounded-xl bg-background border-border/60 focus-visible:ring-primary/30 text-sm"
                     />
                     {text.length > 0 && (
-                      <span className="absolute right-3 bottom-1/2 translate-y-1/2 text-[10px] text-muted-foreground/50 pointer-events-none">
+                      <span className="absolute right-3 bottom-1/2 translate-y-1/2 text-xs text-muted-foreground/50 pointer-events-none">
                         {text.length}
                       </span>
                     )}

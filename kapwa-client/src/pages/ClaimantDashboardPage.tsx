@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { statusLabel } from '@/i18n/display';
-import { formatDate } from '../lib/format';
+import { formatDate, formatPeso } from '../lib/format';
 import { toast } from 'sonner';
 
 interface ServiceRecord {
@@ -206,7 +206,7 @@ export function ClaimantDashboardPage() {
               {myCase.amountAssistance != null && (
                 <div>
                   <p className="text-xs text-muted-foreground">{t('claims.amountAssistance', 'Assistance Amount')}</p>
-                  <p className="text-sm font-semibold">₱{myCase.amountAssistance.toLocaleString()}</p>
+                  <p className="text-sm font-semibold">{formatPeso(myCase.amountAssistance)}</p>
                 </div>
               )}
               <div>
@@ -248,15 +248,15 @@ export function ClaimantDashboardPage() {
                     <div className="min-w-0">
                       <p className="text-sm font-medium">{req.key}</p>
                       {req.mandatory && (
-                        <p className="text-[11px] text-muted-foreground">{t('claims.required', 'Required')}</p>
+                        <p className="text-xs text-muted-foreground">{t('claims.required', 'Required')}</p>
                       )}
                     </div>
                     {req.met ? (
-                      <Badge variant="default" className="shrink-0 text-[10px]">{t('claims.requirementMet', 'Confirmed')}</Badge>
+                      <Badge variant="default" className="shrink-0 text-xs">{t('claims.requirementMet', 'Confirmed')}</Badge>
                     ) : req.pendingVerification ? (
-                      <Badge variant="secondary" className="shrink-0 text-[10px]">{t('claims.pendingOnSite', 'Pending on-site')}</Badge>
+                      <Badge variant="secondary" className="shrink-0 text-xs">{t('claims.pendingOnSite', 'Pending on-site')}</Badge>
                     ) : (
-                      <Badge variant="outline" className="shrink-0 text-[10px]">{t('claims.notSubmitted', 'Not submitted')}</Badge>
+                      <Badge variant="outline" className="shrink-0 text-xs">{t('claims.notSubmitted', 'Not submitted')}</Badge>
                     )}
                   </div>
                   {submitted && (
@@ -311,8 +311,8 @@ export function ClaimantDashboardPage() {
                   <p className="text-xs text-muted-foreground">{formatDate(s.date)}</p>
                 </div>
                 <div className="text-right">
-                  {s.amount > 0 && <p className="text-sm font-semibold">₱{s.amount.toLocaleString()}</p>}
-                  <span className={`text-xs ${s.status === 'completed' ? 'text-emerald-600' : 'text-amber-600'}`}>{s.status}</span>
+                  {s.amount > 0 && <p className="text-sm font-semibold">{formatPeso(s.amount)}</p>}
+                  <span className={`text-xs ${s.status === 'completed' ? 'text-success' : 'text-warning'}`}>{s.status}</span>
                 </div>
               </div>
             ))}

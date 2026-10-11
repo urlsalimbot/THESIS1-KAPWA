@@ -108,7 +108,7 @@ export function AnnouncementsPage() {
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold font-heading truncate">{a.title}</h3>
                       {a.pinned && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-accent shrink-0">
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-accent shrink-0">
                           <Pin size={12} />
                           {t('announcements.pinned', 'Pinned')}
                         </span>

@@ -190,7 +190,7 @@ function MobileDayAgenda({
       </div>
 
       {/* Office events of the day */}
-      <div className="border-b bg-primary/5 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <div className="border-b bg-primary/5 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {t('team.week.events')}
       </div>
       <div className="space-y-1 px-3 py-2">
@@ -263,11 +263,11 @@ function MobileDayAgenda({
                   >
                     <span className="min-w-0 flex-1 truncate">{label}</span>
                     {entry.dayCount > 1 && (
-                      <span className="shrink-0 text-[10px] opacity-80">
+                      <span className="shrink-0 text-xs opacity-80">
                         {t('team.multidayDay', { n: entry.dayIndex + 1 })}/{entry.dayCount}
                       </span>
                     )}
-                    <span className="shrink-0 text-[10px] opacity-80">
+                    <span className="shrink-0 text-xs opacity-80">
                       {block.startTime && block.endTime
                         ? `${block.startTime}–${block.endTime}`
                         : t('team.week.allDay')}
@@ -393,7 +393,7 @@ export function WeekView({
 
         {/* All-day office events strip */}
         <div className={`grid ${GRID_COLS} border-b bg-primary/5`}>
-          <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <div className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {t('team.week.events')}
           </div>
           {dayStrs.map((day, i) => (
@@ -415,7 +415,7 @@ export function WeekView({
                         })
                       : item.event.title
                   }
-                  className={`w-full truncate rounded border px-1 py-0.5 text-left text-[10px] font-medium ${
+                  className={`w-full truncate rounded border px-1 py-0.5 text-left text-xs font-medium ${
                     item.continuation
                       ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
                       : 'border-indigo-400 bg-indigo-100/70 text-indigo-900'
@@ -471,7 +471,7 @@ export function WeekView({
                             ? `${block.startTime}–${block.endTime}`
                             : t('team.week.allDay'))
                         }
-                        className={`absolute z-10 truncate px-1 text-left text-[10px] font-medium ${
+                        className={`absolute z-10 truncate px-1 text-left text-xs font-medium ${
                           sliceClasses(slice)
                         } ${BLOCK_COLORS[block.blockType] ?? BLOCK_COLOR_FALLBACK}`}
                         style={blockBarStyle(block)}

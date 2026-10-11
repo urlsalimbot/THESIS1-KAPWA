@@ -33,7 +33,7 @@ export function NeedsAttention({ cases }: NeedsAttentionProps) {
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
-          <AlertTriangle size={14} className="text-amber-500" />
+          <AlertTriangle size={14} className="text-warning" />
           {t('dashboard.needsAttention', 'Needs Attention')} ({needsAttention.length})
         </CardTitle>
       </CardHeader>

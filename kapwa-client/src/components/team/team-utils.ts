@@ -29,10 +29,10 @@ export type TeamStatusValue = (typeof STATUS_VALUES)[number];
 // field amber, leave gray, remote violet. Full literal classes so Tailwind
 // generates them.
 export const BLOCK_COLORS: Record<string, string> = {
-  in_office: 'bg-sky-200/70 border-sky-600 text-sky-900',
-  home_visit: 'bg-emerald-200/70 border-emerald-600 text-emerald-900',
-  field_day: 'bg-amber-200/70 border-amber-600 text-amber-900',
-  on_leave: 'bg-slate-300/70 border-slate-500 text-slate-800',
+  in_office: 'bg-badge-review-bg border-badge-review-bg text-secondary-foreground',
+  home_visit: 'bg-alert-success-bg border-success/35 text-success-foreground',
+  field_day: 'bg-alert-error-bg border-warning/35 text-warning-foreground',
+  on_leave: 'bg-muted-foreground/25 border-border text-muted-foreground',
   remote: 'bg-violet-200/70 border-violet-600 text-violet-900',
   // System-synced court appearances (case_events mirrors).
   court_hearing: 'bg-purple-200/70 border-purple-600 text-purple-900',
@@ -41,12 +41,12 @@ export const BLOCK_COLOR_FALLBACK = 'bg-muted border-muted-foreground/40 text-mu
 
 // Whereabouts dot colors (chips across the views).
 export const STATUS_COLORS: Record<string, string> = {
-  in_office: 'bg-sky-500',
-  home_visit: 'bg-emerald-500',
-  field_day: 'bg-amber-500',
-  on_leave: 'bg-slate-400',
+  in_office: 'bg-secondary',
+  home_visit: 'bg-success',
+  field_day: 'bg-warning',
+  on_leave: 'bg-muted-foreground/25',
   remote: 'bg-violet-500',
-  offline: 'bg-gray-400',
+  offline: 'bg-muted-foreground/25',
 };
 export const STATUS_COLOR_FALLBACK = 'bg-muted-foreground';
 

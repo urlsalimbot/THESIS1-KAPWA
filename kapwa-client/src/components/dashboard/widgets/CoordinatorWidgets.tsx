@@ -77,7 +77,7 @@ export function CoordinatorWidgets() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3 mb-2">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('dashboard.servedToday', 'Served Today')}</span>
-              <Clock className="ml-auto text-yellow-600" size={16} />
+              <Clock className="ml-auto text-warning" size={16} />
             </div>
             <div className="text-2xl font-bold text-foreground font-heading">{servedToday}</div>
           </CardContent>
@@ -86,7 +86,7 @@ export function CoordinatorWidgets() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3 mb-2">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('dashboard.pendingReview', 'Pending Review')}</span>
-              <ClipboardList className="ml-auto text-emerald-600" size={16} />
+              <ClipboardList className="ml-auto text-success" size={16} />
             </div>
             <div className="text-2xl font-bold text-foreground font-heading">{pendingReview}</div>
           </CardContent>

@@ -16,7 +16,7 @@ import { FormError } from '@/components/FormError';
 import type { AccessCardCategory } from '@/lib/constants';
 import { Search, Check, History, BadgeCheck, Loader2, MapPin, CheckCircle2 } from 'lucide-react';
 import type { ColumnDef, PaginationState } from '@tanstack/react-table';
-import { formatDate, todayInManila } from '../lib/format';
+import { formatDate, todayInManila, formatPeso } from '../lib/format';
 
 type Tab = 'verify' | 'history';
 
@@ -199,7 +199,7 @@ function VerifyTab() {
           <FormError>{lookupWarning}</FormError>
 
           {justLogged && (
-            <p role="status" className="flex items-center gap-1.5 text-sm text-emerald-700 dark:text-emerald-400">
+            <p role="status" className="flex items-center gap-1.5 text-sm text-success-foreground dark:text-success">
               <CheckCircle2 size={14} className="shrink-0" />
               {justLogged}
             </p>
@@ -240,7 +240,7 @@ function VerifyTab() {
                       </div>
                       {s.cost != null && (
                         <span className="text-sm font-medium tabular-nums">
-                          ₱{s.cost.toLocaleString()}
+                          {formatPeso(s.cost)}
                         </span>
                       )}
                     </div>
@@ -332,7 +332,7 @@ function ActivityForm({
                 id="ac-category"
                 value={category}
                 onChange={setCategory}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className=""
               />
             </div>
             <div className="space-y-1">
@@ -350,7 +350,7 @@ function ActivityForm({
               id="ac-agency"
               value={agencyId}
               onChange={e => setAgencyId(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className=""
               required
             >
               <option value="">{t('accessCard.selectAgency', 'Select agency...')}</option>
@@ -369,7 +369,7 @@ function ActivityForm({
               onChange={e => setRemarks(e.target.value)}
               rows={2}
               required
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px]"
+              className="form-input min-h-[60px]"
               placeholder={t('accessCard.remarksPlaceholder', 'Describe the activity...')}
             />
           </div>

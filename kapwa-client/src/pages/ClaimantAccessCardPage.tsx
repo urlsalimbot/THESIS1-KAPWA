@@ -5,7 +5,7 @@ import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CategoryBadge } from '@/components/cards/CategoryBadge';
-import { formatDate } from '../lib/format';
+import { formatDate, formatPeso } from '../lib/format';
 import { IdCard } from 'lucide-react';
 
 interface MyAccessCard {
@@ -75,7 +75,7 @@ export function ClaimantAccessCardPage() {
                   <span>{s.serviceRendered}</span>
                   <span className="flex items-center gap-3 text-muted-foreground">
                     <CategoryBadge category={s.category} />
-                    {s.cost != null && s.cost > 0 && <span className="font-semibold text-foreground">₱{s.cost.toLocaleString()}</span>}
+                    {s.cost != null && s.cost > 0 && <span className="font-semibold text-foreground">{formatPeso(s.cost)}</span>}
                     <span className="text-xs">{formatDate(s.serviceDate)}</span>
                   </span>
                 </li>

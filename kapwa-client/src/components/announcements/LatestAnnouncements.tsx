@@ -92,17 +92,17 @@ export function LatestAnnouncements() {
                     )}
                     <div className="mb-3 flex items-center justify-between gap-2">
                       {a.pinned ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-accent">
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-accent">
                           <Pin size={12} aria-hidden="true" />
                           {t('announcements.pinned', 'Pinned')}
                         </span>
                       ) : (
-                        <span className="text-[11px] font-medium text-primary/70">
+                        <span className="text-xs font-medium text-primary/70">
                           {t('announcements.item', 'Announcement')}
                         </span>
                       )}
                       {a.publishedAt && (
-                        <time className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                        <time className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                           <CalendarDays size={12} aria-hidden="true" />
                           {formatDate(a.publishedAt)}
                         </time>

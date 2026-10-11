@@ -33,7 +33,7 @@ export function AccessCardPrintView() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <p className="text-gray-400">{t('accessCard.loadingCardData', 'Loading card data...')}</p>
+        <p className="text-muted-foreground">{t('accessCard.loadingCardData', 'Loading card data...')}</p>
       </div>
     );
   }
@@ -41,8 +41,8 @@ export function AccessCardPrintView() {
   if (error || !card || !card.beneficiary) {
     return (
       <div className="flex flex-col items-center justify-center p-8 text-center">
-        <h2 className="text-lg font-semibold text-gray-700">{t('accessCard.noCard', 'No Access Card')}</h2>
-        <p className="mt-2 text-sm text-gray-500">
+        <h2 className="text-lg font-semibold text-muted-foreground">{t('accessCard.noCard', 'No Access Card')}</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
           {t('accessCard.noCardBody', 'This beneficiary has no Access Card. Generate and assign one to enable card-based tracking.')}
         </p>
       </div>
@@ -68,7 +68,9 @@ export function AccessCardPrintView() {
           {t('accessCard.printCard', 'Print Card')}
         </button>
       </div>
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
+      {/* Printed output is always white-paper, whatever the app's theme — the
+          PDF preview must not print a dark card. */}
+      <div className="rounded-lg border border-border bg-white p-6">
         <AccessCard beneficiary={beneficiary} services={card.services || []} printable />
       </div>
     </div>

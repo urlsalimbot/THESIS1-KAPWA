@@ -23,8 +23,8 @@ function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
       <div className="min-h-[60vh] flex items-center justify-center p-6">
         <Card className="w-full max-w-md shadow-lg border-destructive/20">
           <CardHeader className="flex flex-col items-center gap-4 pt-10">
-            <div className="rounded-full bg-amber-100 p-4">
-              <WifiOff size={40} className="text-amber-600" />
+            <div className="rounded-full bg-alert-error-bg p-4">
+              <WifiOff size={40} className="text-warning" />
             </div>
             <div className="text-center space-y-1">
               <h2 className="text-xl font-semibold text-foreground">{t('error.boundaryOfflineTitle', "You're Offline")}</h2>

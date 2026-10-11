@@ -82,7 +82,7 @@ export function ProgramCard({ program, className }: { program: PublicProgram; cl
             {funds.slice(0, 3).map((f) => (
               <span
                 key={f}
-                className="rounded-md border border-border bg-muted/50 px-2 py-0.5 text-[11px] text-muted-foreground"
+                className="rounded-md border border-border bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground"
               >
                 {f}
               </span>

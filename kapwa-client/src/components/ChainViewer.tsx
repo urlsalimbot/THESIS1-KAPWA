@@ -43,30 +43,30 @@ export function ChainViewer({ caseId }: { caseId: string }) {
 
   if (loading) return <div className="p-4 text-center text-sm">{t('chain.loading', 'Loading chain...')}</div>;
   if (error) return <div className="p-4 text-destructive text-sm">{error}</div>;
-  if (chain.length === 0) return <div className="p-4 text-gray-500 text-sm">{t('chain.noInterventions', 'No interventions recorded')}</div>;
+  if (chain.length === 0) return <div className="p-4 text-muted-foreground text-sm">{t('chain.noInterventions', 'No interventions recorded')}</div>;
 
   const isValid = verifyIntegrity();
 
   return (
     <div className="border rounded-lg p-4">
       <div className="flex items-center gap-2 mb-4">
-        <Shield size={16} className={isValid ? 'text-emerald-600' : 'text-destructive'} />
+        <Shield size={16} className={isValid ? 'text-success' : 'text-destructive'} />
         <span className="font-semibold text-sm">{t('chain.title', 'Intervention Hash Chain')}</span>
         {isValid
-          ? <CheckCircle size={16} className="text-emerald-600" />
+          ? <CheckCircle size={16} className="text-success" />
           : <XCircle size={16} className="text-destructive" />
         }
-        <span className={`text-xs ${isValid ? 'text-emerald-600' : 'text-destructive'}`}>
+        <span className={`text-xs ${isValid ? 'text-success' : 'text-destructive'}`}>
           {isValid ? t('chain.integrityVerified', 'Chain Integrity Verified') : t('chain.integrityFailed', 'Chain Integrity Failed')}
         </span>
       </div>
       <div className="space-y-2 text-xs font-mono">
         {chain.map((entry, idx) => (
-          <div key={entry.id} className="border-l-2 border-gray-300 pl-3 py-1">
-            <div className="text-gray-500">#{idx + 1} - {entry.interventionType} (₱{entry.amount})</div>
-            <div className="text-gray-400">{t('chain.hash', 'Hash:')} <span className="text-gray-700">{entry.hash.slice(0, 20)}...</span></div>
-            <div className="text-gray-400">{t('chain.prev', 'Prev:')} <span className="text-gray-700">{entry.prevHash.slice(0, 20)}...</span></div>
-            <div className="text-gray-400">{formatDateTime(entry.loggedAt)}</div>
+          <div key={entry.id} className="border-l-2 border-border pl-3 py-1">
+            <div className="text-muted-foreground">#{idx + 1} - {entry.interventionType} (₱{entry.amount})</div>
+            <div className="text-muted-foreground">{t('chain.hash', 'Hash:')} <span className="text-muted-foreground">{entry.hash.slice(0, 20)}...</span></div>
+            <div className="text-muted-foreground">{t('chain.prev', 'Prev:')} <span className="text-muted-foreground">{entry.prevHash.slice(0, 20)}...</span></div>
+            <div className="text-muted-foreground">{formatDateTime(entry.loggedAt)}</div>
           </div>
         ))}
       </div>

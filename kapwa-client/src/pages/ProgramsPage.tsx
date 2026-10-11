@@ -171,7 +171,7 @@ export function ProgramsPage() {
                     </div>
                     <Badge
                       variant={r.isActive ? 'default' : 'secondary'}
-                      className={cn('shrink-0', r.isActive && 'bg-emerald-500')}
+                      className={cn('shrink-0', r.isActive && 'bg-success')}
                     >
                       {r.isActive ? t('programs.active', 'Active') : t('programs.inactive', 'Inactive')}
                     </Badge>

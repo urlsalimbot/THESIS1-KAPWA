@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { queryKeys } from '../../lib/query-keys';
+import { formatPeso } from '../../lib/format';
 import { MethodologyNote } from './MethodologyNote';
 
 interface InequalityResponse {
@@ -68,7 +69,7 @@ export function InequalityTab({ filters }: { filters: Record<string, unknown> })
           {data.deciles.map((value, i) => (
             <div key={i}>
               <span className="text-xs text-muted-foreground">{t('analytics.inequality.decileLabel', 'D{{n}}', { n: i + 1 })}</span>
-              <p className="font-medium">₱{value.toLocaleString()}</p>
+              <p className="font-medium">{formatPeso(value)}</p>
             </div>
           ))}
         </CardContent>

@@ -4,15 +4,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { statusLabel } from '@/i18n/display';
 
-const STATUS_BADGES: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-  enrolled: 'outline',
-  assessed: 'secondary',
-  in_review: 'secondary',
-  active: 'default',
-  transitioning: 'secondary',
-  closed: 'outline',
-};
-
 import { Eye } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
 import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
@@ -25,6 +16,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { queryKeys } from '../lib/query-keys';
 import { formatDateTime } from '../lib/format';
 import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/StatusBadge';
 import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
 
 interface TrackerEntry {
@@ -105,7 +97,7 @@ export function CaseTrackerPage() {
     { accessorKey: 'clientCategory', header: t('tracker.category', 'Category') },
     { accessorKey: 'caseCategory', header: t('tracker.caseCategory', 'Case Category'), cell: ({ row }) => <CaseCategoryCell category={row.original.caseCategory} /> },
     { accessorKey: 'barangay', header: t('tracker.barangay', 'Barangay') },
-    { accessorKey: 'status', header: t('tracker.status', 'Status'), cell: ({ row }) => <Badge variant={STATUS_BADGES[row.original.status] || 'outline'}>{statusLabel(t, row.original.status)}</Badge> },
+    { accessorKey: 'status', header: t('tracker.status', 'Status'), cell: ({ row }) => <StatusBadge status={row.original.status} label={statusLabel(t, row.original.status)} /> },
     {
       id: 'actions',
       header: t('tracker.actions', 'Actions'),

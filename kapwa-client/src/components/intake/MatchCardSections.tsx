@@ -85,7 +85,7 @@ const COMPARE_COLUMNS = 'grid grid-cols-[minmax(4.5rem,7rem)_1fr_1fr_1.25rem] ga
 // heading levels would skip the page's own structure (and fail heading-order).
 function SectionLabel({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode }) {
   return (
-    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+    <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
       <Icon size={12} className="shrink-0" aria-hidden />
       {children}
     </p>
@@ -93,9 +93,9 @@ function SectionLabel({ icon: Icon, children }: { icon: LucideIcon; children: Re
 }
 
 function confidenceBand(score: number, t: TFunction): { label: string; className: string } {
-  if (score >= 0.6) return { label: t('intake.confidenceVeryLikely', 'Very likely the same person'), className: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
-  if (score >= 0.35) return { label: t('intake.confidenceSome', 'Some similarities'), className: 'bg-yellow-100 text-yellow-800 border-yellow-300' };
-  return { label: t('intake.confidenceSameSurname', 'Possible match'), className: 'bg-gray-100 text-gray-600 border-gray-300' };
+  if (score >= 0.6) return { label: t('intake.confidenceVeryLikely', 'Very likely the same person'), className: 'bg-alert-success-bg text-success-foreground border-success/35' };
+  if (score >= 0.35) return { label: t('intake.confidenceSome', 'Some similarities'), className: 'bg-alert-error-bg text-warning-foreground border-warning/35' };
+  return { label: t('intake.confidenceSameSurname', 'Possible match'), className: 'bg-muted text-muted-foreground border-border' };
 }
 
 function eligibilityNote(candidate: MatchCandidate, t: TFunction): { text: string; icon: 'check' | 'info' } {
@@ -150,7 +150,7 @@ function MatchRow({ label, newVal, existingVal, t }: { label: string; newVal: st
       className={cn(
         COMPARE_COLUMNS,
         'border-b border-border/60 py-2 text-sm last:border-0',
-        !match && 'bg-amber-50/50',
+        !match && 'bg-alert-error-bg',
       )}
     >
       <span className="truncate text-muted-foreground">{label}</span>
@@ -158,8 +158,8 @@ function MatchRow({ label, newVal, existingVal, t }: { label: string; newVal: st
       <span className="truncate border-l border-border/60 pl-3 font-medium" title={existingVal || '—'}>{existingVal || '—'}</span>
       <span role="img" aria-label={status} title={status} className="flex justify-end">
         {match
-          ? <Check size={14} className="text-emerald-600" aria-hidden />
-          : <X size={14} className="text-amber-500" aria-hidden />}
+          ? <Check size={14} className="text-success" aria-hidden />
+          : <X size={14} className="text-warning" aria-hidden />}
       </span>
     </div>
   );
@@ -171,7 +171,7 @@ function MatchCompare({ candidate, intake, t }: { candidate: MatchCandidate; int
   const matched = candidate.matchedPerson ?? candidate.primaryBeneficiary;
   return (
     <section className="rounded-lg border bg-muted/30 p-3">
-      <div className={cn(COMPARE_COLUMNS, 'border-b border-border pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground')}>
+      <div className={cn(COMPARE_COLUMNS, 'border-b border-border pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground')}>
         <span />
         <span className="text-right">{t('intake.youEntered', 'You entered')}</span>
         <span className="border-l border-border/60 pl-3">{t('intake.existingRecord', 'Existing record')}</span>
@@ -208,7 +208,7 @@ function EligibilityBanner({ candidate, t }: { candidate: MatchCandidate; t: TFu
     <p
       className={cn(
         'flex items-start gap-2 rounded-lg p-3 text-sm',
-        elig.icon === 'info' ? 'bg-primary/5 text-primary' : 'bg-emerald-50 text-emerald-800',
+        elig.icon === 'info' ? 'bg-primary/5 text-primary' : 'bg-alert-success-bg text-success-foreground',
       )}
     >
       {elig.icon === 'info'
@@ -226,7 +226,7 @@ function ReasonChips({ candidate, t }: { candidate: MatchCandidate; t: TFunction
       <SectionLabel icon={CheckCircle}>{t('intake.whyFlagged', 'Why this was flagged')}</SectionLabel>
       <div className="flex flex-wrap gap-1.5">
         {candidate.matchedOn.map(token => (
-          <span key={token} className="rounded-full border bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground">
+          <span key={token} className="rounded-full border bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground">
             {t(MATCHED_ON_KEY[token] || token, MATCHED_ON_FALLBACK[token] || token)}
           </span>
         ))}
@@ -292,9 +292,9 @@ function HouseholdMembers({ candidate, t }: { candidate: MatchCandidate; t: TFun
 }
 
 const CASE_STATUS_TONE: Array<[RegExp, string]> = [
-  [/approved|completed|closed/i, 'border-emerald-300 bg-emerald-50 text-emerald-800'],
-  [/active/i, 'border-sky-300 bg-sky-50 text-sky-800'],
-  [/pending/i, 'border-amber-300 bg-amber-50 text-amber-800'],
+  [/approved|completed|closed/i, 'border-success/35 bg-alert-success-bg text-success-foreground'],
+  [/active/i, 'border-badge-review-bg bg-badge-review-bg text-secondary-foreground'],
+  [/pending/i, 'border-warning/35 bg-alert-error-bg text-warning-foreground'],
 ];
 
 function caseStatusTone(status: string): string {
@@ -321,7 +321,7 @@ function PastCases({ candidate, t }: { candidate: MatchCandidate; t: TFunction }
           <li key={`${pc.controlNo}-${i}`} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2 text-sm">
             <span className="font-mono text-xs tracking-wide text-muted-foreground">{pc.controlNo}</span>
             <span className="min-w-0 truncate">{pc.beneficiaryName}</span>
-            <span className={cn('rounded-full border px-2 py-0.5 text-[11px] font-medium', caseStatusTone(pc.status))}>
+            <span className={cn('rounded-full border px-2 py-0.5 text-xs font-medium', caseStatusTone(pc.status))}>
               {statusLabel(t, pc.status)}
             </span>
             <span className="shrink-0 text-xs text-muted-foreground">{pc.createdAt ? formatDate(pc.createdAt) : ''}</span>
@@ -375,7 +375,7 @@ export function MatchCandidateCard({
             {t('intake.isThis', 'Is this')} <span className="text-primary">{fullName}</span>{t('intake.isThisQ', '?')}
           </p>
           {candidate.matchedPerson?.role === 'member' && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+            <span className="inline-flex items-center gap-1 rounded-full border border-warning/35 bg-alert-error-bg px-2 py-0.5 text-xs font-medium text-warning-foreground">
               {t('intake.roleMember', 'Household member')}{matched.relationship ? ` · ${matched.relationship}` : ''}
             </span>
           )}

@@ -145,7 +145,7 @@ export function MonthView({
                     e.stopPropagation();
                     onPlaceBlock?.(dayStr);
                   }}
-                  className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-sm bg-muted text-[11px] font-bold leading-none text-muted-foreground opacity-0 transition-opacity hover:bg-muted-foreground/20 focus-visible:opacity-100 group-hover:opacity-100"
+                  className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-sm bg-muted text-xs font-bold leading-none text-muted-foreground opacity-0 transition-opacity hover:bg-muted-foreground/20 focus-visible:opacity-100 group-hover:opacity-100"
                 >
                   +
                 </button>
@@ -219,7 +219,7 @@ export function MonthView({
         {BLOCK_TYPES.map(type => {
             const typeKey = BLOCK_TYPE_LABEL_KEYS[type];
             return (
-              <span key={type} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <span key={type} className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span
                   className={`h-2 w-2 rounded-full ${
                     BLOCK_COLORS[type]?.split(' ')[0] ?? BLOCK_COLOR_FALLBACK.split(' ')[0]

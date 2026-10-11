@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/StatusBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-context';
 import { downloadMonthlyFunds, downloadSummaryReport } from '@/lib/api';
@@ -55,15 +56,6 @@ interface DailyCounts {
   [day: string]: { interventions: number; cases: number };
 }
 
-const STATUS_BADGES: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-  enrolled: 'outline',
-  assessed: 'secondary',
-  in_review: 'secondary',
-  active: 'default',
-  transitioning: 'secondary',
-  closed: 'outline',
-};
-
 const WORKER_ROLES = ['social_worker', 'admin'];
 
 export function DashboardPage() {
@@ -74,8 +66,8 @@ export function DashboardPage() {
 
   const offlineStats: Stat[] = [
     { label: t('dashboard.servedToday', 'Served Today'), value: '0', change: 'N/A', icon: TrendingUp, iconClass: 'bg-primary/5 text-primary' },
-    { label: t('dashboard.pendingReview', 'Pending Review'), value: '0', change: 'N/A', icon: Clock, iconClass: 'bg-yellow-100 text-yellow-800' },
-    { label: t('dashboard.disbursedThisMonth', 'Disbursed This Month'), value: '₱0', change: 'N/A', icon: DollarSign, iconClass: 'bg-emerald-100 text-emerald-800' },
+    { label: t('dashboard.pendingReview', 'Pending Review'), value: '0', change: 'N/A', icon: Clock, iconClass: 'bg-alert-error-bg text-warning-foreground' },
+    { label: t('dashboard.disbursedThisMonth', 'Disbursed This Month'), value: '₱0', change: 'N/A', icon: DollarSign, iconClass: 'bg-alert-success-bg text-success-foreground' },
   ];
 
   const [range, setRange] = useState<TrendRange>('6m');
@@ -157,7 +149,7 @@ export function DashboardPage() {
     { accessorKey: 'category', header: t('dashboard.category', 'Category'), cell: ({ row }) => <Badge variant="secondary">{categoryLabel(t, row.original.category)}</Badge> },
     { accessorKey: 'caseCategory', header: t('dashboard.caseCategory', 'Case Category'), cell: ({ row }) => <CaseCategoryCell category={row.original.caseCategory} /> },
     { accessorKey: 'barangay', header: t('dashboard.barangay', 'Barangay') },
-    { accessorKey: 'status', header: t('dashboard.statusColumn', 'Status'), cell: ({ row }) => <Badge variant={STATUS_BADGES[row.original.status] || 'outline'}>{statusLabel(t, row.original.status)}</Badge> },
+    { accessorKey: 'status', header: t('dashboard.statusColumn', 'Status'), cell: ({ row }) => <StatusBadge status={row.original.status} label={statusLabel(t, row.original.status)} /> },
     { id: 'actions', header: t('dashboard.actions', 'Actions'), cell: ({ row }) => (
       <Button variant="secondary" size="sm" onClick={() => navigate(`/cases/${row.original.id}`)} aria-label={t('dashboard.viewCase', 'View Case')}>
         <Eye size={14} className="mr-1" /> {t('dashboard.view', 'View')}
@@ -260,7 +252,7 @@ export function DashboardPage() {
         />
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4 [@media(max-height:820px)]:mt-3 [@media(max-height:820px)]:gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4 short:mt-3 short:gap-3">
         <div className="lg:col-span-2"><CaseStatusChart data={data?.byStatus || []} /></div>
         <div className="lg:col-span-1"><ActivityCalendar data={dailyCounts ?? null} year={now.getFullYear()} month={now.getMonth() + 1} /></div>
         <div className="lg:col-span-2"><TrendsChart range={range} /></div>

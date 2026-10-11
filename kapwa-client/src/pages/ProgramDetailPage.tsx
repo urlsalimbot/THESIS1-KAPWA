@@ -129,7 +129,7 @@ export function ProgramDetailPage() {
       backTo={{ label: t('programs.backToPrograms', 'Back to Programs'), onClick: () => navigate('/admin/programs') }}
       actions={
         <div className="flex items-center gap-2">
-          <Badge variant={program.isActive ? 'default' : 'secondary'} className={cn(program.isActive && 'bg-emerald-500')}>
+          <Badge variant={program.isActive ? 'default' : 'secondary'} className={cn(program.isActive && 'bg-success')}>
             {program.isActive ? t('programs.active', 'Active') : t('programs.inactive', 'Inactive')}
           </Badge>
           <Button variant="outline" size="sm" onClick={toggleActive} disabled={busy} className="gap-1.5">
@@ -165,7 +165,7 @@ export function ProgramDetailPage() {
                 <InfoRow label={t('programs.formVersion', 'Form Version')}>{program.formVersion}</InfoRow>
                 <InfoRow label={t('programs.status', 'Status')}>
                   <span className="inline-flex items-center gap-1">
-                    {program.isActive ? <CheckCircle size={14} className="text-emerald-500" aria-hidden="true" /> : <XCircle size={14} className="text-muted-foreground" aria-hidden="true" />}
+                    {program.isActive ? <CheckCircle size={14} className="text-success" aria-hidden="true" /> : <XCircle size={14} className="text-muted-foreground" aria-hidden="true" />}
                     {program.isActive ? t('programs.active', 'Active') : t('programs.inactive', 'Inactive')}
                   </span>
                 </InfoRow>

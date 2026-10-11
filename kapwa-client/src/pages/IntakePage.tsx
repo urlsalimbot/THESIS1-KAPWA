@@ -117,7 +117,7 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">{t('intake.extension', 'Extension')}</label>
-            <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={form.extension} onChange={e => onChange('extension', e.target.value)} aria-label={`${prefix}-extension`}>
+            <select className="form-select" value={form.extension} onChange={e => onChange('extension', e.target.value)} aria-label={`${prefix}-extension`}>
               {NAME_EXTENSIONS.map(e => <option key={e} value={e === 'N/A' ? '' : e}>{e}</option>)}
             </select>
           </div>
@@ -793,7 +793,7 @@ export function IntakePage() {
           {t('intake.fromReferral', 'From referral: {{reason}}', { reason: sourceReferral.reason })}
         </div>
       )}
-      <form onSubmit={handleSubmit} noValidate className="mx-auto w-full max-w-5xl space-y-6 [@media(max-height:820px)]:space-y-4">
+      <form onSubmit={handleSubmit} noValidate className="mx-auto w-full max-w-5xl space-y-6 short:space-y-4">
         {/* Section I: Beneficiary */}
         <div className="relative rounded-lg border bg-card shadow-sm">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
@@ -888,7 +888,7 @@ export function IntakePage() {
             {family.map(m => {
               const dobError = m.dob && (!/^\d{4}-\d{2}-\d{2}$/.test(m.dob) || computeAge(m.dob) < 0 || computeAge(m.dob) > 120) ? t('intake.invalidDob', 'Invalid date of birth') : '';
               return (
-                <div key={m.id} className={`mb-3 rounded-lg border p-3 transition-colors ${m.done ? 'bg-emerald-50 border-emerald-300' : 'bg-muted/30'}`}>
+                <div key={m.id} className={`mb-3 rounded-lg border p-3 transition-colors ${m.done ? 'bg-alert-success-bg border-success/35' : 'bg-muted/30'}`}>
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-2">
                     <div className="space-y-1">
                       <label className="text-xs text-muted-foreground">{t('intake.surname', 'Surname *')}</label>

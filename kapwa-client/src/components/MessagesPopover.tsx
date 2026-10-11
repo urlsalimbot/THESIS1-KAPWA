@@ -79,7 +79,7 @@ export default function MessagesPopover() {
         <div className="flex items-center justify-between px-4 py-3">
           <span className="text-sm font-semibold">{t('messages.title', 'Messages')}</span>
           {unreadCount > 0 && (
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+            <Badge variant="secondary" className="text-xs px-1.5 py-0">
               {t('messages.unread', '{{count}} unread', { count: unreadCount })}
             </Badge>
           )}
@@ -107,7 +107,7 @@ export default function MessagesPopover() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium truncate">{conv.name || t('messages.unknown', 'Unknown')}</span>
-                    <span className="text-[10px] text-muted-foreground shrink-0">{formatTime(conv.lastTime)}</span>
+                    <span className="text-xs text-muted-foreground shrink-0">{formatTime(conv.lastTime)}</span>
                   </div>
                   <p className="text-xs text-muted-foreground/70 truncate mt-0.5">{conv.lastMessage}</p>
                 </div>

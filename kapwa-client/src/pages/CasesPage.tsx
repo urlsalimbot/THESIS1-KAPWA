@@ -16,6 +16,7 @@ import { DataTable } from '@/components/data-table';
 import { CaseCategoryCell } from '@/components/case-category-cell';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/StatusBadge';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '../lib/auth-context';
 import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
@@ -37,15 +38,6 @@ interface CaseRow {
   slaOverdue?: boolean;
   createdAt: string;
 }
-
-const STATUS_BADGES: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-  enrolled: 'outline',
-  assessed: 'secondary',
-  in_review: 'secondary',
-  active: 'default',
-  transitioning: 'secondary',
-  closed: 'outline',
-};
 
 const STATUS_LABELS: Record<string, string> = {
   enrolled: 'Enrolled',
@@ -243,7 +235,7 @@ export function CasesPage() {
     { accessorKey: 'category', header: t('cases.category', 'Client Category'), cell: ({ row }) => <Badge variant="secondary">{row.original.category ? categoryLabel(t, row.original.category) : ''}</Badge> },
     { accessorKey: 'caseCategory', header: t('cases.caseCategory', 'Case Category'), cell: ({ row }) => <CaseCategoryCell category={row.original.caseCategory} /> },
     { accessorKey: 'barangay', header: t('cases.barangay', 'Barangay') },
-    { accessorKey: 'status', header: t('cases.status', 'Status'), cell: ({ row }) => <Badge variant={STATUS_BADGES[row.original.status] || 'outline'}>{statusLabel(t, row.original.status)}</Badge> },
+    { accessorKey: 'status', header: t('cases.status', 'Status'), cell: ({ row }) => <StatusBadge status={row.original.status} label={statusLabel(t, row.original.status)} /> },
     { id: 'actions', header: t('cases.actions', 'Actions'), cell: ({ row }) => <ActionsCell c={row.original} /> },
   ], [t]);
 

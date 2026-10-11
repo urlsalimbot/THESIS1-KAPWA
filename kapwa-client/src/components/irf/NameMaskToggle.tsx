@@ -38,7 +38,7 @@ export default function NameMaskToggle({ irfId, legalBasis: initialLegalBasis, o
 
   return (
     <div className="flex items-center gap-2 mt-2">
-      <input className="rounded border border-gray-300 p-2 text-sm w-48"
+      <input className="rounded border border-border p-2 text-sm w-48"
         placeholder={t('irf.legalBasisPlaceholder', 'Legal basis code')}
         value={legalBasis}
         onChange={e => setLegalBasis(e.target.value)}

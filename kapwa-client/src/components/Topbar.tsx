@@ -106,7 +106,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
 
   return (
     <TooltipProvider>
-      <header className="z-40 h-[4.5rem] border-b bg-card flex items-center px-4 lg:px-6 overflow-visible [@media(max-height:820px)]:h-14">
+      <header className="z-40 h-[4.5rem] border-b bg-card flex items-center px-4 lg:px-6 overflow-visible short:h-14">
         <div className="flex items-center gap-3 min-w-0 shrink-0">
           <button
             className="touch-sm lg:hidden w-9 h-9 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 hover:scale-105"
@@ -128,7 +128,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
 
           {user && (
             <div className="hidden md:flex items-center gap-2 shrink-0">
-              <Badge variant="secondary" className="text-[10px] font-semibold">{roleLabel}</Badge>
+              <Badge variant="secondary" className="text-xs font-semibold">{roleLabel}</Badge>
             </div>
           )}
 
@@ -193,7 +193,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
           <Separator orientation="vertical" className="h-6" />
 
           {!online && (
-            <Badge variant="outline" className="hidden md:inline-flex border-amber-500 text-amber-600 bg-amber-50" aria-label={t('topbar.offlineIndicator', 'Offline indicator')}>
+            <Badge variant="outline" className="hidden md:inline-flex border-warning/35 text-warning bg-alert-error-bg" aria-label={t('topbar.offlineIndicator', 'Offline indicator')}>
               <WifiOff size={12} className="mr-1" /> {t('topbar.offline', 'Offline')}
             </Badge>
           )}

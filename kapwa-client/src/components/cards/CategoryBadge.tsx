@@ -42,7 +42,7 @@ export function CategoryBadge({ category, className }: { category?: string; clas
         badgeVariants({
           variant: CATEGORY_VARIANTS[category as AccessCardCategory] ?? FALLBACK_VARIANT,
         }),
-        'text-[10px]',
+        'text-xs',
         className,
       )}
     >

@@ -193,7 +193,7 @@ export function LoginPage() {
             </form>
             {isEmailOtp && (
               <div className="text-center text-sm text-muted-foreground mt-4 space-y-1">
-                {mfaResendNotice && <p className="text-emerald-600">{mfaResendNotice}</p>}
+                {mfaResendNotice && <p className="text-success">{mfaResendNotice}</p>}
                 <button
                   type="button"
                   onClick={handleMfaResend}

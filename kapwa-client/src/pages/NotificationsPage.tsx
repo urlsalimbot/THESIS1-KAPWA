@@ -48,14 +48,14 @@ const categoryLabels: Record<string, { key: string; label: string }> = {
 
 const categoryColors: Record<string, string> = {
   case_update: 'bg-primary/10 text-primary',
-  approval: 'bg-emerald-100 text-emerald-700',
+  approval: 'bg-alert-success-bg text-success-foreground',
   disbursement: 'bg-primary/10 text-primary',
-  chat: 'bg-amber-100 text-amber-700',
+  chat: 'bg-alert-error-bg text-warning-foreground',
   sync_conflict: 'bg-destructive/10 text-destructive',
-  system: 'bg-slate-100 text-slate-700',
-  sla_escalation: 'bg-amber-100 text-amber-700',
+  system: 'bg-muted text-muted-foreground',
+  sla_escalation: 'bg-alert-error-bg text-warning-foreground',
   court_hearing: 'bg-purple-100 text-purple-700',
-  home_visit: 'bg-emerald-100 text-emerald-700',
+  home_visit: 'bg-alert-success-bg text-success-foreground',
 };
 
 export function NotificationsPage() {
@@ -162,7 +162,7 @@ export function NotificationsPage() {
           <div className="flex items-center gap-3">
             <h2 className="text-sm font-semibold text-foreground">{t('notifications.title', 'Notifications')}</h2>
             {unreadCount > 0 && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+              <Badge variant="secondary" className="text-xs px-1.5 py-0">
                 {t('notifications.unreadCount', '{{count}} unread', { count: unreadCount })}
               </Badge>
             )}
@@ -236,13 +236,13 @@ export function NotificationsPage() {
                         {n.title}
                         <ExternalLink size={12} className="text-muted-foreground/40 shrink-0" />
                       </span>
-                      <span className="text-[10px] text-muted-foreground shrink-0">
+                      <span className="text-xs text-muted-foreground shrink-0">
                         {formatNotificationTime(n.createdAt, t)}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground/80 mt-0.5">{n.message}</p>
                     <div className="flex items-center gap-2 mt-1.5">
-                      <span className={cn('text-[10px] px-1.5 py-0.5 rounded', categoryColors[n.category] || 'bg-slate-100 text-slate-700')}>
+                      <span className={cn('text-xs px-1.5 py-0.5 rounded', categoryColors[n.category] || 'bg-muted text-muted-foreground')}>
                         {categoryLabels[n.category] ? t(categoryLabels[n.category].key, categoryLabels[n.category].label) : n.category}
                       </span>
                       {!n.isRead && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}

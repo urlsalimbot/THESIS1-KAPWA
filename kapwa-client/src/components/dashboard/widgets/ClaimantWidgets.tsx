@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { queryKeys } from '@/lib/query-keys';
 import { useTranslation } from 'react-i18next';
 import { statusLabel } from '@/i18n/display';
-import { formatDate } from '../../../lib/format';
+import { formatDate, formatPeso } from '../../../lib/format';
 
 interface ServiceRecord {
   id: string;
@@ -99,9 +99,9 @@ export function ClaimantWidgets() {
                 </div>
                 <div className="text-right">
                   {s.amount > 0 && (
-                    <p className="text-sm font-semibold">₱{s.amount.toLocaleString()}</p>
+                    <p className="text-sm font-semibold">{formatPeso(s.amount)}</p>
                   )}
-                  <span className={`text-xs ${s.status === 'completed' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  <span className={`text-xs ${s.status === 'completed' ? 'text-success' : 'text-warning'}`}>
                     {s.status}
                   </span>
                 </div>
