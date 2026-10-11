@@ -252,7 +252,7 @@ export function FileUploadList({
                   title={t('caseView.documents.preview', 'Preview')}
                 >
                   <span className="block truncate font-medium text-foreground">{name}</span>
-                  <span className="block text-[10px] text-muted-foreground">{(doc.fileSize / 1024).toFixed(0)} KB</span>
+                  <span className="block text-xs text-muted-foreground">{(doc.fileSize / 1024).toFixed(0)} KB</span>
                 </button>
                 {renderDocExtras?.(doc)}
                 <DropdownMenu>

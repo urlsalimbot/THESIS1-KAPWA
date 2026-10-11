@@ -71,8 +71,9 @@ describe('StepCategoryFields — the card titles itself', () => {
     });
   }
 
-  // The seal is a statement about the whole step, so it stands below the card
-  // rather than as a row beside the Save button.
+  // The seal is a statement about the whole step, so it stands below the card —
+  // and it is the card's submit: one press saves the form and seals the step, so
+  // the card holds no Save row of its own.
   it('stands the seal below the card, not inside it', () => {
     renderStep(StepProtectionOrder);
 
@@ -82,20 +83,17 @@ describe('StepCategoryFields — the card titles itself', () => {
     expect(lock.closest('section')?.contains(lock)).toBe(true);
   });
 
-  it('keeps Save inside the card and the seal outside it', () => {
+  it('keeps no Save control of its own — the seal bar below the card is the submit', () => {
     renderStep(StepProtectionOrder);
 
     const card = theCard(screen.getByRole('heading', { name: /Protection Order/i }));
-    expect(card.contains(screen.getByRole('button', { name: 'Save' }))).toBe(true);
+    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
     expect(card.contains(screen.getByRole('button', { name: /^lock$/i }))).toBe(false);
   });
 
-  // A viewer gets no Save row, so a rule above it would end the card on a line
-  // ruling off nothing — the StepAssessment fix, applied to the same shape.
-  it('ends a read-only card on its last field, not on a stray rule', () => {
+  it('ends a card on its last field, not on a stray rule', () => {
     renderStep(StepProtectionOrder, { readOnly: true, lockReadOnly: true });
 
-    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
     const content = theCard(screen.getByRole('heading', { name: /Protection Order/i })).lastElementChild;
     // A separator renders no text; the form's own last field does. This passes on
     // the field and fails on a bare rule left ruling off nothing.

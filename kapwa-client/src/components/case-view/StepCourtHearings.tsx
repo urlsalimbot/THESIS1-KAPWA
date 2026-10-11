@@ -5,6 +5,7 @@ import useSWR from 'swr';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { humanizeError } from '@/lib/errors';
+import { toastSaved } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
@@ -81,6 +82,9 @@ export function StepCourtHearings({ caseId, caseData, userRole, readOnly, lockRe
     try {
       await api.patch(`/cases/${caseId}/court-hearings-decision`, { notNeeded: next });
       await refresh();
+      toastSaved(next
+        ? t('caseView.hearings.hearingsNeeded', 'Hearings required again')
+        : t('caseView.hearings.noHearingNeeded', 'Recorded: no hearing for this case'));
     } catch (err) {
       toast.error(t('caseView.hearings.decisionFailed', 'Could not save the hearing decision'), { description: humanizeError(err) });
     } finally {
@@ -117,6 +121,7 @@ export function StepCourtHearings({ caseId, caseData, userRole, readOnly, lockRe
     try {
       await api.patch(`/cases/${caseId}/events/${id}`, { status });
       await refresh();
+      toastSaved(t('caseView.hearings.updated', 'Hearing updated'));
     } catch (e) {
       toast.error(t('caseView.hearings.updateFailed', 'Could not update the hearing'), { description: humanizeError(e) });
     } finally {
@@ -129,6 +134,7 @@ export function StepCourtHearings({ caseId, caseData, userRole, readOnly, lockRe
     try {
       await api.del(`/cases/${caseId}/events/${id}`);
       await refresh();
+      toastSaved(t('caseView.hearings.deleted', 'Hearing removed'));
     } catch (e) {
       toast.error(t('caseView.hearings.deleteFailed', 'Could not delete the hearing'), { description: humanizeError(e) });
     } finally {
@@ -150,7 +156,7 @@ export function StepCourtHearings({ caseId, caseData, userRole, readOnly, lockRe
                 <Gavel size={16} className="text-primary" />
                 <h3 className="text-sm font-semibold">{t('caseView.hearings.title', 'Court Hearings')}</h3>
                 {notNeeded && (
-                  <Badge variant="outline" className="gap-1 text-[10px]">
+                  <Badge variant="outline" className="gap-1 text-xs">
                     <CheckCircle2 size={10} aria-hidden="true" /> {t('caseView.hearings.notNeededBadge', 'No hearing needed')}
                   </Badge>
                 )}
@@ -191,7 +197,7 @@ export function StepCourtHearings({ caseId, caseData, userRole, readOnly, lockRe
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">
                     {ev.title || t('caseView.hearings.defaultTitle', 'Court hearing')}
-                    <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                    <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-semibold ${
                       ev.attended === true ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
                     }`}>
                       {ev.attended === true

@@ -15,13 +15,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { api, downloadCsrPdf, downloadFilingDoc, filingDocIdFromUrl, getFilingObjectUrl, downloadGisPdf } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { addressNames } from '@/lib/psgc';
-import { formatDate, formatDateTime, personFullName } from '../lib/format';
+import { formatDate, formatDateTime, personFullName, formatPeso } from '../lib/format';
 import { interventionRequirementsMet } from '../lib/case-progress';
 import { setCaseLabel } from '../lib/breadcrumbs';
 import { humanizeError } from '../lib/errors';
 import { useAuth } from '../lib/auth-context';
 import { PageShell } from '@/components/PageShell';
 import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
@@ -82,15 +83,6 @@ function focusFirstInvalidAssessmentField(err: unknown): void {
   }
 }
 
-const STATUS_BADGES: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-  enrolled: 'outline',
-  assessed: 'secondary',
-  in_review: 'secondary',
-  active: 'default',
-  transitioning: 'secondary',
-  closed: 'outline',
-  aftercare: 'secondary',
-};
 
 /**
  * The step a freshly-opened case should show. Only steps the lifecycle has
@@ -409,32 +401,10 @@ export function CaseViewPage() {
     otherAssistance: caseData?.otherAssistance || ({} as Record<string, unknown>),
     clientSignature: caseData?.clientSignature || '',
   });
-  const [savingAssessment, setSavingAssessment] = useState(false);
-
-  useEffect(() => {
-    if (caseData) {
-      setAssessment({
-        problemsPresented: caseData.problemsPresented || '',
-        socialWorkerAssessment: caseData.socialWorkerAssessment || '',
-        clientCategory: caseData.clientCategory || '',
-        caseCategory: caseData.caseCategory || '',
-        frvaScore: caseData.frvaScore || null,
-        swdiScore: caseData.swdiScore || null,
-        familyDialogueNotes: caseData.familyDialogueNotes || '',
-        natureOfService: (caseData.natureOfService || []) as string[],
-        financialSubsidies: (caseData.financialSubsidies || {}) as Record<string, unknown>,
-        amountAssistance: caseData.amountAssistance !== undefined && caseData.amountAssistance !== null ? caseData.amountAssistance : '',
-        modeFinancialAssistance: caseData.modeFinancialAssistance || '',
-        sourceOfFund: caseData.sourceOfFund || '',
-        legislatorSpecify: caseData.legislatorSpecify || '',
-        otherAssistance: (caseData.otherAssistance || {}) as Record<string, unknown>,
-        clientSignature: caseData.clientSignature || '',
-      });
-    }
-  }, [caseData]);
-
+  // Throws on failure: the caller is the seal bar, which reports it and leaves
+  // the step unsealed. No `saving` flag of its own — the bar is busy for the
+  // whole save-then-seal, which is the control the worker is watching.
   async function saveAssessment() {
-    setSavingAssessment(true);
     try {
       // Empty strings must be omitted, not sent: the API rejects "" for the
       // enum ('Cash' | 'Cheque') and numeric fields ("Please check the
@@ -457,19 +427,36 @@ export function CaseViewPage() {
       });
       await mutate(queryKeys.cases.detail(id!));
     } catch (e) {
-      console.error('Failed to save assessment:', e);
-      // Previously this logged and returned: a 400 reached the console while the
-      // worker got silence, because the ApiError's message is a Zod object the
-      // toast copy never read. Name what is missing and take them to it — the
-      // card runs well past the fold.
-      toast.error(t('caseView.assessment.saveFailed', 'Could not save the assessment'), {
-        description: humanizeError(e),
-      });
+      // A Zod-shaped 400 is otherwise unreadable and the card runs well past the
+      // fold, so take the worker to the field the server named; the seal bar's
+      // toast carries the message. (This used to toast here as well — two toasts
+      // for one failure, once the bar had to report it too.)
       focusFirstInvalidAssessmentField(e);
-    } finally {
-      setSavingAssessment(false);
+      throw e;
     }
   }
+
+  useEffect(() => {
+    if (caseData) {
+      setAssessment({
+        problemsPresented: caseData.problemsPresented || '',
+        socialWorkerAssessment: caseData.socialWorkerAssessment || '',
+        clientCategory: caseData.clientCategory || '',
+        caseCategory: caseData.caseCategory || '',
+        frvaScore: caseData.frvaScore || null,
+        swdiScore: caseData.swdiScore || null,
+        familyDialogueNotes: caseData.familyDialogueNotes || '',
+        natureOfService: (caseData.natureOfService || []) as string[],
+        financialSubsidies: (caseData.financialSubsidies || {}) as Record<string, unknown>,
+        amountAssistance: caseData.amountAssistance !== undefined && caseData.amountAssistance !== null ? caseData.amountAssistance : '',
+        modeFinancialAssistance: caseData.modeFinancialAssistance || '',
+        sourceOfFund: caseData.sourceOfFund || '',
+        legislatorSpecify: caseData.legislatorSpecify || '',
+        otherAssistance: (caseData.otherAssistance || {}) as Record<string, unknown>,
+        clientSignature: caseData.clientSignature || '',
+      });
+    }
+  }, [caseData]);
 
   if (isLoading) {
     return (
@@ -567,7 +554,7 @@ export function CaseViewPage() {
       switch (key) {
         case 'assessment':
           return <StepAssessment key={stepLockKey(id!, key)} {...common} assessment={assessment}
-            onAssessmentChange={setAssessment} onSave={saveAssessment} saving={savingAssessment}
+            onAssessmentChange={setAssessment} onSave={saveAssessment}
             userRole={user?.role}
             readOnly={bodyReadOnly(caseClosed || !['enrolled', 'assessed'].includes(caseData?.status), key)}
             transitionReadOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)}
@@ -673,9 +660,7 @@ export function CaseViewPage() {
               <AlertTriangle size={12} aria-hidden="true" /> {t('cases.overdueBadge', 'OVERDUE')}
             </span>
           )}
-          <Badge variant={STATUS_BADGES[caseData.status] || 'outline'} className="px-3 py-1 text-sm">
-            {statusLabel(t, caseData.status)}
-          </Badge>
+          <StatusBadge status={caseData.status} label={statusLabel(t, caseData.status)} className="px-3 py-1 text-sm" />
         </div>
       }
     >
@@ -687,7 +672,7 @@ export function CaseViewPage() {
 
           {/* Case details strip */}
           {caseData?.crisisMode && (
-            <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800" role="status">
+            <div className="rounded-md border border-warning/35 bg-alert-error-bg px-3 py-2 text-xs text-warning-foreground" role="status">
               {t('caseView.crisisModeBanner', 'Crisis mode — ad-hoc services use intervention-anchored documents.')}
             </div>
           )}
@@ -950,7 +935,7 @@ export function CaseViewPage() {
                     <span className="text-muted-foreground text-xs">{t('cases.household', 'Household')}</span>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                       {household.barangay && <span>{household.barangay}</span>}
-                      {household.estimatedIncome && <span className="tabular-nums">₱{Number(household.estimatedIncome).toLocaleString()}/mo</span>}
+                      {household.estimatedIncome && <span className="tabular-nums">{formatPeso(Number(household.estimatedIncome))}/mo</span>}
                       {household.nhtsPrId && <span>{t('nhts.label', 'NHTS-PR / Listahanan ID')}: {household.nhtsPrId}</span>}
                     </div>
                     {(famGraph?.members?.length || 0) > 0 && (
@@ -1121,7 +1106,7 @@ export function CaseViewPage() {
                               ? `${statusLabel(t, entry.fromStatus)} → ${statusLabel(t, entry.toStatus)}`
                               : statusLabel(t, entry.toStatus)}
                           </span>
-                          <Badge variant="outline" className="px-1 py-0 text-[10px] capitalize">
+                          <Badge variant="outline" className="px-1 py-0 text-xs capitalize">
                             {String(entry.transitionType || '').replace(/_/g, ' ')}
                           </Badge>
                         </div>

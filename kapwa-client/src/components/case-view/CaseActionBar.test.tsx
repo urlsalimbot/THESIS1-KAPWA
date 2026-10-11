@@ -55,7 +55,12 @@ function renderBar(props: Partial<React.ComponentProps<typeof CaseActionBar>> = 
   return render(
     <>
       <Toaster />
-      <CaseActionBar caseId="c1" caseData={{ status: 'assessed' }} userRole="social_worker" onChanged={noop} {...props} />
+      {/* A handle for assertions that must see only the bar: the success toasts
+          this file's own actions raise are legitimate on-screen content now, and
+          app-wide queries would read them as the bar's state. */}
+      <div data-testid="case-action-bar">
+        <CaseActionBar caseId="c1" caseData={{ status: 'assessed' }} userRole="social_worker" onChanged={noop} {...props} />
+      </div>
     </>,
   );
 }
@@ -215,7 +220,8 @@ describe('CaseActionBar', () => {
   it('reports a committed transition whose refresh failed as a refresh failure', async () => {
     const user = userEvent.setup();
     const onChanged = vi.fn().mockRejectedValue(new Error('offline'));
-    renderBar({ caseData: { status: 'assessed', stepLocks: locksFor([0, 5, 1, 2]) }, onChanged });
+    const bar = renderBar({ caseData: { status: 'assessed', stepLocks: locksFor([0, 5, 1, 2]) }, onChanged });
+    const barEl = () => screen.getByTestId('case-action-bar');
 
     await user.click(flagButton());
     await user.click(confirmButton());
@@ -233,9 +239,11 @@ describe('CaseActionBar', () => {
     // a failure. Asserted as "no button at all", not "a disabled one", because a
     // disabled button still invites the question of why.
     expect(screen.queryByRole('button', { name: /flag for admin review/i })).toBeNull();
-    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    // Scoped to the bar: the success toast of this very action also carries a
+    // button (its close control), which is toast furniture, not a bar control.
+    expect(within(barEl()).queryAllByRole('button')).toHaveLength(0);
     // And the record of what happened, in the case's own vocabulary.
-    expect(screen.getByText(/moved to in review/i)).toBeTruthy();
+    expect(within(barEl()).getByText(/moved to in review/i)).toBeTruthy();
     expect(mockApiPatch).toHaveBeenCalledTimes(1);
   });
 
@@ -245,10 +253,11 @@ describe('CaseActionBar', () => {
     const { rerender } = renderBar({
       caseData: { status: 'assessed', stepLocks: locksFor([0, 5, 1, 2]) }, onChanged,
     });
+    const barEl = () => screen.getByTestId('case-action-bar');
 
     await user.click(flagButton());
     await user.click(confirmButton());
-    expect(await screen.findByText(/moved to in review/i)).toBeTruthy();
+    expect(await within(barEl()).findByText(/moved to in review/i)).toBeTruthy();
 
     // The parent eventually catches up — a revalidation, another tab, anything.
     // This bar's own record must yield to it, and the *next* hop appear: a
@@ -257,17 +266,21 @@ describe('CaseActionBar', () => {
     rerender(
       <>
         <Toaster />
-        <CaseActionBar
-          caseId="c1"
-          caseData={{ status: 'in_review' }}
-          userRole="admin"
-          onChanged={noop}
-        />
+        <div data-testid="case-action-bar">
+          <CaseActionBar
+            caseId="c1"
+            caseData={{ status: 'in_review' }}
+            userRole="admin"
+            onChanged={noop}
+          />
+        </div>
       </>,
     );
 
-    expect(screen.queryByText(/moved to in review/i)).toBeNull();
-    expect(screen.getByRole('button', { name: /approve & activate/i })).toBeEnabled();
+    // Scoped to the bar: the action's own "Moved to In Review." toast may still
+    // be on screen, and it is not the record this assertion is about.
+    expect(within(barEl()).queryByText(/moved to in review/i)).toBeNull();
+    expect(within(barEl()).getByRole('button', { name: /approve & activate/i })).toBeEnabled();
   });
 
   // --- admin: one named button per legal forward hop -----------------------

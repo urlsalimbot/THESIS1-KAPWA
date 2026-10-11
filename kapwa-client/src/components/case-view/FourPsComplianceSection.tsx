@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle, ChevronDown, ChevronRight, Circle, RefreshC
 import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
 import { queryKeys } from '../../lib/query-keys';
+import { toastSaved } from '../../lib/toast';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -122,6 +123,7 @@ export function FourPsComplianceSection({ caseId }: { caseId: string }) {
     try {
       await api.post(`/fourps/${caseId}/generate-compliance`);
       await mutate();
+      toastSaved(t('fourps.complianceGenerated', 'Compliance documents generated'));
     } catch {
       setError(t('fourps.actionFailed', 'Action failed. Please try again.'));
     } finally {
@@ -135,6 +137,7 @@ export function FourPsComplianceSection({ caseId }: { caseId: string }) {
     try {
       await api.patch(`/fourps/compliance/${id}/meet`);
       await mutate();
+      toastSaved(t('fourps.requirementMet', 'Requirement marked met'));
     } catch {
       setError(t('fourps.actionFailed', 'Action failed. Please try again.'));
     } finally {
@@ -155,6 +158,7 @@ export function FourPsComplianceSection({ caseId }: { caseId: string }) {
         await api.patch(`/fourps/compliance/${item.id}/meet`);
       }
       await mutate();
+      toastSaved(t('fourps.requirementsMet', 'Requirements marked met'));
     } catch {
       setError(t('fourps.actionFailed', 'Action failed. Please try again.'));
       await mutate();
@@ -194,7 +198,7 @@ export function FourPsComplianceSection({ caseId }: { caseId: string }) {
         <div className="px-4 pb-3">
           <div className="h-2 w-full rounded-full bg-secondary">
             <div
-              className={cn('h-2 rounded-full transition-all', rate >= 80 ? 'bg-emerald-500' : rate >= 50 ? 'bg-amber-500' : 'bg-destructive')}
+              className={cn('h-2 rounded-full transition-all', rate >= 80 ? 'bg-success' : rate >= 50 ? 'bg-warning' : 'bg-destructive')}
               style={{ width: `${rate}%` }}
             />
           </div>
@@ -224,12 +228,12 @@ export function FourPsComplianceSection({ caseId }: { caseId: string }) {
 
       {/* Delisting risk: two consecutive missed periods */}
       {atRisk.length > 0 && (
-        <div className="rounded-lg border border-amber-500/40 bg-amber-50 px-4 py-3">
-          <p className="flex items-center gap-2 text-sm font-semibold text-amber-800">
+        <div className="rounded-lg border border-warning/35 bg-alert-error-bg px-4 py-3">
+          <p className="flex items-center gap-2 text-sm font-semibold text-warning-foreground">
             <AlertTriangle size={16} aria-hidden="true" />
             {t('fourps.atRisk', 'Delisting risk')}
           </p>
-          <p className="mt-1 text-xs text-amber-800/90">
+          <p className="mt-1 text-xs text-warning-foreground">
             {t(
               'fourps.atRiskDesc',
               'Two consecutive non-compliant periods means delisting from the program. These members have missed two or more periods in a row:',
@@ -237,9 +241,9 @@ export function FourPsComplianceSection({ caseId }: { caseId: string }) {
           </p>
           <ul className="mt-2 space-y-0.5">
             {atRisk.map(member => (
-              <li key={member.name} className="text-xs text-amber-900">
+              <li key={member.name} className="text-xs text-warning-foreground">
                 <span className="font-medium">{member.name}</span>
-                {member.relationship ? <span className="text-amber-800/80"> · {member.relationship}</span> : null}
+                {member.relationship ? <span className="text-warning-foreground"> · {member.relationship}</span> : null}
                 <span className="ml-1">
                   {t('fourps.missedPeriods', '{{count}} consecutive periods missed', { count: member.missedPeriods })}
                 </span>
@@ -275,7 +279,7 @@ export function FourPsComplianceSection({ caseId }: { caseId: string }) {
                     <span className="text-sm font-medium">{period.label}</span>
                     <Badge
                       variant={complete ? 'default' : 'secondary'}
-                      className={cn('text-[10px]', complete && 'bg-emerald-500')}
+                      className={cn('text-xs', complete && 'bg-success')}
                     >
                       {period.complied}/{period.total}
                     </Badge>
@@ -314,10 +318,10 @@ export function FourPsComplianceSection({ caseId }: { caseId: string }) {
                         <div className="flex shrink-0 items-center gap-2">
                           {item.met ? (
                             <>
-                              <Badge variant="secondary" className="text-[10px]">
+                              <Badge variant="secondary" className="text-xs">
                                 {t('fourps.complied', 'Complied')}
                               </Badge>
-                              <CheckCircle size={16} className="text-emerald-500" aria-hidden="true" />
+                              <CheckCircle size={16} className="text-success" aria-hidden="true" />
                             </>
                           ) : (
                             <Button
@@ -328,7 +332,7 @@ export function FourPsComplianceSection({ caseId }: { caseId: string }) {
                               disabled={pendingId === item.id || bulkPeriod === period.label}
                               onClick={() => markMet(item.id)}
                             >
-                              <Circle size={14} className="text-amber-500" aria-hidden="true" />
+                              <Circle size={14} className="text-warning" aria-hidden="true" />
                               {t('fourps.markMetShort', 'Mark complied')}
                             </Button>
                           )}

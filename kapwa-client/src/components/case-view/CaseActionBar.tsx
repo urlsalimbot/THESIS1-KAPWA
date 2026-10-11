@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { humanizeError } from '@/lib/errors';
+import { toastSaved } from '@/lib/toast';
 import { statusLabel } from '@/i18n/display';
 import { CASE_ADMIN_ROLE, canTransitionCase } from '@/lib/role-access';
 import { Button } from '@/components/ui/button';
@@ -295,6 +296,7 @@ function CaseHopControl({
       // case where it does. Close the dialog and stop offering the hop at the same
       // moment, so a committed transition cannot be performed twice from this bar.
       setMine({ from: status, to: hop.to });
+      toastSaved(t('caseView.action.movedTo', 'Moved to {{status}}.', { status: statusLabel(t, hop.to) }));
       setOpen(false);
       try {
         await onChanged();

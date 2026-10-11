@@ -30,7 +30,6 @@ function renderAssessment(
       assessment={{ problemsPresented: '', socialWorkerAssessment: '', clientCategory: '', frvaScore: null, swdiScore: null, ...assessment }}
       onAssessmentChange={() => {}}
       onSave={() => {}}
-      saving={false}
       userRole={opts.userRole ?? 'social_worker'}
       readOnly={opts.readOnly}
       transitionReadOnly={opts.transitionReadOnly}
@@ -59,10 +58,10 @@ describe('StepAssessment — step completion gate and save flow', () => {
     mockPatch.mockResolvedValue({});
   });
 
-  it('shows one Save button for the whole step, not a second one in the tools card', () => {
+  it('has no Save button of its own — the seal bar below the card is the submit', () => {
     renderAssessment(filledCaseData(), { problemsPresented: 'x', socialWorkerAssessment: 'y', clientCategory: 'z' });
-    expect(screen.getAllByRole('button', { name: 'Save Assessment' }).length).toBe(1);
-    expect(screen.queryByRole('button', { name: 'Save Assessment Tools' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Save Assessment/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /^lock$/i })).toBeTruthy();
   });
 
   it('does not offer Complete Assessment until an FRVA/SWDI score is recorded', () => {
@@ -184,15 +183,14 @@ describe('StepAssessment — step completion gate and save flow', () => {
 
     // The step's root is what the card and its seal strip share, so the box
     // between that root and the card's own title is the card itself. Both
-    // titles and the Save button landing in it is what "one card" means: a
-    // second card would leave the tools title outside the box the card's title
-    // names, which is exactly the shape this replaced.
+    // titles landing in it is what "one card" means: a second card would leave
+    // the tools title outside the box the card's title names, which is exactly
+    // the shape this replaced.
     const root = commonAncestor(cardTitle, lock);
     expect(root).not.toBeNull();
     const card = childOf(root as Element, cardTitle);
     expect(card).not.toBeNull();
     expect(card?.contains(toolsTitle)).toBe(true);
-    expect(card?.contains(screen.getByRole('button', { name: 'Save Assessment' }))).toBe(true);
     // One title for the card, not one per group.
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(1);
 
@@ -210,10 +208,9 @@ describe('StepAssessment — step completion gate and save flow', () => {
     expect(category.compareDocumentPosition(problems) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  // The Save row is the only thing that carries the rule above it, so a viewer —
-  // who gets no Save row — is the case where a separator left standing would
-  // rule off nothing at the foot of the card.
-  it('does not end the card on a rule when a viewer has no Save row', () => {
+  // No Save row carries a rule of its own at the foot of the card any more, so
+  // this is the guard against a separator left standing after the last field.
+  it('does not end the card on a rule', () => {
     renderAssessment(filledCaseData(), {}, { readOnly: true, lockReadOnly: true });
 
     const heading = screen.getByRole('heading', { name: 'Assessment & Diagnosis' });
@@ -223,7 +220,6 @@ describe('StepAssessment — step completion gate and save flow', () => {
     // A separator renders no text; the form's own content does. This passes on
     // the form and fails on a bare rule, whichever rule it happens to be.
     expect(content?.lastElementChild?.textContent?.trim().length ?? 0).toBeGreaterThan(0);
-    expect(screen.queryByRole('button', { name: 'Save Assessment' })).toBeNull();
   });
 });
 
@@ -246,12 +242,17 @@ describe('StepAssessment — sealing step 1', () => {
   });
 
   it('enables Lock once the assessment is done', () => {
-    renderAssessment({
-      problemsPresented: 'Poverty',
-      socialWorkerAssessment: 'Needs aid',
-      clientCategory: 'Indigent',
-      caseCategory: 'Individual in Crisis Situation (AICS)',
-    });
+    // The bar reads the *draft* — that is what makes one press save and seal —
+    // and the page seeds that draft from the case row, so the two agree here.
+    renderAssessment(
+      {
+        problemsPresented: 'Poverty',
+        socialWorkerAssessment: 'Needs aid',
+        clientCategory: 'Indigent',
+        caseCategory: 'Individual in Crisis Situation (AICS)',
+      },
+      { problemsPresented: 'Poverty', socialWorkerAssessment: 'Needs aid', clientCategory: 'Indigent' },
+    );
 
     expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
     expect(screen.queryByText(/Complete this step before sealing it/)).toBeNull();
@@ -262,7 +263,7 @@ describe('StepAssessment — sealing step 1', () => {
   // step 1 hid "Complete Assessment" and the worker had to unlock, advance, and
   // re-seal. The seal guards the step's data; the hop it prepares for is not
   // data. `transitionReadOnly` is the base signal, without the seal.
-  it('keeps Complete Assessment available while the step is sealed, but not its Save', () => {
+  it('keeps Complete Assessment available while the step is sealed, but not its submit', () => {
     const stepLock = { stepKey: 'assessment', lockedByName: 'Juan Dela Cruz', lockedAt: '2026-10-01T09:00:00Z' };
     renderAssessment(
       filledCaseData({ frvaScore: 45 }),
@@ -271,8 +272,9 @@ describe('StepAssessment — sealing step 1', () => {
     );
 
     expect(screen.getByRole('button', { name: /Complete Assessment/ })).toBeEnabled();
-    // The seal still freezes the data — no way to change the frozen fields.
-    expect(screen.queryByRole('button', { name: 'Save Assessment' })).toBeNull();
+    // The seal still freezes the data: the bar offers the release, not a submit.
+    expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /^unlock$/i })).toBeTruthy();
   });
 
   it('withholds the transition when the base signal does, seal or not', () => {

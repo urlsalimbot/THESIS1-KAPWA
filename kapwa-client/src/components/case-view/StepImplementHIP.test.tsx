@@ -71,28 +71,19 @@ describe('StepImplementHIP adhoc intervention', () => {
     expect((form as FormData).get('requirementKey')).toBeNull();
   });
 
-  it('sends programId as null for an adhoc service (not the adhoc: sentinel)', async () => {
+  it('requires an enrolled program — an unenrolled service cannot be recorded', async () => {
     renderHIP();
 
-    // Open the New Intervention form
     fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
+    const save = await screen.findByRole('button', { name: /Save Intervention/ });
+    expect(save).toBeDisabled();
 
-    // No programs available (empty), so the generic "Other service" entry is
-    // the only choice — there is no hardcoded service list any more.
-    const programSelect = screen.getAllByRole('combobox')[0];
-    fireEvent.change(programSelect, { target: { value: 'adhoc:other' } });
-
-    // Adhoc selection reveals the required Service Name input
-    const serviceNameInput = await screen.findByPlaceholderText(/Counseling Session/);
-    fireEvent.change(serviceNameInput, { target: { value: 'Medical Assistance Subsidy' } });
-
-    fireEvent.click(screen.getByRole('button', { name: /Save Intervention/ }));
-
-    await waitFor(() => expect(mockApiPost).toHaveBeenCalledTimes(1));
-    const [path, payload] = mockApiPost.mock.calls[0];
-    expect(path).toBe('/cases/case-1/interventions');
-    expect(payload.programId).toBeNull();
-    expect(payload.serviceName).toBe('Medical Assistance Subsidy');
+    // No enrollments on this case: the program select has no choices and the
+    // service field never appears — an intervention is a service under a
+    // program ASSIGNED to this case, so nothing can be recorded.
+    expect(screen.queryByLabelText('Service *')).toBeNull();
+    fireEvent.click(save);
+    expect(mockApiPost).not.toHaveBeenCalled();
   });
 
   // The step 2/step 3 redundancy resolution: when the case has program
@@ -110,7 +101,7 @@ describe('StepImplementHIP adhoc intervention', () => {
             {
               id: 'enr-1', programId: 'p1',
               programName: 'Juvenile Diversion & Intervention Program (CICL)',
-              services: ['crisis_counseling', 'community_service'],
+              services: ['crisis_counseling', 'community_service', 'financial_grant'],
             },
           ];
         }
@@ -146,7 +137,7 @@ describe('StepImplementHIP adhoc intervention', () => {
         expect.arrayContaining(['Crisis Counseling', 'Community Service']),
       );
       expect([...serviceSelect.options].map(o => o.textContent))
-        .not.toEqual(expect.arrayContaining(['Financial Grant']));
+        .not.toEqual(expect.arrayContaining(['Home Visit']));
     });
 
     it('saves the intervention under the enrollment, with the enrollment program', async () => {
@@ -182,6 +173,40 @@ describe('StepImplementHIP adhoc intervention', () => {
       fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
       await screen.findByRole('dialog');
       expect(screen.getByText(/no program enrollment yet/i)).toBeTruthy();
+    });
+
+    it('shows the financial fields only for a financial service', async () => {
+      renderWithEnrollment();
+      fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
+      await screen.findByRole('dialog');
+
+      // Non-financial service: the money half of the form is absent entirely.
+      fireEvent.change(screen.getByLabelText('Service *'), { target: { value: 'crisis_counseling' } });
+      expect(screen.queryByLabelText(/Amount/)).toBeNull();
+      expect(screen.queryByLabelText(/Mode of Delivery/)).toBeNull();
+      expect(screen.queryByLabelText(/Fund Source/)).toBeNull();
+
+      // Financial service: the same fields are back.
+      fireEvent.change(screen.getByLabelText('Service *'), { target: { value: 'financial_grant' } });
+      expect(screen.getByLabelText(/Amount/)).toBeTruthy();
+      expect(screen.getByLabelText(/Mode of Delivery/)).toBeTruthy();
+      expect(screen.getByLabelText(/Fund Source/)).toBeTruthy();
+    });
+
+    it('never sends financial fields for a non-financial service', async () => {
+      renderWithEnrollment();
+      fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
+      await screen.findByRole('dialog');
+
+      fireEvent.change(screen.getByLabelText('Service *'), { target: { value: 'crisis_counseling' } });
+      fireEvent.click(screen.getByRole('button', { name: /Save Intervention/ }));
+
+      await waitFor(() => expect(mockApiPost).toHaveBeenCalledTimes(1));
+      const [, payload] = mockApiPost.mock.calls[0];
+      expect(payload.interventionType).toBe('crisis_counseling');
+      expect(payload.amount).toBeNull();
+      expect(payload.modeOfDelivery).toBeNull();
+      expect(payload.fundSource).toBeNull();
     });
   });
 
@@ -257,7 +282,12 @@ describe('StepImplementHIP — completing step 2', () => {
     mockApiGet.mockImplementation(async (key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('interventions')) return interventions;
-      if (k.includes('programs')) return [];
+      if (k.includes('enrollments')) {
+        return [{ id: 'enr-1', programId: 'p1', programName: 'AICS — Assistance to Individuals in Crisis Situation', services: ['financial_grant', 'medical_assistance'] }];
+      }
+      if (k.includes('programs')) {
+        return [{ id: 'p1', name: 'AICS — Assistance to Individuals in Crisis Situation', requiredDocuments: [], services: ['financial_grant', 'medical_assistance'] }];
+      }
       return [];
     });
     return render(
@@ -284,15 +314,16 @@ describe('StepImplementHIP — completing step 2', () => {
     renderWith(caseData);
 
     fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
-    fireEvent.change(await screen.findByLabelText(/Program \/ Service/), { target: { value: 'adhoc:other' } });
-    const nameInput = screen.getByPlaceholderText(/Counseling Session/);
-    fireEvent.change(nameInput, { target: { value: 'Half typed' } });
+    fireEvent.change(await screen.findByLabelText(/Program \/ Service/), { target: { value: 'enr:enr-1' } });
+    fireEvent.change(screen.getByLabelText('Service *'), { target: { value: 'financial_grant' } });
 
     fireEvent.click(screen.getByRole('button', { name: /Cancel/ }));
     fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
 
-    // Reopening must not resurrect the abandoned draft.
-    expect(await screen.findByLabelText(/Program \/ Service/)).toHaveValue('');
+    // Reopening must not resurrect the abandoned draft: the program select is
+    // back on its default (the first enrollment), and the service choice —
+    // the half that was typed — is empty again.
+    expect(await screen.findByLabelText('Service *')).toHaveValue('');
   });
 
   it('records "no interventions issued" through the decision endpoint', async () => {
@@ -503,10 +534,11 @@ describe('StepImplementHIP — the merged intervention card', () => {
     mockUpload.mockResolvedValue({});
   });
 
-  function renderCard(opts: { interventions?: unknown[]; programs?: unknown[] } = {}) {
+  function renderCard(opts: { interventions?: unknown[]; programs?: unknown[]; enrollments?: unknown[] } = {}) {
     mockApiGet.mockImplementation(async (key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('interventions')) return opts.interventions ?? [];
+      if (k.includes('enrollments')) return opts.enrollments ?? [];
       if (k.includes('programs')) return opts.programs ?? [];
       return [];
     });
@@ -605,10 +637,13 @@ describe('StepImplementHIP — the merged intervention card', () => {
   });
 
   it('names the documents the selected program will require, before it is saved', async () => {
-    renderCard({ programs: [MEDICAL] });
+    renderCard({
+      programs: [MEDICAL],
+      enrollments: [{ id: 'enr-1', programId: MEDICAL.id, programName: MEDICAL.name, services: ['medical_assistance'] }],
+    });
 
     fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
-    fireEvent.change(await screen.findByLabelText(/Program \/ Service/), { target: { value: 'med-1' } });
+    fireEvent.change(await screen.findByLabelText(/Program \/ Service/), { target: { value: 'enr:enr-1' } });
 
     // The dialog's overlay hides the card behind it, so the select says what
     // the choice obliges the worker to — while it can still change their mind.

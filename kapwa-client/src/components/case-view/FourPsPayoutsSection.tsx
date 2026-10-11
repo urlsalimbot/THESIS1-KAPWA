@@ -4,11 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { Bell, Calendar, CheckCircle, DollarSign, XCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
+import { toastSaved } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { formatDate, formatDateTime } from '../../lib/format';
+import { formatDate, formatDateTime, formatPeso } from '../../lib/format';
 
 interface Payout {
   id: string;
@@ -46,6 +47,7 @@ export function FourPsPayoutsSection({ caseId }: { caseId: string }) {
       setShowForm(false);
       setForm({ scheduledAt: '', cycleNo: '', amount: '' });
       await mutate();
+      toastSaved(t('payouts.payoutScheduled', 'Payout scheduled'));
     } catch {
       setError(t('payouts.actionFailed', 'Action failed. Please try again.'));
     } finally {
@@ -59,6 +61,7 @@ export function FourPsPayoutsSection({ caseId }: { caseId: string }) {
     try {
       await api.patch(`/fourps/payouts/${id}/status`, { status });
       await mutate();
+      toastSaved(t('payouts.payoutUpdated', 'Payout updated'));
     } catch {
       setError(t('payouts.actionFailed', 'Action failed. Please try again.'));
     } finally {
@@ -72,6 +75,7 @@ export function FourPsPayoutsSection({ caseId }: { caseId: string }) {
     try {
       await api.post(`/fourps/payouts/${id}/notify`);
       await mutate();
+      toastSaved(t('payouts.clientNotified', 'Client notified'));
     } catch {
       setError(t('payouts.actionFailed', 'Action failed. Please try again.'));
     } finally {
@@ -149,7 +153,7 @@ export function FourPsPayoutsSection({ caseId }: { caseId: string }) {
                   </span>
                   {payout.cycleNo && <span className="ml-3 text-xs text-muted-foreground">{payout.cycleNo}</span>}
                   {payout.amount != null && (
-                    <span className="ml-3 text-lg font-bold">₱{Number(payout.amount).toLocaleString()}</span>
+                    <span className="ml-3 text-lg font-bold">{formatPeso(Number(payout.amount))}</span>
                   )}
                 </div>
                 <Badge variant={statusVariant[payout.status] || 'outline'}>

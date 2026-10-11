@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { humanizeError } from '@/lib/errors';
+import { toastSaved } from '@/lib/toast';
 import useSWR, { useSWRConfig } from 'swr';
 import { queryKeys } from '@/lib/query-keys';
 import { useAuth } from '@/lib/auth-context';
@@ -75,6 +76,9 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
       await api.patch(`/cases/${caseId}/referral-decision`, { notNeeded });
       await mutate(queryKeys.cases.detail(caseId));
       await mutate(queryKeys.cases.list());
+      toastSaved(notNeeded
+        ? t('caseView.integrated.referralNeeded', 'Referral required again')
+        : t('caseView.integrated.noReferralNeeded', 'Recorded: no referral needed'));
     } catch (err: any) {
       toast.error(t('caseView.integrated.decisionFailed', 'Could not save the referral decision'), { description: humanizeError(err) });
     } finally {
@@ -96,6 +100,7 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
       setIssueOpen(false);
       await revalidate();
       await mutate(queryKeys.cases.detail(caseId));
+      toastSaved(t('caseView.integrated.issued', 'Endorsement letter issued'));
     } catch (err: any) {
       toast.error(t('caseView.integrated.issueFailed', 'Could not issue the endorsement letter'), { description: humanizeError(err) });
     } finally {
@@ -123,7 +128,7 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
             <FileText size={16} className="text-primary" />
             <h3 className="text-sm font-semibold">{t('caseView.integrated.interAgencyReferrals', 'Inter-Agency Referrals')}</h3>
             {referralNotNeeded && (
-              <Badge variant="outline" className="gap-1 text-[10px]">
+              <Badge variant="outline" className="gap-1 text-xs">
                 <CheckCircle2 size={10} /> {t('caseView.integrated.referralNotNeededBadge', 'No referral needed')}
               </Badge>
             )}
@@ -170,7 +175,7 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
                           office: r.toAgency?.name || t('caseView.integrated.receivingAgency', 'the receiving agency'),
                         })}
                       </p>
-                      {r.status && <Badge variant="outline" className="text-[10px] capitalize">{r.status}</Badge>}
+                      {r.status && <Badge variant="outline" className="text-xs capitalize">{r.status}</Badge>}
                     </div>
                     {r.reason && (
                       <p className="mt-1 text-xs text-muted-foreground">
@@ -178,7 +183,7 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
                       </p>
                     )}
                     {r.legalBasisCode && (
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      <p className="mt-0.5 text-xs text-muted-foreground">
                         {t('caseView.integrated.legalBasisShort', 'Legal basis: {{code}}', { code: r.legalBasisCode })}
                       </p>
                     )}
@@ -229,7 +234,7 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
                 required
                 value={toAgencyId}
                 onChange={(e) => setToAgencyId(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className=""
               >
                 <option value="">{t('caseView.integrated.selectAgency', 'Select agency...')}</option>
                 {(agencies || []).map((a) => (
@@ -247,7 +252,7 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
                 rows={2}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className=""
               />
             </div>
             <div className="space-y-1">
@@ -259,7 +264,7 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
                 required
                 value={legalBasisCode}
                 onChange={(e) => setLegalBasisCode(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className=""
               >
                 {LEGAL_BASIS_OPTIONS.map((o) => (
                   <option key={o} value={o}>{o}</option>
@@ -275,7 +280,7 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
                 rows={2}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className=""
               />
             </div>
             <div className="flex justify-end gap-2 pt-1">

@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useSWRConfig } from 'swr';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -35,15 +34,14 @@ interface CategoryStepProps {
  * then a rule and the record itself. The title used to sit in a box of its own
  * above the card, naming a box it was not in. The seal is passed in rather than
  * placed by each step, because it is a statement about the whole step and
- * belongs below the card — not as another row beside the Save button.
+ * belongs below the card — where it is the card's **submit**: it saves the form
+ * and seals it in one press, so there is no second Save row in here.
  */
 function StepShell({
   icon: Icon,
   title,
   hint,
   readOnly,
-  saving,
-  onSave,
   lock,
   children,
 }: {
@@ -51,8 +49,6 @@ function StepShell({
   title: string;
   hint: string;
   readOnly?: boolean;
-  saving?: boolean;
-  onSave?: () => void;
   lock: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -73,22 +69,7 @@ function StepShell({
             <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
           </div>
           <Separator />
-          <div className="p-4 space-y-4">
-            {children}
-            {/* The Save row is the card's last line, and it exists only when
-                there is something to save: a sealed card would otherwise end on
-                a rule ruling off nothing. */}
-            {!readOnly && (
-              <>
-                <Separator />
-                <div className="flex items-center gap-2">
-                  <Button size="sm" onClick={onSave} disabled={saving}>
-                    {saving ? t('common.saving', 'Saving…') : t('common.save', 'Save')}
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
+          <div className="p-4 space-y-4">{children}</div>
         </div>
         {lock}
       </section>
@@ -96,29 +77,23 @@ function StepShell({
   );
 }
 
-// The shared save bar was inlined into each step so the seal bar and the save
-// button sit beside each other without an extra abstraction.
+// The seal bar is each step's submit: it saves the form on its way to sealing
+// it, so these components hold no Save control of their own.
 export function StepDiscernment({ caseId, caseData, readOnly, lockReadOnly, stepLock }: CategoryStepProps) {
   const { t } = useTranslation();
   const { mutate } = useSWRConfig();
-  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     discernmentAssessedAt: caseData?.discernmentAssessedAt || '',
     discernmentResult: caseData?.discernmentResult || '',
     discernmentNotes: caseData?.discernmentNotes || '',
   });
   async function save() {
-    setSaving(true);
-    try {
-      await api.patch(`/cases/${caseId}/discernment`, {
-        discernmentAssessedAt: form.discernmentAssessedAt || null,
-        discernmentResult: form.discernmentResult || null,
-        discernmentNotes: form.discernmentNotes || null,
-      });
-      await mutate(queryKeys.cases.detail(caseId));
-    } finally {
-      setSaving(false);
-    }
+    await api.patch(`/cases/${caseId}/discernment`, {
+      discernmentAssessedAt: form.discernmentAssessedAt || null,
+      discernmentResult: form.discernmentResult || null,
+      discernmentNotes: form.discernmentNotes || null,
+    });
+    await mutate(queryKeys.cases.detail(caseId));
   }
   const pathway = form.discernmentResult === 'discerned' ? 'diversion' : form.discernmentResult === 'not_discerned' ? 'intervention' : null;
   return (
@@ -127,11 +102,9 @@ export function StepDiscernment({ caseId, caseData, readOnly, lockReadOnly, step
       title={t('caseView.discernment.title', 'Discernment Assessment')}
       hint={t('caseView.discernment.hint', 'Under R.A. 9344 §22, the social worker determines whether a CICL above 15 and below 18 acted with discernment — this decides diversion vs intervention program (DSWD AO 10 s. 2007).')}
       readOnly={readOnly}
-      saving={saving}
-      onSave={save}
       lock={
-        <StepLockBar caseId={caseId} stepKey="discernment" caseData={caseData} interventionCount={0} enrollmentCount={0}
-          locked={stepLock} readOnly={lockReadOnly} onChanged={async () => mutate(queryKeys.cases.detail(caseId))} />
+        <StepLockBar caseId={caseId} stepKey="discernment" caseData={{ ...caseData, ...form }} interventionCount={0} enrollmentCount={0}
+          locked={stepLock} readOnly={lockReadOnly} onBeforeLock={save} onChanged={async () => mutate(queryKeys.cases.detail(caseId))} />
       }
     >
       <div className="grid gap-4 sm:grid-cols-2">
@@ -177,7 +150,6 @@ const PO_VALIDITY: Record<string, string> = {
 export function StepProtectionOrder({ caseId, caseData, readOnly, lockReadOnly, stepLock }: CategoryStepProps) {
   const { t } = useTranslation();
   const { mutate } = useSWRConfig();
-  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     protectionOrderType: caseData?.protectionOrderType || '',
     protectionOrderIssuedAt: caseData?.protectionOrderIssuedAt || '',
@@ -185,18 +157,13 @@ export function StepProtectionOrder({ caseId, caseData, readOnly, lockReadOnly, 
     protectionOrderNotes: caseData?.protectionOrderNotes || '',
   });
   async function save() {
-    setSaving(true);
-    try {
-      await api.patch(`/cases/${caseId}/protection-order`, {
-        protectionOrderType: form.protectionOrderType || null,
-        protectionOrderIssuedAt: form.protectionOrderIssuedAt || null,
-        protectionOrderIssuedBy: form.protectionOrderIssuedBy || null,
-        protectionOrderNotes: form.protectionOrderNotes || null,
-      });
-      await mutate(queryKeys.cases.detail(caseId));
-    } finally {
-      setSaving(false);
-    }
+    await api.patch(`/cases/${caseId}/protection-order`, {
+      protectionOrderType: form.protectionOrderType || null,
+      protectionOrderIssuedAt: form.protectionOrderIssuedAt || null,
+      protectionOrderIssuedBy: form.protectionOrderIssuedBy || null,
+      protectionOrderNotes: form.protectionOrderNotes || null,
+    });
+    await mutate(queryKeys.cases.detail(caseId));
   }
   return (
     <StepShell
@@ -204,11 +171,9 @@ export function StepProtectionOrder({ caseId, caseData, readOnly, lockReadOnly, 
       title={t('caseView.protectionOrder.title', 'Protection Order')}
       hint={t('caseView.protectionOrder.hint', 'Under R.A. 9262 §8/§14–16 the MSWDO assists the victim-survivor in securing a protection order; the social worker may file (§9).')}
       readOnly={readOnly}
-      saving={saving}
-      onSave={save}
       lock={
-        <StepLockBar caseId={caseId} stepKey="protection_order" caseData={caseData} interventionCount={0} enrollmentCount={0}
-          locked={stepLock} readOnly={lockReadOnly} onChanged={async () => mutate(queryKeys.cases.detail(caseId))} />
+        <StepLockBar caseId={caseId} stepKey="protection_order" caseData={{ ...caseData, ...form }} interventionCount={0} enrollmentCount={0}
+          locked={stepLock} readOnly={lockReadOnly} onBeforeLock={save} onChanged={async () => mutate(queryKeys.cases.detail(caseId))} />
       }
     >
       <label className="space-y-1.5">
@@ -250,24 +215,18 @@ export function StepProtectionOrder({ caseId, caseData, readOnly, lockReadOnly, 
 export function StepSoloParent({ caseId, caseData, readOnly, lockReadOnly, stepLock }: CategoryStepProps) {
   const { t } = useTranslation();
   const { mutate } = useSWRConfig();
-  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     soloParentIdIssuedDate: caseData?.soloParentIdIssuedDate || '',
     soloParentIdNumber: caseData?.soloParentIdNumber || '',
     soloParentNotes: caseData?.soloParentNotes || '',
   });
   async function save() {
-    setSaving(true);
-    try {
-      await api.patch(`/cases/${caseId}/solo-parent`, {
-        soloParentIdIssuedDate: form.soloParentIdIssuedDate || null,
-        soloParentIdNumber: form.soloParentIdNumber || null,
-        soloParentNotes: form.soloParentNotes || null,
-      });
-      await mutate(queryKeys.cases.detail(caseId));
-    } finally {
-      setSaving(false);
-    }
+    await api.patch(`/cases/${caseId}/solo-parent`, {
+      soloParentIdIssuedDate: form.soloParentIdIssuedDate || null,
+      soloParentIdNumber: form.soloParentIdNumber || null,
+      soloParentNotes: form.soloParentNotes || null,
+    });
+    await mutate(queryKeys.cases.detail(caseId));
   }
   return (
     <StepShell
@@ -275,11 +234,9 @@ export function StepSoloParent({ caseId, caseData, readOnly, lockReadOnly, stepL
       title={t('caseView.soloParent.title', 'Solo Parent ID')}
       hint={t('caseView.soloParent.hint', 'Under R.A. 8972 §4 the DSWD worker assesses eligibility against the poverty threshold; the LGU issues the Solo Parent ID (benefits: parental leave, educational, housing).')}
       readOnly={readOnly}
-      saving={saving}
-      onSave={save}
       lock={
-        <StepLockBar caseId={caseId} stepKey="solo_parent" caseData={caseData} interventionCount={0} enrollmentCount={0}
-          locked={stepLock} readOnly={lockReadOnly} onChanged={async () => mutate(queryKeys.cases.detail(caseId))} />
+        <StepLockBar caseId={caseId} stepKey="solo_parent" caseData={{ ...caseData, ...form }} interventionCount={0} enrollmentCount={0}
+          locked={stepLock} readOnly={lockReadOnly} onBeforeLock={save} onChanged={async () => mutate(queryKeys.cases.detail(caseId))} />
       }
     >
       <div className="grid gap-4 sm:grid-cols-2">
@@ -305,7 +262,6 @@ export function StepSoloParent({ caseId, caseData, readOnly, lockReadOnly, stepL
 export function StepAdoption({ caseId, caseData, readOnly, lockReadOnly, stepLock }: CategoryStepProps) {
   const { t } = useTranslation();
   const { mutate } = useSWRConfig();
-  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     adoptionDvcDate: caseData?.adoptionDvcDate || '',
     adoptionCaseStudyDate: caseData?.adoptionCaseStudyDate || '',
@@ -313,18 +269,13 @@ export function StepAdoption({ caseId, caseData, readOnly, lockReadOnly, stepLoc
     adoptionNotes: caseData?.adoptionNotes || '',
   });
   async function save() {
-    setSaving(true);
-    try {
-      await api.patch(`/cases/${caseId}/adoption`, {
-        adoptionDvcDate: form.adoptionDvcDate || null,
-        adoptionCaseStudyDate: form.adoptionCaseStudyDate || null,
-        adoptionCdclaaReceived: form.adoptionCdclaaReceived,
-        adoptionNotes: form.adoptionNotes || null,
-      });
-      await mutate(queryKeys.cases.detail(caseId));
-    } finally {
-      setSaving(false);
-    }
+    await api.patch(`/cases/${caseId}/adoption`, {
+      adoptionDvcDate: form.adoptionDvcDate || null,
+      adoptionCaseStudyDate: form.adoptionCaseStudyDate || null,
+      adoptionCdclaaReceived: form.adoptionCdclaaReceived,
+      adoptionNotes: form.adoptionNotes || null,
+    });
+    await mutate(queryKeys.cases.detail(caseId));
   }
   return (
     <StepShell
@@ -332,11 +283,9 @@ export function StepAdoption({ caseId, caseData, readOnly, lockReadOnly, stepLoc
       title={t('caseView.adoption.title', 'Adoption & Foster Care')}
       hint={t('caseView.adoption.hint', 'Under R.A. 11642 the LSWDO files the CDCLAA petition (§12); the DVC, child case-study and home-study reports are the document spine (§11: within 3 months of DVC/foundling certification).')}
       readOnly={readOnly}
-      saving={saving}
-      onSave={save}
       lock={
-        <StepLockBar caseId={caseId} stepKey="adoption" caseData={caseData} interventionCount={0} enrollmentCount={0}
-          locked={stepLock} readOnly={lockReadOnly} onChanged={async () => mutate(queryKeys.cases.detail(caseId))} />
+        <StepLockBar caseId={caseId} stepKey="adoption" caseData={{ ...caseData, ...form }} interventionCount={0} enrollmentCount={0}
+          locked={stepLock} readOnly={lockReadOnly} onBeforeLock={save} onChanged={async () => mutate(queryKeys.cases.detail(caseId))} />
       }
     >
       <div className="grid gap-4 sm:grid-cols-2">

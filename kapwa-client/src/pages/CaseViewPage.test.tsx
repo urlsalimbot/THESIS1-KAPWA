@@ -600,10 +600,12 @@ describe('CaseViewPage — stepper gating', () => {
     expect(step3.textContent).not.toContain('3');
   });
 
-  it('keeps the transition plan savable after the plan is saved while the case is active', async () => {
+  it('saves the transition plan through the seal bar while the case is active', async () => {
     // Regression: once the plan is saved (stepDone[3] flips true) the old
     // readOnly={stepDone[3] || caseClosed} hid the only "Save Transition Plan"
-    // button — the worker could add follow-up visits but never persist them.
+    // button — the worker could add follow-up visits but never persist them. There
+    // is no Save button to hide now: the seal bar submits, and it stays reachable
+    // for the whole active phase.
     mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
     let detailFetches = 0;
     mockApiGet.mockImplementation((key: unknown) => {
@@ -629,20 +631,21 @@ describe('CaseViewPage — stepper gating', () => {
     renderWithSWR(<CaseViewPage />);
 
     // Steps 0-2 done + plan not saved yet -> initial nav lands on Evaluate Help Given.
-    const saveBtn = await screen.findByRole('button', { name: /Save Transition Plan/i });
-    expect(saveBtn).toBeTruthy();
+    const submit = await screen.findByRole('button', { name: /^lock$/i });
+    expect(submit).toBeTruthy();
 
-    // Fill in the plan and save it.
+    // Fill in the plan and submit it through the bar.
     fireEvent.click(screen.getByLabelText(/Level 3 - Self-Sufficient/i));
     fireEvent.change(screen.getAllByRole('textbox')[0] as HTMLElement, { target: { value: 'sari-sari store' } });
-    fireEvent.click(saveBtn);
+    fireEvent.click(submit);
 
-    // The refetched case now has the plan saved (stepDone[3] = true) — the
-    // Save button must NOT disappear while the case is still active.
+    // The plan went up as part of the submit, and the case refetched with it on
+    // the row (stepDone[3] now true) without the submit becoming unreachable.
     await waitFor(() => expect(detailFetches).toBe(2));
-    // While the save is in flight the button reads "Saving…"; wait for it to
-    // return rather than asserting synchronously, which races the busy state.
-    expect(await screen.findByRole('button', { name: /Save Transition Plan/i })).toBeTruthy();
+    expect(mockApiPatch).toHaveBeenCalledWith('/cases/C-001/transition-plan', expect.objectContaining({
+      selfRelianceLevel: 3,
+      sustainabilityPlan: 'sari-sari store',
+    }));
   });
 });
 // Step 5's seal is the one control whose readOnly signal cannot come from the
@@ -1044,6 +1047,9 @@ describe('CaseViewPage — a sealed step', () => {
           problemsPresented: 'Poverty',
           socialWorkerAssessment: 'Needs aid',
           clientCategory: 'Indigent',
+          // The fourth field of step 0's done-predicate, so "done" in the test
+          // names above is the predicate's own answer rather than a guess.
+          caseCategory: 'Individual in Crisis Situation (AICS)',
           frvaScore: 65,
           stepLocks: seals,
         });
@@ -1064,22 +1070,22 @@ describe('CaseViewPage — a sealed step', () => {
     mockGetFilingObjectUrl.mockResolvedValue('blob:mock-id-photo');
   });
 
-  it('offers Save Assessment on a done, unsealed step 0', async () => {
+  it('offers the seal bar submit on a done, unsealed step 0', async () => {
     await renderStepZero([]);
 
     // The positive control. Without it, the assertion below could pass for the
-    // wrong reason — a step-0 panel that never rendered a Save button at all
-    // would satisfy "no Save button while sealed" just as well.
-    expect(await screen.findByRole('button', { name: /Save Assessment/i })).toBeTruthy();
+    // wrong reason — a step-0 panel that never rendered a submit at all would
+    // satisfy "no submit while sealed" just as well.
+    expect(await screen.findByRole('button', { name: /^lock$/i })).toBeEnabled();
   });
 
-  it('withholds Save Assessment once step 0 is sealed', async () => {
+  it('withholds the submit once step 0 is sealed', async () => {
     await renderStepZero(STEP_ONE_SEALED);
 
     // The strip has to be on screen first, or the absence below would be the
     // panel still loading.
     expect(await screen.findByText(/Locked by Ana Cruz/)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Save Assessment/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
   });
 
   it('keeps the release reachable on a sealed step — the strip is the only way out', async () => {

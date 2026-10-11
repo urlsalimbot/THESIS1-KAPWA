@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { CASE_TRANSITION_ROLES } from './role-access';
 import { STATUS_INDEX, STEP_FLOORS, STEP_PHASE } from '@/components/case-view/CaseStepper';
-import { INTERVENTION_TYPES, PROGRAM_TYPES } from '@/lib/constants';
+import { INTERVENTION_TYPES, PROGRAM_TYPES, FINANCIAL_INTERVENTION_TYPES, PROGRAM_TYPES_BY_CASE_CATEGORY } from '@/lib/constants';
 
 /**
  * The client's copies of the server's case-FSM facts, asserted equal to the
@@ -229,10 +229,29 @@ it('STEP_FLOORS equals the server CASE_STEP_FLOORS, key for key', () => {
         path.resolve(import.meta.dirname, '../../../docs/superpowers/specs/case-catalog.json'),
         'utf8',
       ),
-    ) as { interventionTypes: string[]; programTypes: string[] };
+    ) as {
+      interventionTypes: string[];
+      programTypes: string[];
+      financialInterventionTypes: string[];
+      programTypesByCaseCategory: Record<string, string[]>;
+    };
     expect(catalog.interventionTypes.length).toBeGreaterThan(0);
     expect([...INTERVENTION_TYPES].sort()).toEqual([...catalog.interventionTypes].sort());
     expect([...PROGRAM_TYPES].sort()).toEqual([...catalog.programTypes].sort());
+    // The financial split and the category → program_types mapping are part of
+    // the same catalog contract (the form hides financial fields, the pickers
+    // filter programs) — a change lands in the JSON, the server copy and this
+    // copy or the test fails loudly.
+    expect([...FINANCIAL_INTERVENTION_TYPES].sort()).toEqual(
+      [...catalog.financialInterventionTypes].sort(),
+    );
+    expect(Object.keys(PROGRAM_TYPES_BY_CASE_CATEGORY).sort()).toEqual(
+      Object.keys(catalog.programTypesByCaseCategory).sort(),
+    );
+    for (const [category, types] of Object.entries(PROGRAM_TYPES_BY_CASE_CATEGORY)) {
+      expect([...types].sort()).toEqual([...catalog.programTypesByCaseCategory[category]].sort());
+      types.forEach((t) => expect(PROGRAM_TYPES).toContain(t));
+    }
   });
 
   it('every intervention type has an i18n label in both locales', () => {

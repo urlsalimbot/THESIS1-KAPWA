@@ -13,6 +13,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
+interface ContactReply {
+  id: string;
+  content: string;
+  repliedByName?: string | null;
+  createdAt: string;
+}
+
 interface ContactMessage {
   id: string;
   name: string;
@@ -21,15 +28,16 @@ interface ContactMessage {
   message: string;
   status: 'new' | 'read';
   createdAt: string;
+  /** Stored staff replies — the conversation under the inquiry. */
+  replies?: ContactReply[];
 }
 
 /**
  * The public contact-form inbox, shown inside the messages page.
  *
- * Staff reply by email: the visitor gave their address on the public form, so
- * the reply goes there rather than into this app — the visitor may never have
- * an account here. Replying marks the message read, since reading it is a
- * precondition for answering it.
+ * A reply is EMAILED to the visitor's address AND recorded under the message,
+ * so the inbox keeps the thread the visitor cannot see. Replying marks the
+ * message read, since answering it is the point of reading it.
  */
 export function ContactMessagesPanel() {
   const { t } = useTranslation();
@@ -61,7 +69,7 @@ export function ContactMessagesPanel() {
       <div className="flex items-center gap-2 border-b px-4 py-3">
         <Inbox size={16} className="text-muted-foreground" />
         <h2 className="text-sm font-semibold text-foreground">{t('messages.contactTitle', 'Contact Messages')}</h2>
-        <span className="text-[11px] text-muted-foreground">
+        <span className="text-xs text-muted-foreground">
           {t('messages.contactCount', '{{count}} inquiries', { count: messages.length })}
         </span>
       </div>
@@ -81,13 +89,13 @@ export function ContactMessagesPanel() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium text-foreground truncate">{m.name}</p>
-                      <Badge variant={m.status === 'new' ? 'default' : 'secondary'} className="shrink-0 text-[10px]">
+                      <Badge variant={m.status === 'new' ? 'default' : 'secondary'} className="shrink-0 text-xs">
                         {m.status === 'new'
                           ? t('messages.statusNew', 'New')
                           : t('messages.statusRead', 'Read')}
                       </Badge>
                     </div>
-                    <p className="text-[11px] text-muted-foreground">{m.email} · {formatDate(m.createdAt)}</p>
+                    <p className="text-xs text-muted-foreground">{m.email} · {formatDate(m.createdAt)}</p>
                   </div>
                   <Button
                     size="sm"
@@ -103,6 +111,23 @@ export function ContactMessagesPanel() {
                   <p className="mt-2 text-xs font-medium text-foreground">{m.subject}</p>
                 )}
                 <p className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap break-words">{m.message}</p>
+                {m.replies && m.replies.length > 0 && (
+                  <div className="mt-2 space-y-2 border-l-2 border-primary/25 pl-3">
+                    {m.replies.map((r) => (
+                      <div key={r.id}>
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground">
+                            {t('messages.reply', 'Reply')}
+                          </span>
+                          {' · '}
+                          {formatDate(r.createdAt)}
+                          {r.repliedByName ? ` · ${r.repliedByName}` : ''}
+                        </p>
+                        <p className="mt-0.5 text-sm text-muted-foreground whitespace-pre-wrap break-words">{r.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -131,7 +156,7 @@ export function ContactMessagesPanel() {
                 className="resize-none"
               />
               <div className="flex items-center justify-between">
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {t('messages.replyHint', 'Sent as an email to {{email}}', { email: replyTo.email })}
                 </p>
                 <div className="flex gap-2">

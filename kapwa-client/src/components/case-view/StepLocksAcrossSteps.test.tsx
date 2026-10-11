@@ -103,10 +103,12 @@ function Steps({
         key={stepLockKey(caseId, 'assessment')}
         caseId={caseId}
         caseData={caseData}
-        assessment={{ problemsPresented: '', socialWorkerAssessment: '', clientCategory: '', frvaScore: null, swdiScore: null }}
+        // The page seeds step 1's draft from the case row, and the bar weighs the
+        // draft — a stale empty draft here would disable a Lock the test expects
+        // to be enabled, which is a fault in the fixture, not in the bar.
+        assessment={caseData}
         onAssessmentChange={() => {}}
         onSave={() => {}}
-        saving={false}
         userRole="social_worker"
         readOnly={bodyReadOnly('assessment')}
         lockReadOnly={lockReadOnly('assessment')}
@@ -247,18 +249,28 @@ describe('a sealed step is not editable', () => {
     });
   });
 
-  it.each([
-    ['step assessment', 'assessment', /Save Assessment/i],
-    ['step interventions', 'interventions', /Add Intervention/i],
-  ] as const)('withholds %s\'s own editing control while it is sealed', async (_name, stepKey, control) => {
-    const sealed = [{ stepKey, lockedByName: 'Ana Cruz', lockedAt: AT }];
+  it("withholds step assessment's fields while it is sealed", async () => {
+    const sealed = [{ stepKey: 'assessment', lockedByName: 'Ana Cruz', lockedAt: AT }];
+    render(<Steps caseId="c1" caseData={completeCaseData()} stepLocks={sealed} />);
+
+    // The fields are the assessment's editing control now: the Save button is gone
+    // for every step — the seal bar is the submit, and a sealed step's bar offers
+    // the release instead of one.
+    expect(await screen.findByLabelText('Problem/s Presented *')).toBeDisabled();
+    // The seal's own strip is still there: a sealed step stays readable, and the
+    // strip is what names who sealed it and offers the release.
+    expect(screen.getByText(`Locked by Ana Cruz · ${formatDate(AT)}`)).toBeTruthy();
+  });
+
+  it("withholds step interventions's own editing control while it is sealed", async () => {
+    const sealed = [{ stepKey: 'interventions', lockedByName: 'Ana Cruz', lockedAt: AT }];
     render(<Steps caseId="c1" caseData={completeCaseData()} stepLocks={sealed} />);
 
     // The list that feeds step 1's done-predicate has to arrive first, or the
     // absence below would be the wrong reason.
     expect(await screen.findByRole('heading', { name: 'Medical Assistance' })).toBeTruthy();
 
-    expect(screen.queryByRole('button', { name: control })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Add Intervention/i })).toBeNull();
     // The seal's own strip is still there: a sealed step stays readable, and the
     // strip is what names who sealed it and offers the release.
     expect(screen.getByText(`Locked by Ana Cruz · ${formatDate(AT)}`)).toBeTruthy();

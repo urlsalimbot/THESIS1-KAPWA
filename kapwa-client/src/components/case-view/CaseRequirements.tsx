@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { humanizeError } from '@/lib/errors';
+import { toastSaved } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -122,6 +123,9 @@ export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, 
     try {
       await api.patch(`/cases/${caseId}/requirements`, { requirementsChecklist: { ...checklist, [key]: met } });
       await refresh();
+      toastSaved(met
+        ? t('caseView.implement.requirementPassed', 'Requirement marked passed')
+        : t('caseView.implement.requirementReopened', 'Requirement reopened'));
     } catch (e: any) {
       toast.error(t('caseView.implement.requirementUpdateFailed', 'Could not update requirement'), { description: humanizeError(e) });
     } finally {
@@ -134,6 +138,9 @@ export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, 
     try {
       await api.patch(`/filing/${docId}/verify`, { verified });
       await refresh();
+      toastSaved(verified
+        ? t('caseView.implement.documentVerified', 'Document verified')
+        : t('caseView.implement.verificationUndone', 'Verification undone'));
     } catch (e: any) {
       toast.error(t('caseView.implement.verifyFailed', 'Could not update verification'), { description: humanizeError(e) });
     } finally {
@@ -190,7 +197,7 @@ export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, 
                   <span className={`text-sm ${done ? 'text-muted-foreground' : ''}`}>{req}</span>
                 </div>
                 {uploadedDocs.length > 0 && (
-                  <Badge variant="outline" className="text-[10px] gap-1">
+                  <Badge variant="outline" className="text-xs gap-1">
                     <FileText size={10} /> {uploadedDocs.length}
                   </Badge>
                 )}
@@ -231,11 +238,11 @@ export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, 
                   return (
                     <div className="flex shrink-0 items-center gap-1.5" title={statusLabel}>
                       {verifiedAt ? (
-                        <Badge variant="secondary" className="gap-1 text-[10px]">
+                        <Badge variant="secondary" className="gap-1 text-xs">
                           <ShieldCheck size={10} /> <span className="hidden sm:inline">{statusLabel}</span>
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="gap-1 text-[10px]">
+                        <Badge variant="outline" className="gap-1 text-xs">
                           <Clock size={10} /> <span className="hidden sm:inline">{statusLabel}</span>
                         </Badge>
                       )}

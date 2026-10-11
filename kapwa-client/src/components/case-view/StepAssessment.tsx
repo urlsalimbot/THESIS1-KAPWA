@@ -17,8 +17,8 @@ interface StepAssessmentProps {
   caseData: any;
   assessment: any;
   onAssessmentChange: (updater: (prev: any) => any) => void;
+  /** The step's save, run by the seal bar before it seals the step. */
   onSave: () => void;
-  saving: boolean;
   userRole?: string;
   readOnly?: boolean;
   /**
@@ -45,7 +45,7 @@ interface StepAssessmentProps {
 }
 
 export function StepAssessment({
-  caseId, caseData, assessment, onAssessmentChange, onSave, saving, userRole, readOnly, transitionReadOnly = readOnly, lockReadOnly = false, stepLock,
+  caseId, caseData, assessment, onAssessmentChange, onSave, userRole, readOnly, transitionReadOnly = readOnly, lockReadOnly = false, stepLock,
 }: StepAssessmentProps) {
   const { t } = useTranslation();
   const { mutate } = useSWRConfig();
@@ -125,7 +125,7 @@ export function StepAssessment({
                     tables has something to show from day one. */}
                 <select
                   id="case-category"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="" form-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
                   value={assessment.caseCategory || ''}
                   onChange={e => onAssessmentChange(a => ({ ...a, caseCategory: e.target.value }))}
                   disabled={readOnly}
@@ -146,7 +146,7 @@ export function StepAssessment({
                 <label htmlFor="problems-presented" className="text-sm font-medium">{t('caseView.assessment.problemsPresented', 'Problem/s Presented *')}</label>
                 <textarea
                   id="problems-presented"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
+                  className="form-input min-h-[80px]"
                   value={assessment.problemsPresented}
                   onChange={e => onAssessmentChange(a => ({ ...a, problemsPresented: e.target.value }))}
                   disabled={readOnly}
@@ -156,7 +156,7 @@ export function StepAssessment({
                 <label htmlFor="social-worker-assessment" className="text-sm font-medium">{t('caseView.assessment.socialWorkerAssessment', "Social Worker's Assessment *")}</label>
                 <textarea
                   id="social-worker-assessment"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
+                  className="form-input min-h-[80px]"
                   value={assessment.socialWorkerAssessment}
                   onChange={e => onAssessmentChange(a => ({ ...a, socialWorkerAssessment: e.target.value }))}
                   disabled={readOnly}
@@ -181,7 +181,7 @@ export function StepAssessment({
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium">{t('caseView.assessment.frvaScore', 'FRVA Score (0-100)')}</label>
                   <input type="number" min="0" max="100"
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className=""
                     value={assessment.frvaScore || ''}
                     onChange={e => onAssessmentChange(a => ({ ...a, frvaScore: e.target.value ? Number(e.target.value) : null }))}
                     placeholder={t('caseView.assessment.frvaPlaceholder', 'Family Risk & Vulnerability Assessment')} disabled={readOnly} />
@@ -189,7 +189,7 @@ export function StepAssessment({
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium">{t('caseView.assessment.swdiScore', 'SWDI Score (0-100)')}</label>
                   <input type="number" min="0" max="100"
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className=""
                     value={assessment.swdiScore || ''}
                     onChange={e => onAssessmentChange(a => ({ ...a, swdiScore: e.target.value ? Number(e.target.value) : null }))}
                     placeholder={t('caseView.assessment.swdiPlaceholder', 'Social Welfare Development Index')} disabled={readOnly} />
@@ -198,7 +198,7 @@ export function StepAssessment({
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">{t('caseView.assessment.familyDialogueNotes', 'Family Dialogue Notes')}</label>
                 <textarea
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
+                  className="form-input min-h-[80px]"
                   value={assessment.familyDialogueNotes || ''}
                   onChange={e => onAssessmentChange(a => ({ ...a, familyDialogueNotes: e.target.value }))}
                   placeholder={t('caseView.assessment.familyDialoguePlaceholder', 'Notes from family dialogue session...')} disabled={readOnly} />
@@ -206,21 +206,14 @@ export function StepAssessment({
             </div>
           </div>
 
-          {/* One Save per step: it persists every field in this card, because
-              the whole assessment object is saved together. Its rule belongs to
-              it as well — a viewer gets no Save row, and a separator left
-              standing would end the card on a line ruling off nothing.
-              The transition is gated on `transitionReadOnly`, not `readOnly`, so
-              a sealed step still offers the advance it was sealed in aid of. */}
+          {/* No Save control here: the seal bar below is this step's submit, and
+              it saves the whole assessment object on its way to sealing. The
+              transition is gated on `transitionReadOnly`, not `readOnly`, so a
+              sealed step still offers the advance it was sealed in aid of. */}
           {(!readOnly || !transitionReadOnly) && (
             <>
               <Separator />
               <div className="flex items-center gap-2">
-                {!readOnly && (
-                  <Button onClick={onSave} disabled={saving}>
-                    {saving ? t('caseView.saving', 'Saving...') : t('caseView.assessment.saveAssessment', 'Save Assessment')}
-                  </Button>
-                )}
                 {!readOnly && assessmentDone && !hasScore && caseData?.status === 'enrolled' && (
                   <span className="text-xs text-muted-foreground">
                     {t('caseView.assessment.scoreRequiredHint', 'Add an FRVA or SWDI score above to complete the assessment.')}
@@ -232,7 +225,7 @@ export function StepAssessment({
                   </Button>
                 )}
                 {!transitionReadOnly && caseData?.status === 'assessed' && (
-                  <span className="text-xs text-emerald-600 font-medium">{t('caseView.assessment.assessmentCompleted', '✓ Assessment completed')}</span>
+                  <span className="text-xs text-success font-medium">{t('caseView.assessment.assessmentCompleted', '✓ Assessment completed')}</span>
                 )}
               </div>
             </>
@@ -241,17 +234,19 @@ export function StepAssessment({
       </div>
 
       {/* Step 1's seal. Mounted here, not in the page, so the control that
-          offers it lives with the step it seals. `lockReadOnly` is the sealing
-          signal, kept apart from the fields' `readOnly` so a sealed step still
-          offers its Unlock — the strip above the disabled fields is what tells
-          the worker that releasing the seal is how to change them. */}
+          offers it lives with the step it seals — and it is this step's submit:
+          it saves the assessment on its way to sealing it. `lockReadOnly` is the
+          sealing signal, kept apart from the fields' `readOnly` so a sealed step
+          still offers its Unlock — the strip above the disabled fields is what
+          tells the worker that releasing the seal is how to change them. */}
       <StepLockBar
         caseId={caseId}
         stepKey="assessment"
-        caseData={caseData}
+        caseData={{ ...caseData, ...assessment }}
         interventionCount={0}
         locked={stepLock}
         readOnly={lockReadOnly}
+        onBeforeLock={onSave}
         onChanged={() => mutate(queryKeys.cases.detail(caseId))}
       />
     </div>

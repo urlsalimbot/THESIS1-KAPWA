@@ -50,19 +50,18 @@ describe('StepTransition — self-reliance recommendation', () => {
 });
 
 describe('StepTransition — savable until closure', () => {
-  it('keeps the Save Transition Plan button when the plan is saved but the case is not closed', () => {
+  it('keeps the plan submittable through the seal bar while the case is open', () => {
     // Regression: CaseViewPage must not flip readOnly once stepDone[3] (plan
-    // saved) — the worker still adds follow-up visits and must be able to save.
+    // saved) — the worker still adds follow-up visits, so the bar that submits
+    // the plan has to stay reachable until the case is closed.
     renderStep({ selfRelianceLevel: 3, sustainabilityPlan: 'sari-sari store' });
-    expect(screen.getByRole('button', { name: /Save Transition Plan/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Save Transition Plan/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /^lock$/i })).toBeTruthy();
   });
 
-  it('hides the Save Transition Plan button only when readOnly (case closed)', () => {
-    render(
-      <SWRConfig value={{ provider: () => new Map(), fetcher: vi.fn() }}>
-        <StepTransition caseId="c1" caseData={{ selfRelianceLevel: 3, sustainabilityPlan: 'sari-sari store' }} userRole="admin" readOnly />
-      </SWRConfig>,
-    );
+  it('hides the submit when readOnly (case closed)', () => {
+    renderStep({ selfRelianceLevel: 3, sustainabilityPlan: 'sari-sari store' }, { readOnly: true, lockReadOnly: true });
+    expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /Save Transition Plan/i })).toBeNull();
   });
 });
@@ -244,12 +243,13 @@ describe('StepTransition — sealing step 4', () => {
     });
 
     // The unsealed shape, so the two tests above cannot both pass on a component
-    // that simply never sends the assessment.
-    it('sends the assessment with the visits while the step is unsealed', async () => {
+    // that simply never sends the assessment. The seal bar is the submit here:
+    // one press saves the plan (visits included) and then seals the step.
+    it('sends the assessment with the visits when the seal bar submits', async () => {
       const user = userEvent.setup();
       renderStep(done);
 
-      await user.click(screen.getByRole('button', { name: /Save Transition Plan/i }));
+      await user.click(screen.getByRole('button', { name: /^lock$/i }));
 
       await waitFor(() => expect(mockPatch).toHaveBeenCalled());
       const calls = mockPatch.mock.calls;

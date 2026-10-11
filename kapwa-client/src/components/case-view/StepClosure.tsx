@@ -38,26 +38,19 @@ export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = false, 
     { value: 'deceased', label: t('caseView.closure.outcomeDeceased', 'Deceased'), description: t('caseView.closure.outcomeDeceasedDesc', 'Client has passed away') },
   ];
   const { mutate } = useSWRConfig();
-  const [saving, setSaving] = useState(false);
 
   const [closure, setClosure] = useState({
     closureOutcome: caseData?.closureOutcome || '',
     exitNotes: caseData?.exitNotes || '',
   });
 
+  // Throws on failure: the seal bar reports it and leaves the step unsealed.
   async function handleSave() {
-    setSaving(true);
-    try {
-      await api.patch(`/cases/${caseId}/closure`, {
-        closureOutcome: closure.closureOutcome || null,
-        exitNotes: closure.exitNotes || null,
-      });
-      await mutate(queryKeys.cases.detail(caseId));
-    } catch (e) {
-      console.error('Failed to save closure:', e);
-    } finally {
-      setSaving(false);
-    }
+    await api.patch(`/cases/${caseId}/closure`, {
+      closureOutcome: closure.closureOutcome || null,
+      exitNotes: closure.exitNotes || null,
+    });
+    await mutate(queryKeys.cases.detail(caseId));
   }
 
   const isClosed = caseData?.status === 'closed';
@@ -120,7 +113,7 @@ export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = false, 
         <Separator />
         <div className="px-4 py-3">
           <textarea
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[100px]"
+            className="form-input min-h-[100px]"
             value={closure.exitNotes}
             onChange={e => setClosure(c => ({ ...c, exitNotes: e.target.value }))}
             placeholder={t('caseView.closure.exitNotesPlaceholder', 'Final notes before case closure...')}
@@ -129,17 +122,11 @@ export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = false, 
         </div>
       </div>
 
-      {/* Action Buttons. Only the exit record is saved here; closing the case is
-          a forward hop that ends this step's work, so it runs the step-5 seal
-          gate and lives on `CaseActionBar`'s "Close case" control. This card used
-          to offer a second "Close Case" that closed directly, around that gate. */}
-      {!isClosed && !readOnly && (
-        <div className="flex gap-2">
-          <Button onClick={handleSave} disabled={saving} variant="outline">
-            {saving ? t('caseView.saving', 'Saving...') : t('caseView.closure.saveProgress', 'Save Progress')}
-          </Button>
-        </div>
-      )}
+      {/* No Save control here: the seal bar below is the step's submit — it
+          saves the exit record on its way to sealing the step. The forward hop
+          out of this step (closing the case) still runs the step-5 seal gate and
+          lives on `CaseActionBar`'s "Close case"; this card used to offer a
+          second "Close Case" that closed directly, around that gate. */}
 
       {/* Download CSR PDF */}
       <div className="rounded-lg border bg-card px-4 py-3">
@@ -159,10 +146,11 @@ export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = false, 
       <StepLockBar
         caseId={caseId}
         stepKey="closure"
-        caseData={caseData}
+        caseData={{ ...caseData, ...closure }}
         interventionCount={0}
         locked={stepLock}
         readOnly={lockReadOnly}
+        onBeforeLock={handleSave}
         onChanged={() => mutate(queryKeys.cases.detail(caseId))}
       />
     </div>

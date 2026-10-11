@@ -293,6 +293,82 @@ describe('StepLockBar', () => {
     expect(mockApiPost).toHaveBeenCalledWith('/cases/c1/steps/closure/lock');
   });
 
+  // --- the step's own save, before the seal -----------------------------
+  //
+  // The Lock button is each step's submit now, so the fields have to reach the
+  // server before the seal claims them. The order is the whole point: a seal
+  // that lands first would seal an empty step and then the server would refuse
+  // the seal with a 400 about a field instead of the save's own reason.
+
+  it("runs the step's save before sealing it", async () => {
+    const user = userEvent.setup();
+    const order: string[] = [];
+    const onBeforeLock = vi.fn(() => { order.push('save'); });
+    mockApiPost.mockImplementation(() => { order.push('seal'); return Promise.resolve({}); });
+
+    renderBar({ onBeforeLock });
+    await user.click(screen.getByRole('button', { name: /^lock$/i }));
+
+    expect(order).toEqual(['save', 'seal']);
+  });
+
+  it('seals nothing when the save fails, and names the save as the failure', async () => {
+    const user = userEvent.setup();
+    const onBeforeLock = vi.fn(() => Promise.reject(new Error('problemsPresented is required')));
+
+    renderBar({ onBeforeLock });
+    await user.click(screen.getByRole('button', { name: /^lock$/i }));
+
+    expect(await screen.findByText('Could not save this step')).toBeTruthy();
+    expect(mockApiPost).not.toHaveBeenCalled();
+    // Still unsealed on screen, so the worker's next press is a second attempt
+    // rather than a duplicate seal of a step that never took the write.
+    expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
+  });
+
+  it("does not run the step's save when releasing the seal", async () => {
+    const user = userEvent.setup();
+    const onBeforeLock = vi.fn();
+
+    renderBar({ locked: lockedRow, onBeforeLock });
+    await user.click(screen.getByRole('button', { name: /unlock/i }));
+
+    expect(onBeforeLock).not.toHaveBeenCalled();
+  });
+
+  // The seal is the one moment a step's worker watches for a result, so the bar
+  // reports it in the same words every step speaks: what happened, then which
+  // step — the save detail only when a save actually ran.
+  it('reports a seal that saved with "Saved" and the step name', async () => {
+    const user = userEvent.setup();
+    renderBar({ onBeforeLock: async () => {} });
+
+    await user.click(screen.getByRole('button', { name: /^lock$/i }));
+
+    expect(await screen.findByText('Saved')).toBeTruthy();
+    expect(screen.getByText('Assess & Interview saved and locked')).toBeTruthy();
+  });
+
+  it('reports a seal without a save as "Locked", not "Saved"', async () => {
+    const user = userEvent.setup();
+    renderBar({ stepKey: 'closure', caseData: { status: 'transitioning', closureOutcome: 'out' } });
+
+    await user.click(screen.getByRole('button', { name: /^lock$/i }));
+
+    expect(await screen.findByText('Locked')).toBeTruthy();
+    expect(screen.getByText('Case Study & Closure is sealed')).toBeTruthy();
+  });
+
+  it('reports the release with its own toast', async () => {
+    const user = userEvent.setup();
+    renderBar({ locked: lockedRow });
+
+    await user.click(screen.getByRole('button', { name: /unlock/i }));
+
+    expect(await screen.findByText('Unlocked')).toBeTruthy();
+    expect(screen.getByText('Assess & Interview is editable again')).toBeTruthy();
+  });
+
   // `busy` is the whole of the double-click defence: it is the button's
   // `disabled`, so the second click never reaches the handler. Both verbs, since
   // each button carries its own `disabled`.

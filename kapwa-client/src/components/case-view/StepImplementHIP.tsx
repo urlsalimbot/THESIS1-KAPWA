@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { interventionRequirementsMet, requiredDocumentKeys } from '@/lib/case-progress';
-import { INTERVENTION_TYPES } from '@/lib/constants';
+import { INTERVENTION_TYPES, isFinancialIntervention } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -18,8 +18,9 @@ import { CaseRequirements } from './CaseRequirements';
 import { FileUploadList } from './FileUploadList';
 import { StepLockBar, type StepLock } from './StepLockBar';
 import { useTranslation } from 'react-i18next';
-import { formatDate } from '../../lib/format';
+import { formatDate, formatPeso } from '../../lib/format';
 import { humanizeError } from '@/lib/errors';
+import { toastSaved } from '@/lib/toast';
 
 interface Intervention {
   id: string;
@@ -132,27 +133,28 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
   /* The program the open dialog has selected, and the documents it will demand
      once saved. Hoisted out of `handleAdd` because the preview below and the
      write both need it, and two lookups that could disagree would show the
-     worker one program while recording another. An ad-hoc service matches no
-     program and so has no documents to preview.
-     When the case has enrollments, the select's value is `enr:<enrollmentId>`
-     and the effective program is the enrollment's program — the redundancy
-     resolution: services are anchored to enrollments, not re-picked from the
-     full catalog. Without enrollments (or after the recorded "not needed"
-     decision) the legacy full-catalog fallback applies. */
+     worker one program while recording another. The select's value is
+     `enr:<enrollmentId>` and the effective program is the enrollment's program —
+     an intervention is a service under a program ASSIGNED to this case, so
+     there is no unenrolled or ad-hoc path. */
   const selectedEnrollment = enrollments.find(e => form.programId === `enr:${e.id}`);
-  const selectedProgram = programs.find(p => p.id === form.programId);
   const dialogProgram = selectedEnrollment
     ? programs.find(p => p.id === selectedEnrollment.programId) ?? null
-    : (selectedProgram ?? null);
+    : null;
   const selectedDocKeys = dialogProgram ? requiredDocumentKeys(dialogProgram) : [];
   // The Program → Services matrix: a chosen (enrolled) program offers only its
-  // own services (spec §6.2); no program / ad-hoc offers the whole catalog.
+  // own services (spec §6.2); a program with no service rows (a local custom
+  // one) offers the whole catalog.
   const serviceOptions =
     (selectedEnrollment?.services && selectedEnrollment.services.length > 0)
       ? selectedEnrollment.services
       : (dialogProgram?.services && dialogProgram.services.length > 0)
         ? dialogProgram.services
         : [...INTERVENTION_TYPES];
+  // A non-financial service renders no money: amount, mode and fund source are
+  // financial-form fields and disappear with the service choice that made them
+  // irrelevant.
+  const financial = isFinancialIntervention(form.interventionType);
   /* The scope the header's checklist is given: nothing selected means nothing
      to preview — the form is reset whenever the dialog closes, so this is empty
      for the whole of the dialog's closed life and the saved interventions are
@@ -173,35 +175,34 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
   async function handleAdd() {
     setSaving(true);
     try {
-      const programId = form.programId?.startsWith('adhoc:')
-        ? null
-        : selectedEnrollment
-          ? selectedEnrollment.programId
-          : form.programId || null;
+      // Only an enrollment-anchored service may be recorded — an intervention
+      // is a service under a program ASSIGNED to this case.
+      if (!selectedEnrollment || !dialogProgram) return;
       const serviceName = dialogProgram?.name || form.serviceName;
       const category = dialogProgram?.category || form.category || undefined;
       await api.post(`/cases/${caseId}/interventions`, {
-        programId,
+        programId: selectedEnrollment.programId,
         // Services are anchored to the case's program enrollment (the treatment
-        // plan); the unenrolled fallback sends no enrollment.
-        programEnrollmentId: selectedEnrollment ? selectedEnrollment.id : null,
+        // plan); the enrollment is now mandatory.
+        programEnrollmentId: selectedEnrollment.id,
         interventionType: form.interventionType || null,
         serviceName,
         category,
         deliveryDate: form.deliveryDate || null,
-        amount: form.amount ? parseFloat(form.amount) : null,
-        modeOfDelivery: form.modeOfDelivery || null,
+        amount: form.amount ? parseFloat(form.amount) : null,        modeOfDelivery: form.modeOfDelivery || null,
         fundSource: form.fundSource || null,
         notes: form.notes || null,
       });
       await mutate();
       closeAdd();
+      toastSaved(t('caseView.implement.added', 'Intervention recorded'));
       // The requirements checklist is derived from the interventions of this
       // case, so a newly logged delivery changes which documents step 2 asks
       // for — revalidate the detail or the checklist stays one step behind.
       await globalMutate(queryKeys.cases.detail(caseId));
     } catch (e) {
       console.error('Failed to add intervention:', e);
+      toast.error(t('caseView.implement.addFailed', 'Could not record the intervention'), { description: humanizeError(e) });
     } finally {
       setSaving(false);
     }
@@ -211,8 +212,10 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
     try {
       await api.del(`/cases/${caseId}/interventions/${id}`);
       await mutate();
+      toastSaved(t('caseView.implement.deleted', 'Intervention removed'));
     } catch (e) {
       console.error('Failed to delete intervention:', e);
+      toast.error(t('caseView.implement.deleteFailed', 'Could not remove the intervention'), { description: humanizeError(e) });
     }
   }
 
@@ -222,6 +225,9 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
       await api.patch(`/cases/${caseId}/intervention-decision`, { notNeeded });
       await globalMutate(queryKeys.cases.detail(caseId));
       await globalMutate(queryKeys.cases.list());
+      toastSaved(notNeeded
+        ? t('caseView.implement.interventionsNeeded', 'Interventions required again')
+        : t('caseView.implement.noInterventionNeeded', 'Recorded: no intervention needed'));
     } catch (e) {
       toast.error(t('caseView.implement.interventionDecisionFailed', 'Could not save the intervention decision'), {
         description: humanizeError(e),
@@ -231,7 +237,9 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
     }
   }
 
-  const totalAmount = interventions.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+  // Summed in centavos: floats display as ₱3,703.6799999999994 for three
+// ₱1,234.56 amounts, which is money on screen that nobody can reconcile.
+  const totalAmount = interventions.reduce((cents, i) => cents + Math.round((Number(i.amount) || 0) * 100), 0) / 100;
 
   return (
     <div className="space-y-4">
@@ -255,7 +263,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
                     navigation does not jump a level here for no reason. */}
                 <h3 className="text-sm font-semibold">{t('caseView.implement.toBeIssued', 'Intervention to be issued')}</h3>
                 {interventionNotNeeded && (
-                  <Badge variant="outline" className="gap-1 text-[10px]">
+                  <Badge variant="outline" className="gap-1 text-xs">
                     <CheckCircle2 size={10} /> {t('caseView.implement.interventionNotNeededBadge', 'Intervention not needed')}
                   </Badge>
                 )}
@@ -351,10 +359,10 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                             <h4 className="text-lg font-semibold leading-tight tracking-tight">{intv.serviceName}</h4>
-                            {intv.category && <Badge variant="secondary" className="text-[10px]">{intv.category}</Badge>}
+                            {intv.category && <Badge variant="secondary" className="text-xs">{intv.category}</Badge>}
                             {intv.amount != null && intv.amount !== ('' as unknown) && (
                               <span className="text-base font-semibold tabular-nums text-primary">
-                                ₱{Number(intv.amount).toLocaleString()}
+                                {formatPeso(Number(intv.amount))}
                               </span>
                             )}
                           </div>
@@ -434,31 +442,20 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
               <Label htmlFor="intv-program">{t('caseView.implement.programService', 'Program / Service *')}</Label>
               <select
                 id="intv-program"
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className=""
                 value={form.programId}
                 onChange={e => setForm(f => ({ ...f, programId: e.target.value, interventionType: '' }))}
               >
                 <option value="">
-                  {t('caseView.implement.selectProgram', enrollments.length > 0 ? '— Select an enrolled program —' : '— Select a program —')}
+                  {t('caseView.implement.selectProgram', '— Select an enrolled program —')}
                 </option>
-                {/* Per MSWDO practice the treatment plan anchors the services: the
-                    select lists the case's ENROLLED programs (step 2) when any
-                    exist — no redundant re-picking from the whole catalog. The
-                    legacy full-catalog fallback applies only when there are no
-                    enrollments (or the "no enrollment needed" decision was
-                    recorded). */}
-                {enrollments.length > 0 ? (
-                  enrollments.map(e => (
-                    <option key={e.id} value={`enr:${e.id}`}>{e.programName}</option>
-                  ))
-                ) : (
-                  programs.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}{p.requiredDocuments?.length ? ` (${p.requiredDocuments.length} ${t('caseView.implement.req', 'req.')})` : ''}</option>
-                  ))
-                )}
-                <option value="adhoc:other">
-                  {t('caseView.implement.otherService', 'Other service (specify)…')}
-                </option>
+                {/* An intervention is a service under a program ASSIGNED to this
+                    case (the treatment plan): the select lists the case's
+                    enrollments, and nothing else — no re-picking from the whole
+                    catalog, no ad-hoc service. */}
+                {enrollments.map(e => (
+                  <option key={e.id} value={`enr:${e.id}`}>{e.programName}</option>
+                ))}
               </select>
               {/* The checklist in the card behind this dialog lists the same
                   documents, but the modal's overlay hides it — so the select
@@ -471,19 +468,29 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
               )}
               {enrollments.length === 0 && !caseData?.enrollmentsNotNeeded && (
                 <p className="rounded-md bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-                  {t('caseView.implement.noEnrollmentHint', 'This case has no program enrollment yet — the service will be recorded without one. Add enrollments in the Program Enrollments step to anchor services to a program.')}
+                  {t('caseView.implement.noEnrollmentHint', 'This case has no program enrollment yet — an intervention can only be recorded under an assigned program. Add enrollments in the Program Enrollments step first.')}
                 </p>
               )}
             </div>
 
-            {!form.programId.startsWith('adhoc:') && form.programId && (
+            {form.programId && (
               <div className="space-y-1.5">
                 <Label htmlFor="intv-service-type">{t('caseView.implement.serviceType', 'Service *')}</Label>
                 <select
                   id="intv-service-type"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className=""
                   value={form.interventionType}
-                  onChange={e => setForm(f => ({ ...f, interventionType: e.target.value }))}
+                  onChange={e => setForm(f => {
+                    const next = { ...f, interventionType: e.target.value };
+                    // A service that carries no money leaves the financial half
+                    // of the form behind — including whatever was typed into it.
+                    if (next.interventionType && !isFinancialIntervention(next.interventionType)) {
+                      next.amount = '';
+                      next.modeOfDelivery = '';
+                      next.fundSource = '';
+                    }
+                    return next;
+                  })}
                 >
                   <option value="">{t('caseView.implement.selectService', '— Select the service rendered —')}</option>
                   {serviceOptions.map((code) => (
@@ -492,67 +499,64 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
                 </select>
               </div>
             )}
-            {form.programId.startsWith('adhoc:') && (
-              <div className="space-y-1.5">
-                <Label htmlFor="intv-service-name">{t('caseView.implement.serviceName', 'Service Name *')}</Label>
-                <Input
-                  id="intv-service-name"
-                  value={form.serviceName}
-                  onChange={e => setForm(f => ({ ...f, serviceName: e.target.value }))}
-                  placeholder={t('caseView.implement.serviceNamePlaceholder', 'e.g., Counseling Session, Home Visit')}
-                />
-              </div>
-            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="intv-delivery-date">{t('caseView.implement.deliveryDate', 'Delivery Date')}</Label>
                 <Input id="intv-delivery-date" type="date" value={form.deliveryDate} onChange={e => setForm(f => ({ ...f, deliveryDate: e.target.value }))} />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="intv-amount">{t('caseView.implement.amount', 'Amount (₱)')}</Label>
-                <Input id="intv-amount" type="text" inputMode="numeric" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value.replace(/,/g, '') }))} />
-              </div>
+              {financial && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="intv-amount">{t('caseView.implement.amount', 'Amount (₱)')}</Label>
+                  <Input id="intv-amount" type="text" inputMode="numeric" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value.replace(/[^\d.]/g, '').replace(/^(\d*\.?\d{0,2}).*$/, '$1') }))} />
+                </div>
+              )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="intv-mode">{t('caseView.implement.modeOfDeliveryLabel', 'Mode of Delivery')}</Label>
-                <select id="intv-mode" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.modeOfDelivery} onChange={e => setForm(f => ({ ...f, modeOfDelivery: e.target.value }))}>
-                  <option value="">—</option>
-                  {[
-                    { value: 'Cash', label: t('caseView.implement.modeOfDelivery.cash', 'Cash') },
-                    { value: 'Cheque', label: t('caseView.implement.modeOfDelivery.cheque', 'Cheque') },
-                    { value: 'Guarantee Letter', label: t('caseView.implement.modeOfDelivery.guaranteeLetter', 'Guarantee Letter') },
-                    { value: 'In-kind', label: t('caseView.implement.modeOfDelivery.inKind', 'In-kind') },
-                    { value: 'Service', label: t('caseView.implement.modeOfDelivery.service', 'Service') },
-                  ].map(o => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
+            {/* The financial half of the form exists only for services that
+                carry money or in-kind value — the non-financial services omit
+                it entirely (and the server strips it if anyone still sends
+                it). */}
+            {financial && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="intv-mode">{t('caseView.implement.modeOfDeliveryLabel', 'Mode of Delivery')}</Label>
+                  <select id="intv-mode" className=""value={form.modeOfDelivery} onChange={e => setForm(f => ({ ...f, modeOfDelivery: e.target.value }))}>
+                    <option value="">—</option>
+                    {[
+                      { value: 'Cash', label: t('caseView.implement.modeOfDelivery.cash', 'Cash') },
+                      { value: 'Cheque', label: t('caseView.implement.modeOfDelivery.cheque', 'Cheque') },
+                      { value: 'Guarantee Letter', label: t('caseView.implement.modeOfDelivery.guaranteeLetter', 'Guarantee Letter') },
+                      { value: 'In-kind', label: t('caseView.implement.modeOfDelivery.inKind', 'In-kind') },
+                      { value: 'Service', label: t('caseView.implement.modeOfDelivery.service', 'Service') },
+                    ].map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="intv-fund">{t('caseView.implement.fundSourceLabel', 'Fund Source')}</Label>
+                  <select id="intv-fund" className=""value={form.fundSource} onChange={e => setForm(f => ({ ...f, fundSource: e.target.value }))}>
+                    <option value="">—</option>
+                    {[
+                      { value: 'DSWD', label: t('caseView.implement.fundSource.dswd', 'DSWD') },
+                      { value: 'LGU', label: t('caseView.implement.fundSource.lgu', 'LGU') },
+                      { value: 'PDAF', label: t('caseView.implement.fundSource.pdaf', 'PDAF') },
+                      { value: 'Donation', label: t('caseView.implement.fundSource.donation', 'Donation') },
+                      { value: 'Other', label: t('caseView.implement.fundSource.other', 'Other') },
+                    ].map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="intv-fund">{t('caseView.implement.fundSourceLabel', 'Fund Source')}</Label>
-                <select id="intv-fund" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.fundSource} onChange={e => setForm(f => ({ ...f, fundSource: e.target.value }))}>
-                  <option value="">—</option>
-                  {[
-                    { value: 'DSWD', label: t('caseView.implement.fundSource.dswd', 'DSWD') },
-                    { value: 'LGU', label: t('caseView.implement.fundSource.lgu', 'LGU') },
-                    { value: 'PDAF', label: t('caseView.implement.fundSource.pdaf', 'PDAF') },
-                    { value: 'Donation', label: t('caseView.implement.fundSource.donation', 'Donation') },
-                    { value: 'Other', label: t('caseView.implement.fundSource.other', 'Other') },
-                  ].map(o => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            )}
 
             <div className="space-y-1.5">
               <Label htmlFor="intv-notes">{t('caseView.implement.notes', 'Notes')}</Label>
               <textarea
                 id="intv-notes"
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px]"
+                className="form-input min-h-[60px]"
                 value={form.notes}
                 onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
                 placeholder={t('caseView.implement.notesPlaceholder', 'Additional details about this intervention...')}
@@ -561,7 +565,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeAdd}>{t('caseView.cancel', 'Cancel')}</Button>
-            <Button onClick={handleAdd} disabled={saving || (!form.programId && !form.serviceName) || Boolean(form.programId && !form.programId.startsWith('adhoc:') && !form.interventionType)}>
+            <Button onClick={handleAdd} disabled={saving || !selectedEnrollment || !form.interventionType}>
               {saving ? t('caseView.saving', 'Saving...') : t('caseView.implement.saveIntervention', 'Save Intervention')}
             </Button>
           </DialogFooter>

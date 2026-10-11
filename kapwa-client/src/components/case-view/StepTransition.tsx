@@ -5,6 +5,7 @@ import { useSWRConfig } from 'swr';
 import useSWR from 'swr';
 import { toast } from 'sonner';
 import { humanizeError } from '@/lib/errors';
+import { toastSaved } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
@@ -120,6 +121,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
     try {
       await api.patch(`/cases/${caseId}/events/${id}`, { status: 'done' });
       await mutateEvents();
+      toastSaved(t('caseView.transition.visitCompleted', 'Visit marked complete'));
     } catch (e) {
       toast.error(t('caseView.transition.visitCompleteFailed', 'Could not complete the visit'), { description: humanizeError(e) });
     }
@@ -129,11 +131,13 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
     try {
       await api.patch(`/cases/${caseId}/events/${id}`, { status: 'cancelled' });
       await mutateEvents();
+      toastSaved(t('caseView.transition.visitCancelled', 'Visit cancelled'));
     } catch (e) {
       toast.error(t('caseView.transition.visitCancelFailed', 'Could not cancel the visit'), { description: humanizeError(e) });
     }
   }
 
+  // Throws on failure: the seal bar reports it and leaves the step unsealed.
   async function handleSave() {
     setSaving(true);
     try {
@@ -153,8 +157,6 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
           };
       await api.patch(`/cases/${caseId}/transition-plan`, body);
       await mutate(queryKeys.cases.detail(caseId));
-    } catch (e) {
-      console.error('Failed to save transition plan:', e);
     } finally {
       setSaving(false);
     }
@@ -180,7 +182,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
   return (
     <div className="space-y-4">
       {/* Step 4 guide — the self-reliance level decides renewal vs closure. */}
-      <div className={`rounded-lg border px-4 py-3 text-sm ${selfSufficient ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-amber-300 bg-amber-50 text-amber-900'}`}>
+      <div className={`rounded-lg border px-4 py-3 text-sm ${selfSufficient ? 'border-success/35 bg-alert-success-bg text-success-foreground' : 'border-warning/35 bg-alert-error-bg text-warning-foreground'}`}>
         {selfSufficient
           ? t('caseView.transition.selfSufficient', 'Self-sufficient — proceed to Closure.')
           : t('caseView.transition.notSelfSufficient', 'Not self-sufficient — subject to case renewal.')}
@@ -237,7 +239,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
           <div className="space-y-1.5">
             <label className="text-sm font-medium">{t('caseView.transition.maintainProgress', 'How will the client maintain progress after case closure?')}</label>
             <textarea
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[100px]"
+              className="form-input min-h-[100px]"
               value={plan.sustainabilityPlan}
               onChange={e => setPlan(p => ({ ...p, sustainabilityPlan: e.target.value }))}
               disabled={assessmentReadOnly}
@@ -248,7 +250,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
             <div className="space-y-1.5">
               <label className="text-sm font-medium">{t('caseView.transition.selfRelianceSteps', 'Self-Reliance Steps')}</label>
               <textarea
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
+                className="form-input min-h-[80px]"
                 value={plan.selfReliancePlan}
                 onChange={e => setPlan(p => ({ ...p, selfReliancePlan: e.target.value }))}
                 disabled={assessmentReadOnly}
@@ -294,7 +296,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
               <div className="space-y-1">
                 <label className="text-xs font-medium">{t('caseView.transition.type', 'Type *')}</label>
                 <select
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className=""
                   value={newFollowUp.type}
                   onChange={e => setNewFollowUp(f => ({ ...f, type: e.target.value }))}
                 >
@@ -312,7 +314,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
               <div className="space-y-1 col-span-2">
                 <label className="text-xs font-medium">{t('caseView.transition.notes', 'Notes')}</label>
                 <textarea
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px]"
+                  className="form-input min-h-[60px]"
                   value={newFollowUp.notes}
                   onChange={e => setNewFollowUp(f => ({ ...f, notes: e.target.value }))}
                   placeholder={t('caseView.transition.notesPlaceholder', 'Visit notes...')}
@@ -462,17 +464,30 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
         </div>
       </div>
 
-      {/* Save Button. Gated on the *visits*, not the assessment: a sealed step 4
-          still saves its follow-up visits, which is the whole reason
-          `assessmentReadOnly` and `visitsReadOnly` are separate. */}
-      {!visitsReadOnly && (
+      {/* Follow-up visits keep a Save of their own, and only a sealed step needs
+          one: while the step is open the seal bar below is the plan's submit, and
+          once it is sealed the bar offers Unlock instead. The visits cannot ride
+          on that seal — they are in no step's done-predicate and the server's
+          `CASE_STEP_UNGUARDED_FIELDS` deliberately lets a visits-only body past a
+          sealed step 4 — so sealing the plan must not be what stops one being
+          recorded. */}
+      {stepLock != null && !visitsReadOnly && (
         <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={saving}>
-            {saving
-              ? t('caseView.saving', 'Saving...')
-              : stepLock != null
-              ? t('caseView.transition.saveVisits', 'Save Follow-up Visits')
-              : t('caseView.transition.saveTransitionPlan', 'Save Transition Plan')}
+          <Button
+            onClick={async () => {
+              // The bar owns the plan and handles its own failures; this control
+              // is the one write with no bar behind it, so it reports both halves
+              // itself rather than leaving a rejection unhandled.
+              try {
+                await handleSave();
+                toastSaved(t('caseView.transition.visitsSaved', 'Follow-up visits saved'));
+              } catch (e) {
+                toast.error(t('caseView.transition.saveFailed', 'Could not save the follow-up visits'), { description: humanizeError(e) });
+              }
+            }}
+            disabled={saving}
+          >
+            {saving ? t('caseView.saving', 'Saving...') : t('caseView.transition.saveVisits', 'Save Follow-up Visits')}
           </Button>
         </div>
       )}
@@ -491,14 +506,16 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
       )}
 
       {/* Step 4's seal. `lockReadOnly`, so a sealed step keeps its Unlock even
-          though its plan is read-only. */}
+          though its plan is read-only. This is the step's submit: it saves the
+          plan (and any follow-up visits added since the last write) and seals it. */}
       <StepLockBar
         caseId={caseId}
         stepKey="evaluate"
-        caseData={caseData}
+        caseData={{ ...caseData, ...plan }}
         interventionCount={0}
         locked={stepLock}
         readOnly={lockReadOnly}
+        onBeforeLock={handleSave}
         onChanged={() => mutate(queryKeys.cases.detail(caseId))}
       />
     </div>
@@ -532,8 +549,10 @@ function TransitionButton({ caseId, caseData, mutate }: { caseId: string; caseDa
     try {
       await api.patch(`/cases/${caseId}/disburse`, { status: 'transitioning' });
       await mutate(queryKeys.cases.detail(caseId));
+      toastSaved(t('caseView.transition.markedTransitioning', 'Case marked ready for graduation'));
     } catch (e) {
       console.error('Failed to transition:', e);
+      toast.error(t('caseView.transition.markFailed', 'Could not mark the case ready for graduation'), { description: humanizeError(e) });
     } finally {
       setLoading(false);
     }

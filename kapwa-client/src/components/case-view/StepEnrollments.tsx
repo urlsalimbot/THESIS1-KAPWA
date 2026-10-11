@@ -5,6 +5,8 @@ import useSWR from 'swr';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { humanizeError } from '@/lib/errors';
+import { toastSaved } from '@/lib/toast';
+import { programTypeAllowedForCaseCategory } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -51,6 +53,12 @@ export function StepEnrollments({ caseId, caseData, userRole, readOnly, lockRead
     ['programs'],
   );
   const notNeeded = Boolean(caseData?.enrollmentsNotNeeded);
+  // Programs apply per case category (catalog Appendix B): only programs
+  // applicable to this case's category are offerable — a CICL case never sees
+  // Social Pension in the picker. Untyped/custom programs stay visible.
+  const applicablePrograms = (programs ?? []).filter((p) =>
+    programTypeAllowedForCaseCategory(p.programType, caseData?.caseCategory),
+  );
 
   const [adding, setAdding] = useState(false);
   const [programId, setProgramId] = useState('');
@@ -83,6 +91,7 @@ export function StepEnrollments({ caseId, caseData, userRole, readOnly, lockRead
     try {
       await api.del(`/cases/${caseId}/enrollments/${id}`);
       await refresh();
+      toastSaved(t('caseView.enrollments.removed', 'Enrollment removed'));
     } catch (e) {
       toast.error(t('caseView.enrollments.removeFailed', 'Could not remove the enrollment'), { description: humanizeError(e) });
     } finally {
@@ -94,6 +103,7 @@ export function StepEnrollments({ caseId, caseData, userRole, readOnly, lockRead
     try {
       await api.patch(`/cases/${caseId}/enrollments/${id}`, { status });
       await refresh();
+      toastSaved(t('caseView.enrollments.statusUpdated', 'Enrollment status updated'));
     } catch (e) {
       toast.error(t('caseView.enrollments.updateFailed', 'Could not update the enrollment'), { description: humanizeError(e) });
     }
@@ -104,6 +114,9 @@ export function StepEnrollments({ caseId, caseData, userRole, readOnly, lockRead
     try {
       await api.patch(`/cases/${caseId}/enrollments-decision`, { notNeeded: !notNeeded });
       await mutate(queryKeys.cases.detail(caseId));
+      toastSaved(notNeeded
+        ? t('caseView.enrollments.programsNeeded', 'Programs required again')
+        : t('caseView.enrollments.noProgramNeeded', 'Recorded: no program needed'));
     } catch (e) {
       toast.error(t('caseView.enrollments.decisionFailed', 'Could not save the decision'), { description: humanizeError(e) });
     } finally {
@@ -211,7 +224,7 @@ export function StepEnrollments({ caseId, caseData, userRole, readOnly, lockRead
                     <Select value={programId || undefined} onValueChange={setProgramId}>
                       <SelectTrigger><SelectValue placeholder={t('caseView.enrollments.programPlaceholder', 'Select program…')} /></SelectTrigger>
                       <SelectContent>
-                        {(programs ?? []).map((p) => (
+                        {(applicablePrograms).map((p) => (
                           <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                         ))}
                       </SelectContent>

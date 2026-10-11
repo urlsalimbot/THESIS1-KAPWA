@@ -441,7 +441,7 @@ export function CaseStepper({ currentStep, onStepClick, caseData, interventionCo
               <div className="w-4 h-px bg-border mx-1" />
             )}
             <div className="flex flex-col">
-              <span className="text-[10px] font-medium text-muted-foreground mb-1 uppercase tracking-wider">
+              <span className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wider">
                 {phase.name}
               </span>
               <div className="flex items-center gap-1">
@@ -478,7 +478,7 @@ export function CaseStepper({ currentStep, onStepClick, caseData, interventionCo
                           : 'cursor-not-allowed text-muted-foreground/60'
                       }`}
                     >
-                      <span className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${
+                      <span className={`flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold ${
                         isActive
                           ? 'bg-primary-foreground text-primary'
                           : done

@@ -5,8 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { api } from '@/lib/api';
 import { humanizeError } from '@/lib/errors';
 import { formatDate } from '@/lib/format';
+import { toastSaved } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
-import { stepperStepDone, statusAtLeast, statusForFloor, STEP_FLOORS, type StepperProgressOpts } from './CaseStepper';
+import { stepperStepDone, statusAtLeast, statusForFloor, STEP_FLOORS, STEP_LABEL_KEYS, type StepperProgressOpts } from './CaseStepper';
 import { statusLabel } from '@/i18n/display';
 
 /** The `case.stepLocks` row as `findById` serializes it. */
@@ -20,6 +21,15 @@ export interface StepLockBarProps {
   caseId: string;
   /** The stable step key (`assessment`, `discernment`, `closure`, …). */
   stepKey: string;
+  /**
+   * The case row, optionally with the step's **unsaved draft** spread over it.
+   *
+   * It has to be the draft: `done` is what enables the Lock button, and the
+   * drafts live in the step's own state until the seal saves them, so a bar
+   * reading only the server row would stay disabled on the one form the worker
+   * just filled — a deadlock the Save buttons used to hide. The draft keys are
+   * the case's own column names, which is why spreading is enough.
+   */
   caseData: any;
   interventionCount: number;
   /** Defaults to 0 for steps that do not weigh enrollments. */
@@ -28,6 +38,20 @@ export interface StepLockBarProps {
   locked?: StepLock | null;
   onChanged: () => void | Promise<void>;
   readOnly?: boolean;
+  /**
+   * The step's own save, run before the seal — the Lock button is the step's
+   * submit, and there is no Save button beside it to reach instead.
+   *
+   * Throwing aborts the seal: a save that failed has its own reason to report,
+   * and sealing on top of it would answer with the server's "step not
+   * complete" (a 400 about a field, not the write that actually failed).
+   *
+   * Only the steps whose form *is* the case's own columns take this. A step whose
+   * done-predicate reads something the form does not hold — a server-side count,
+   * like the enrollments, interventions, referrals and hearings steps — cannot be
+   * made sealable by anything the worker has typed, so it keeps its own controls.
+   */
+  onBeforeLock?: () => unknown | Promise<unknown>;
 }
 
 /**
@@ -97,6 +121,7 @@ export function StepLockBar({
   locked,
   onChanged,
   readOnly,
+  onBeforeLock,
 }: StepLockBarProps) {
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
@@ -111,6 +136,10 @@ export function StepLockBar({
   const [mine, setMine] = useState<{ row: StepLock | null; parentRow: StepLock | null } | null>(null);
 
   const done = stepperStepDone(stepKey, caseData, interventionCount, enrollmentCount, opts ?? {});
+  // The step's own name, from the shared vocabulary the stepper and the action
+  // bar already speak, so a toast says "Assess & Interview" and not `assessment`.
+  const label = STEP_LABEL_KEYS[stepKey];
+  const stepName = label ? t(label.key, label.fallback) : stepKey;
   const path = `/cases/${caseId}/steps/${stepKey}/lock`;
   // Two different reasons disable the button, and they ask for opposite things.
   // Below the step's lifecycle floor the work is not owed yet — a case at
@@ -142,12 +171,25 @@ export function StepLockBar({
     failureKey: string,
     failureCopy: string,
     written: (result: unknown) => void,
+    save?: () => unknown | Promise<unknown>,
   ): Promise<void> {
     // `busy` disables the one control that reaches `run`, so a second click
     // cannot get here; it is also what keeps a failed control from staying
     // dead, since the `finally` below releases it on both paths.
     setBusy(true);
     try {
+      // The step's fields first: the seal is a claim about them, so a body the
+      // server has never seen would be sealed as an empty step.
+      if (save) {
+        try {
+          await save();
+        } catch (err) {
+          toast.error(t('caseView.lock.saveFailed', 'Could not save this step'), {
+            description: humanizeError(err),
+          });
+          return;
+        }
+      }
       let result: unknown;
       try {
         result = await request();
@@ -181,10 +223,20 @@ export function StepLockBar({
       parentRow: locked ?? null,
       row: { stepKey, lockedByName: row.lockedByName, lockedAt: row.lockedAt ?? '' },
     });
+    // The seal's own report. A bar that also saved says so — the two are one
+    // press now, and the worker is entitled to know the write happened before
+    // the seal did, since that is the half that would be lost if it had not.
+    if (onBeforeLock) toastSaved(t('caseView.lock.savedAndLocked', '{{step}} saved and locked', { step: stepName }));
+    else toast.success(t('caseView.lock.lockedTitle', 'Locked'), {
+      description: t('caseView.lock.lockedDesc', '{{step}} is sealed', { step: stepName }),
+    });
   };
 
   const releaseWritten = () => {
     setMine({ parentRow: locked ?? null, row: null });
+    toast.success(t('caseView.lock.unlockedTitle', 'Unlocked'), {
+      description: t('caseView.lock.unlockedDesc', '{{step}} is editable again', { step: stepName }),
+    });
   };
 
   if (lock) {
@@ -244,7 +296,7 @@ export function StepLockBar({
         // text is the half the tooltip cannot, since this button is
         // `pointer-events-none` while disabled and so can never be hovered.
         title={done ? undefined : notDoneHint}
-        onClick={() => run(() => api.post(path), 'caseView.lock.lockFailed', 'Could not seal this step', sealWritten)}
+        onClick={() => run(() => api.post(path), 'caseView.lock.lockFailed', 'Could not seal this step', sealWritten, onBeforeLock)}
       >
         <Lock aria-hidden="true" />
         {t('caseView.lock.lock', 'Lock')}
