@@ -115,7 +115,7 @@ export class ClientImportRow extends BaseEntity {
    * `intra_list`/`household_recent` for the rest — not derived from the
    * reason copy on the client.
    */
-  @Column({ name: 'eligibility_code', nullable: true })
+  @Column({ name: 'eligibility_code', type: 'text', nullable: true })
   eligibilityCode?: EligibilityCode | null;
 
   /** Operator review: 'waive' (serve anyway) or 'confirm' (keep disqualified). */
