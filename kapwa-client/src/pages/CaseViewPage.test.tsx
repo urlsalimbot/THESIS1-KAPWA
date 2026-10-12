@@ -920,7 +920,7 @@ describe('CaseViewPage — who acted on this case', () => {
 describe('CaseViewPage — inter-agency referral rows', () => {
   const mockReferral = {
     id: 'IAR-1',
-    status: 'referred',
+    reason: 'Medical coordination',
     createdAt: '2026-07-01T00:00:00Z',
     person: { firstName: 'Maria', surname: 'Reyes' },
     fromAgency: { code: 'MSWDO', name: 'MSWDO Norzagaray' },
@@ -974,11 +974,11 @@ describe('CaseViewPage — inter-agency referral rows', () => {
     expect(row.closest('a, button')).toBeNull();
   });
 
-  it('still shows the referral as a record — office and status', async () => {
+  it('still shows the referral as a record — office and reason', async () => {
     await openReferralsStep();
 
     expect(screen.getByText(/Referred to PESO Norzagaray/i)).toBeTruthy();
-    expect(screen.getByText('referred')).toBeTruthy();
+    expect(screen.getByText(/Reason: Medical coordination/i)).toBeTruthy();
   });
 
   // The sidebar ran beside every step and carried its own read-only copy of the

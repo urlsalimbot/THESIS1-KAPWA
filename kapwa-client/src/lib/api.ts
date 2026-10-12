@@ -468,7 +468,7 @@ export async function downloadClientDedupOutput(operationId: string): Promise<vo
 // confirmation action.
 export async function downloadEndorsementLetter(
   caseId: string,
-  body: { toAgencyId: string; reason: string; legalBasisCode: string; notes?: string },
+  body: { toAgencyId: string; reason: string; notes?: string },
 ): Promise<void> {
   const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch(`${API_BASE}/inter-agency-referrals/case/${caseId}/endorsement-letter`, {

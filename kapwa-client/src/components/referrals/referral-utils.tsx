@@ -125,7 +125,7 @@ export function referralPrefill(src: ReferralPrefillSource) {
  * cannot drift between entry points.
  */
 export function referralIntakeState(
-  type: 'barangay' | 'inter_agency',
+  type: 'barangay',
   src: { id: string } & ReferralPrefillSource,
 ) {
   const { prefill, reason } = referralPrefill(src);

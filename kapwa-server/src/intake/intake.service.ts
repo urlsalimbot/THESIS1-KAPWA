@@ -15,7 +15,6 @@ import { CasesService } from '../cases/cases.service';
 import { AccessCardsService } from '../access-cards/access-cards.service';
 import { AccountProvisioningService } from '../accounts/account-provisioning.service';
 import { Referral, ReferralStatus } from '../referrals/referral.entity';
-import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 import { memberToPerson } from './member-person';
 import { assessMatchCandidate, soundex } from './match-scoring';
 import { User, UserRole } from '../auth/user.entity';
@@ -123,24 +122,10 @@ export class IntakeService {
       return;
     }
 
-    const referral = await manager.findOne(InterAgencyReferral, { where: { id } });
-    if (!referral) {
-      this.logger.warn(`Intake ${caseId}: inter-agency referral ${id} not found; link skipped`);
-      return;
-    }
-    if (referral.status !== 'received') {
-      this.logger.warn(
-        `Intake ${caseId}: inter-agency referral ${id} is "${referral.status}", not received; link skipped`,
-      );
-      return;
-    }
-    if (referral.caseId && referral.caseId !== caseId) {
-      this.logger.warn(
-        `Intake ${caseId}: inter-agency referral ${id} already linked to ${referral.caseId}; link skipped`,
-      );
-      return;
-    }
-    await manager.update(InterAgencyReferral, id, { caseId });
+    // The inter-agency hand-off was part of the retired IAR lifecycle (it gated
+    // on the referral's `status`); IAR is letters-only now, so an intake can no
+    // longer be sourced from one.
+    this.logger.warn(`Intake ${caseId}: unknown source referral type "${type}"; link skipped`);
   }
 
   // A PhilHealth number is unique per client. Only treat the holder as "the
@@ -395,9 +380,7 @@ export class IntakeService {
   ): Promise<void> {
     if (!sourceReferral) return;
 
-    const caseId = sourceReferral.type === 'barangay'
-      ? (await this.dataSource.getRepository(Referral).findOne({ where: { id: sourceReferral.id } }))?.caseId
-      : (await this.dataSource.getRepository(InterAgencyReferral).findOne({ where: { id: sourceReferral.id } }))?.caseId;
+    const caseId = (await this.dataSource.getRepository(Referral).findOne({ where: { id: sourceReferral.id } }))?.caseId;
     if (!caseId) return;
 
     const existing = await this.caseRepo.findOne({ where: { id: caseId } });

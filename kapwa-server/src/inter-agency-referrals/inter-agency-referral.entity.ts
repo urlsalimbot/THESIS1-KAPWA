@@ -6,8 +6,12 @@ import { Person } from '../beneficiaries/person.entity';
 import { Case } from '../cases/case.entity';
 import { User } from '../auth/user.entity';
 
-export type InterAgencyReferralStatus = 'referred' | 'received' | 'actioned' | 'closed' | 'declined';
-
+/**
+ * An inter-agency referral is the record the endorsement letter is made of:
+ * who was referred (case + person), by which office, to which institution,
+ * and why. The old lifecycle around it (status workflow, consent, legal
+ * basis, outcome) was retired — the table holds the letter's inputs only.
+ */
 @Entity({ name: 'inter_agency_referrals' })
 export class InterAgencyReferral extends BaseEntity {
   @Column({ name: 'case_id', nullable: true })
@@ -74,35 +78,11 @@ export class InterAgencyReferral extends BaseEntity {
   @JoinColumn({ name: 'to_agency_id' })
   toAgency?: Agency;
 
-  @Column({ type: 'text', default: 'referred' })
-  status!: InterAgencyReferralStatus;
-
   @Column({ type: 'text' })
   reason!: string;
 
   @Column({ type: 'text', nullable: true })
   notes?: string;
-
-  @Column({ name: 'legal_basis_code', type: 'text' })
-  legalBasisCode!: string;
-
-  @Column({ name: 'consent_ledger_id', nullable: true })
-  consentLedgerId?: string;
-
-  @Column({ type: 'text', nullable: true })
-  outcome?: string;
-
-  @Column({ name: 'received_at', type: 'timestamp', nullable: true })
-  receivedAt?: Date;
-
-  @Column({ name: 'actioned_at', type: 'timestamp', nullable: true })
-  actionedAt?: Date;
-
-  @Column({ name: 'closed_at', type: 'timestamp', nullable: true })
-  closedAt?: Date;
-
-  @Column({ name: 'declined_reason', type: 'text', nullable: true })
-  declinedReason?: string;
 
   @Column({ name: 'created_by', nullable: true })
   createdBy?: string;

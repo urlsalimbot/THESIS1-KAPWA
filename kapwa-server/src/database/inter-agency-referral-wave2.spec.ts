@@ -31,7 +31,6 @@ describe('InterAgencyReferral identity getters', () => {
     const person = linkedPerson();
     const ref = new InterAgencyReferral();
     ref.reason = 'Medical assistance';
-    ref.legalBasisCode = 'public_authority_sec13';
     ref.person = person;
     ref.personId = person.id;
 
@@ -52,7 +51,6 @@ describe('InterAgencyReferral identity getters', () => {
   it('returns empty values when no person is linked', () => {
     const ref = new InterAgencyReferral();
     ref.reason = 'Referral';
-    ref.legalBasisCode = 'consent_verified';
     expect(ref.surname).toBe('');
     expect(ref.firstName).toBe('');
     expect(ref.gender).toBe('');
@@ -67,7 +65,6 @@ describe('InterAgencyReferral identity getters', () => {
     const person = linkedPerson();
     const ref = new InterAgencyReferral();
     ref.reason = 'Medical assistance';
-    ref.legalBasisCode = 'public_authority_sec13';
     ref.person = person;
     ref.personId = person.id;
 

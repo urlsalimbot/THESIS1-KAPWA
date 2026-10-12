@@ -8,7 +8,6 @@ const DATA: EndorsementLetterData = {
   beneficiaryName: 'Juan Dela Cruz',
   caseCategory: 'Indigent',
   reason: 'Medical coordination',
-  legalBasis: 'Pub Doc',
   preparedBy: 'Juan Dela Cruz',
   preparedByRole: 'Social Worker',
 };

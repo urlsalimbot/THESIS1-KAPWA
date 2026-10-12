@@ -860,21 +860,23 @@ export async function migrate() {
     person_id UUID NOT NULL REFERENCES persons(id),
     from_agency_id UUID NOT NULL REFERENCES agencies(id),
     to_agency_id UUID NOT NULL REFERENCES agencies(id),
-    status TEXT NOT NULL DEFAULT 'referred'
-      CHECK (status IN ('referred','received','actioned','closed','declined')),
     reason TEXT NOT NULL,
     notes TEXT,
-    legal_basis_code TEXT NOT NULL,
-    consent_ledger_id UUID REFERENCES consent_ledger(id),
-    outcome TEXT,
-    received_at TIMESTAMP,
-    actioned_at TIMESTAMP,
-    closed_at TIMESTAMP,
-    declined_reason TEXT,
     created_by UUID REFERENCES users(id),
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
+  // IAR is letters-only now: the status/consent/outcome workflow columns are
+  // gone (mirrors SimplifyInterAgencyReferrals), so upgraded DBs drop them here.
+  await q.query(`ALTER TABLE inter_agency_referrals DROP COLUMN IF EXISTS status`);
+  await q.query(`ALTER TABLE inter_agency_referrals DROP COLUMN IF EXISTS legal_basis_code`);
+  await q.query(`ALTER TABLE inter_agency_referrals DROP COLUMN IF EXISTS consent_ledger_id`);
+  await q.query(`ALTER TABLE inter_agency_referrals DROP COLUMN IF EXISTS outcome`);
+  await q.query(`ALTER TABLE inter_agency_referrals DROP COLUMN IF EXISTS received_at`);
+  await q.query(`ALTER TABLE inter_agency_referrals DROP COLUMN IF EXISTS actioned_at`);
+  await q.query(`ALTER TABLE inter_agency_referrals DROP COLUMN IF EXISTS closed_at`);
+  await q.query(`ALTER TABLE inter_agency_referrals DROP COLUMN IF EXISTS declined_reason`);
+  await q.query(`DROP INDEX IF EXISTS idx_iar_status`);
   await q.query(`CREATE TABLE IF NOT EXISTS notification_preferences (
     id uuid DEFAULT uuid_generate_v7() PRIMARY KEY,
     user_id varchar NOT NULL,

@@ -18,7 +18,6 @@ export interface EndorsementLetterData {
   beneficiaryName: string;
   caseCategory?: string;
   reason: string;
-  legalBasis?: string;
   notes?: string;
   preparedBy: string;
   preparedByRole?: string;

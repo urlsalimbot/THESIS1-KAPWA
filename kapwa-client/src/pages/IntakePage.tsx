@@ -61,7 +61,7 @@ interface PersonForm {
 
 /** Which referral this intake was handed off from, if any. */
 interface SourceReferralRef {
-  type: 'barangay' | 'inter_agency';
+  type: 'barangay';
   id: string;
   reason?: string;
 }

@@ -162,8 +162,9 @@ describe('StepIntegratedDelivery — referral or an explicit no-referral decisio
     await waitFor(() => {
       expect(mockDownloadLetter).toHaveBeenCalledWith(
         'case-1',
-        expect.objectContaining({ toAgencyId: 'ag-rhu', reason: 'Medical coordination', legalBasisCode: expect.any(String) }),
+        expect.objectContaining({ toAgencyId: 'ag-rhu', reason: 'Medical coordination' }),
       );
+      expect(mockDownloadLetter.mock.calls[0][1]).not.toHaveProperty('legalBasisCode');
     });
   });
 

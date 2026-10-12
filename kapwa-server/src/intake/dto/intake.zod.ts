@@ -86,7 +86,7 @@ export const FamilyMemberSchema = z.object({
 });
 
 export const SourceReferralSchema = z.object({
-  type: z.enum(['barangay', 'inter_agency']),
+  type: z.enum(['barangay']),
   id: z.string().uuid(),
 });
 

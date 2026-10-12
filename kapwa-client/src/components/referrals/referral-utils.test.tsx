@@ -99,14 +99,14 @@ describe('referralPrefill', () => {
 
 describe('referralIntakeState', () => {
   it('carries the referral type, id and reason alongside the prefill', () => {
-    const state = referralIntakeState('inter_agency', {
+    const state = referralIntakeState('barangay', {
       id: 'ref-9',
       ...FULL,
       reason: 'Medical assistance',
     });
 
     expect(state.sourceReferral).toEqual({
-      type: 'inter_agency',
+      type: 'barangay',
       id: 'ref-9',
       reason: 'Medical assistance',
     });

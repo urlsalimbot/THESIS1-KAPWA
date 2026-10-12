@@ -16,7 +16,6 @@ import { CaseHistory } from '../cases/case-history.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { CasesService } from '../cases/cases.service';
 import { Referral } from '../referrals/referral.entity';
-import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 import { UserRole } from '../auth/user.entity';
 import { IntakeInputSchema } from './dto/intake.zod';
 import type { IntakeInput } from './dto/intake.zod';
@@ -519,15 +518,6 @@ describe('IntakeService', () => {
       expect(m.update).toHaveBeenCalledWith(Referral, 'ref-1', { caseId: 'case-1' });
     });
 
-    it('links a received inter-agency referral to the case', async () => {
-      const m = fakeManager();
-      m.findOne.mockResolvedValue({ id: 'iar-1', status: 'received', caseId: null });
-
-      await link(m, { type: 'inter_agency', id: 'iar-1' }, 'case-1');
-
-      expect(m.update).toHaveBeenCalledWith(InterAgencyReferral, 'iar-1', { caseId: 'case-1' });
-    });
-
     it('skips an unknown referral without failing the intake', async () => {
       const m = fakeManager();
       m.findOne.mockResolvedValue(null);
@@ -581,20 +571,6 @@ describe('IntakeService', () => {
       ).rejects.toThrow(/already has case KAPWA-2026-00012/);
 
       expect(queryRunnerMock.startTransaction).not.toHaveBeenCalled();
-    });
-
-    it('refuses a second intake for an inter-agency referral that already has a case', async () => {
-      dataSourceMock.getRepository = jest.fn(() => ({
-        findOne: jest.fn().mockResolvedValue({ id: 'iar-1', caseId: 'case-existing' }),
-      }));
-      caseRepo.findOne.mockResolvedValue({ id: 'case-existing', controlNo: 'KAPWA-2026-00013' });
-
-      await expect(
-        service.submitIntake(
-          { ...validIntakeInput, sourceReferral: { type: 'inter_agency', id: 'iar-1' } },
-          { id: 'u1', role: UserRole.SW },
-        ),
-      ).rejects.toThrow(/already has case KAPWA-2026-00013/);
     });
 
     it('links inside the intake transaction, before commit', async () => {

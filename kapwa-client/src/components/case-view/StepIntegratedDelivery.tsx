@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Lock, FileText, Plus, Ban, CheckCircle2 } from 'lucide-react';
 import { api, downloadEndorsementLetter, downloadEndorsementLetterById } from '@/lib/api';
-import { Agency, LEGAL_BASIS_OPTIONS } from '@/components/referrals/referral-utils';
+import { Agency } from '@/components/referrals/referral-utils';
 import { StepLockBar, type StepLock } from './StepLockBar';
 import { useTranslation } from 'react-i18next';
 
@@ -19,8 +19,6 @@ interface ReferralRow {
   toAgencyId: string;
   toAgency?: { id: string; code?: string; name?: string } | null;
   reason?: string;
-  status?: string;
-  legalBasisCode?: string;
   notes?: string;
 }
 
@@ -55,7 +53,6 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
   const [issueOpen, setIssueOpen] = useState(false);
   const [toAgencyId, setToAgencyId] = useState('');
   const [reason, setReason] = useState('');
-  const [legalBasisCode, setLegalBasisCode] = useState(LEGAL_BASIS_OPTIONS[0]);
   const [notes, setNotes] = useState('');
   const [issuing, setIssuing] = useState(false);
   const [savingDecision, setSavingDecision] = useState(false);
@@ -94,7 +91,6 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
       await downloadEndorsementLetter(caseId, {
         toAgencyId,
         reason: reason.trim(),
-        legalBasisCode,
         notes: notes.trim() || undefined,
       });
       setIssueOpen(false);
@@ -175,16 +171,10 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
                           office: r.toAgency?.name || t('caseView.integrated.receivingAgency', 'the receiving agency'),
                         })}
                       </p>
-                      {r.status && <Badge variant="outline" className="text-xs capitalize">{r.status}</Badge>}
                     </div>
                     {r.reason && (
                       <p className="mt-1 text-xs text-muted-foreground">
                         {t('caseView.integrated.referralReason', 'Reason: {{reason}}', { reason: r.reason })}
-                      </p>
-                    )}
-                    {r.legalBasisCode && (
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {t('caseView.integrated.legalBasisShort', 'Legal basis: {{code}}', { code: r.legalBasisCode })}
                       </p>
                     )}
                   </li>
@@ -254,22 +244,6 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
                 onChange={(e) => setReason(e.target.value)}
                 className=""
               />
-            </div>
-            <div className="space-y-1">
-              <label htmlFor="endorse-legal" className="text-xs font-medium text-muted-foreground">
-                {t('caseView.integrated.legalBasis', 'Legal Basis *')}
-              </label>
-              <select
-                id="endorse-legal"
-                required
-                value={legalBasisCode}
-                onChange={(e) => setLegalBasisCode(e.target.value)}
-                className=""
-              >
-                {LEGAL_BASIS_OPTIONS.map((o) => (
-                  <option key={o} value={o}>{o}</option>
-                ))}
-              </select>
             </div>
             <div className="space-y-1">
               <label htmlFor="endorse-notes" className="text-xs font-medium text-muted-foreground">
