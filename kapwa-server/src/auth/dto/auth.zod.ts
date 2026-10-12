@@ -93,6 +93,13 @@ export const ResetPasswordSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
+// Staff-initiated reset for a specific account (admin for anyone; a social
+// worker only for claimant accounts — enforced in the service).
+export const IssuePasswordResetSchema = z.object({
+  userId: z.string().uuid(),
+});
+export type IssuePasswordResetInput = z.infer<typeof IssuePasswordResetSchema>;
+
 export const ConfirmEmailChangeSchema = z.object({
   token: z.string().min(1),
 });

@@ -3,7 +3,7 @@ import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from './user.entity';
+import { User, UserRole } from './user.entity';
 import { UserToken } from './user-token.entity';
 import { UserBarangayAssignment } from './user-barangay-assignment.entity';
 import { Person } from '../beneficiaries/person.entity';
@@ -32,7 +32,9 @@ describe('AuthService', () => {
     };
     tokenRepoMock = {
       findOne: jest.fn(),
-      create: jest.fn(),
+      // create() materialises the row in the real repo; returning the input
+      // keeps save()/row assertions meaningful in tests.
+      create: jest.fn((d: unknown) => d) as any,
       save: jest.fn(),
       delete: jest.fn(),
     };
@@ -54,6 +56,7 @@ describe('AuthService', () => {
       sendOtpEmail: jest.fn().mockResolvedValue({ success: true }),
       sendForgotPasswordEmail: jest.fn().mockResolvedValue({ success: true }),
       sendEmailChangeVerification: jest.fn().mockResolvedValue({ success: true }),
+      passwordResetUrl: jest.fn((token: string) => `https://app.test/reset-password?token=${token}`),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -299,6 +302,46 @@ describe('AuthService', () => {
     it('does not issue tokens for a disabled user (MFA/OTP verify path)', () => {
       expect(() => (service as any).issueTokens({ id: '1', email: 'a@a.com', role: 'admin', isActive: false, tokenVersion: 0 }))
         .toThrow('disabled');
+    });
+  });
+
+  describe('issuePasswordReset (staff-issued)', () => {
+    const asAny = (v: unknown) => v as any;
+    const actor = (role: UserRole) => ({ id: 'u-1', role } as any);
+
+    it('lets a social worker reset a claimant account and returns the one-time link', async () => {
+      asAny(repoMock).findOne.mockResolvedValue({ id: 'c1', email: 'claimant@example.test', role: 'claimant' });
+      emailMock.sendForgotPasswordEmail.mockResolvedValue(true);
+
+      const out = await service.issuePasswordReset('c1', actor(UserRole.SW));
+
+      expect(tokenRepoMock.delete).toHaveBeenCalledWith({ userId: 'c1', purpose: 'password_reset' });
+      expect(tokenRepoMock.save).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'c1', purpose: 'password_reset', expiresAt: expect.any(Date) }),
+      );
+      expect(emailMock.sendForgotPasswordEmail).toHaveBeenCalledWith('claimant@example.test', expect.any(String));
+      const token = asAny(tokenRepoMock.create).mock.calls[0][0].token;
+      expect(out.resetUrl).toBe(`https://app.test/reset-password?token=${token}`);
+      expect(out.emailDelivered).toBe(true);
+    });
+
+    it('refuses a social worker resetting a staff account', async () => {
+      asAny(repoMock).findOne.mockResolvedValue({ id: 's1', email: 'sw@example.test', role: 'social_worker' });
+      await expect(
+        service.issuePasswordReset('s1', actor(UserRole.SW)),
+      ).rejects.toThrow('Social workers can only issue password resets for claimant accounts');
+      expect(tokenRepoMock.save).not.toHaveBeenCalled();
+    });
+
+    it('allows an admin to reset any account', async () => {
+      asAny(repoMock).findOne.mockResolvedValue({ id: 's1', email: 'sw@example.test', role: 'coordinator' });
+      const out = await service.issuePasswordReset('s1', actor(UserRole.ADMIN));
+      expect(out.resetUrl).toContain('/reset-password?token=');
+    });
+
+    it('throws NotFound for a missing user', async () => {
+      asAny(repoMock).findOne.mockResolvedValue(null);
+      await expect(service.issuePasswordReset('nope', actor(UserRole.ADMIN))).rejects.toThrow('User not found');
     });
   });
 });

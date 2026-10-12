@@ -1,12 +1,12 @@
 import { BCRYPT_SALT_ROUNDS, OTP_EXPIRY_MINUTES, OTP_MIN, OTP_RANGE, OTP_RATE_LIMIT_SECONDS, MS_PER_SECOND, SECONDS_PER_MINUTE } from '../common/constants';
-import { Logger, Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Logger, Injectable, UnauthorizedException, ConflictException, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { generateTOTPSecret, generateTOTPUri, verifyTOTP } from './totp';
-import { User, MfaMethod } from './user.entity';
+import { User, MfaMethod, UserRole } from './user.entity';
 import { UserToken } from './user-token.entity';
 import { UserBarangayAssignment } from './user-barangay-assignment.entity';
 import { Person } from '../beneficiaries/person.entity';
@@ -521,6 +521,31 @@ export class AuthService {
 
     const emailDelivered = await this.emailService.sendForgotPasswordEmail(user.email, resetToken);
     return { message: 'If an account with that email exists, a password reset link has been sent.', emailDelivered };
+  }
+
+  /**
+   * Staff-issued password reset: same token/email machinery as the self-service
+   * flow, plus the reset link so the worker can hand it over when the account
+   * holder has no inbox of their own. A social worker may only do this for
+   * claimant accounts; an admin may reset anyone.
+   */
+  async issuePasswordReset(userId: string, caller: Pick<User, 'id' | 'role'>) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+    if (caller.role === UserRole.SW && user.role !== UserRole.CLAIMANT) {
+      throw new ForbiddenException('Social workers can only issue password resets for claimant accounts');
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await this.upsertToken(user.id, 'password_reset', { token: resetToken, expiresAt });
+    const emailDelivered = await this.emailService.sendForgotPasswordEmail(user.email, resetToken);
+
+    return {
+      message: 'Password reset link issued. The claimant also received it by email.',
+      emailDelivered,
+      resetUrl: this.emailService.passwordResetUrl(resetToken),
+    };
   }
 
   async resetPassword(token: string, newPassword: string) {

@@ -2,10 +2,12 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import { mutate } from 'swr';
 import type { ColumnDef, PaginationState, SortingState } from '@tanstack/react-table';
-import { Search, RotateCcw, Pencil, Ban, UserCheck, Lock } from 'lucide-react';
+import { Search, RotateCcw, Pencil, Ban, UserCheck, Lock, KeyRound, Copy, Check } from 'lucide-react';
 import { api } from '../lib/api';
 import { formatDate } from '../lib/format';
 import { queryKeys } from '../lib/query-keys';
+import { useAuth } from '@/lib/auth-context';
+import { toast } from 'sonner';
 import { DataTable } from '@/components/data-table/DataTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +28,6 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 import { Mail } from 'lucide-react';
 
 interface AppUser {
@@ -99,8 +100,13 @@ function EditableRoleCell({ user, onRoleChange, roleLabel }: { user: AppUser; on
 
 export default function UsersPanel() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  // Social workers get the claimant-accounts surface only: the claimants tab,
+  // plus disable/enable and password-reset for those accounts. Staff-user
+  // management (create/edit/role) stays admin-only.
+  const isSwPanel = user?.role === 'social_worker';
   const roleLabel = (r: string) => t(`usersPanel.role.${r}`, ROLE_LABELS[r] || r);
-  const [tab, setTab] = useState<UserTab>('active');
+  const [tab, setTab] = useState<UserTab>(() => (isSwPanel ? 'claimants' : 'active'));
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
@@ -243,6 +249,35 @@ export default function UsersPanel() {
     }
   }
 
+  // Staff-issued password reset: the claimant gets the email AND the worker
+  // gets the one-time link to hand over (claimants often have no inbox of
+  // their own — the link is what makes the counter workflow possible).
+  const [resetFor, setResetFor] = useState<AppUser | null>(null);
+  const [resetting, setResetting] = useState(false);
+  const [resetResult, setResetResult] = useState<{ resetUrl: string; message?: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+  async function issueReset() {
+    if (!resetFor || resetting) return;
+    setResetting(true);
+    try {
+      const res = await api.post<{ message?: string; resetUrl: string }>('/auth/issue-password-reset', { userId: resetFor.id });
+      setResetResult({ resetUrl: res.resetUrl, message: res.message });
+    } catch {
+      toast.error(t('usersPanel.resetFailed', 'Could not issue the password reset'));
+      setResetFor(null);
+    } finally {
+      setResetting(false);
+    }
+  }
+  async function copyResetLink() {
+    if (!resetResult?.resetUrl) return;
+    try {
+      await navigator.clipboard.writeText(resetResult.resetUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch { /* clipboard unavailable — the field stays selectable */ }
+  }
+
   function changeTab(next: string) {
     setTab(next as UserTab);
     setPagination((p) => ({ ...p, pageIndex: 0 }));
@@ -304,14 +339,26 @@ export default function UsersPanel() {
               <Mail size={14} />
             </button>
           )}
-          <button
-            onClick={() => openEdit(row.original)}
-            title={t('usersPanel.editAria', 'Edit {{email}}', { email: row.original.email })}
-            className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
-            aria-label={t('usersPanel.editAria', 'Edit {{email}}', { email: row.original.email })}
-          >
-            <Pencil size={14} />
-          </button>
+          {row.original.role === CLAIMANT_ROLE && (
+            <button
+              onClick={() => { setCopied(false); setResetResult(null); setResetFor(row.original); }}
+              title={t('usersPanel.resetPasswordAria', 'Issue password reset for {{email}}', { email: row.original.email })}
+              className="w-7 h-7 rounded flex items-center justify-center text-primary hover:bg-primary/10 transition-colors"
+              aria-label={t('usersPanel.resetPasswordAria', 'Issue password reset for {{email}}', { email: row.original.email })}
+            >
+              <KeyRound size={14} />
+            </button>
+          )}
+          {!isSwPanel && (
+            <button
+              onClick={() => openEdit(row.original)}
+              title={t('usersPanel.editAria', 'Edit {{email}}', { email: row.original.email })}
+              className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+              aria-label={t('usersPanel.editAria', 'Edit {{email}}', { email: row.original.email })}
+            >
+              <Pencil size={14} />
+            </button>
+          )}
           {row.original.isActive ? (
             <button
               onClick={() => setConfirm({ id: row.original.id, email: row.original.email, action: 'disable' })}
@@ -380,17 +427,22 @@ export default function UsersPanel() {
 
       {/* Active / Disabled / Claimants split. Claimants are segregated from the
           staff tabs because they are self-registered accounts, not MSWDO staff;
-          disabled users are kept, never deleted. */}
+          disabled users are kept, never deleted. Social workers see the
+          claimants tab alone — their user-management surface. */}
       <Tabs value={tab} onValueChange={changeTab}>
         <TabsList>
-          <TabsTrigger value="active">
-            {t('usersPanel.tabActive', 'Active users')}
-            {counts ? <span aria-hidden="true" className="ml-1.5 text-xs text-muted-foreground tabular-nums">{counts.active}</span> : null}
-          </TabsTrigger>
-          <TabsTrigger value="disabled">
-            {t('usersPanel.tabDisabled', 'Disabled users')}
-            {counts ? <span aria-hidden="true" className="ml-1.5 text-xs text-muted-foreground tabular-nums">{counts.disabled}</span> : null}
-          </TabsTrigger>
+          {!isSwPanel && (
+            <TabsTrigger value="active">
+              {t('usersPanel.tabActive', 'Active users')}
+              {counts ? <span aria-hidden="true" className="ml-1.5 text-xs text-muted-foreground tabular-nums">{counts.active}</span> : null}
+            </TabsTrigger>
+          )}
+          {!isSwPanel && (
+            <TabsTrigger value="disabled">
+              {t('usersPanel.tabDisabled', 'Disabled users')}
+              {counts ? <span aria-hidden="true" className="ml-1.5 text-xs text-muted-foreground tabular-nums">{counts.disabled}</span> : null}
+            </TabsTrigger>
+          )}
           <TabsTrigger value="claimants">
             {t('usersPanel.tabClaimants', 'Claimants')}
             {counts ? <span aria-hidden="true" className="ml-1.5 text-xs text-muted-foreground tabular-nums">{counts.claimants}</span> : null}
@@ -398,30 +450,34 @@ export default function UsersPanel() {
         </TabsList>
         {/* One table instance per panel (Radix mounts only the active panel), so
             each tab has the aria-controls target axe expects. */}
-        <TabsContent value="active">
-          <DataTable
-            columns={columns}
-            data={users}
-            rowCount={total}
-            loading={isLoading}
-            pagination={pagination}
-            sorting={sorting}
-            onPaginationChange={setPagination}
-            onSortingChange={setSorting}
-          />
-        </TabsContent>
-        <TabsContent value="disabled">
-          <DataTable
-            columns={columns}
-            data={users}
-            rowCount={total}
-            loading={isLoading}
-            pagination={pagination}
-            sorting={sorting}
-            onPaginationChange={setPagination}
-            onSortingChange={setSorting}
-          />
-        </TabsContent>
+        {!isSwPanel && (
+          <TabsContent value="active">
+            <DataTable
+              columns={columns}
+              data={users}
+              rowCount={total}
+              loading={isLoading}
+              pagination={pagination}
+              sorting={sorting}
+              onPaginationChange={setPagination}
+              onSortingChange={setSorting}
+            />
+          </TabsContent>
+        )}
+        {!isSwPanel && (
+          <TabsContent value="disabled">
+            <DataTable
+              columns={columns}
+              data={users}
+              rowCount={total}
+              loading={isLoading}
+              pagination={pagination}
+              sorting={sorting}
+              onPaginationChange={setPagination}
+              onSortingChange={setSorting}
+            />
+          </TabsContent>
+        )}
         <TabsContent value="claimants">
           <DataTable
             columns={columns}
@@ -505,6 +561,61 @@ export default function UsersPanel() {
               {editSaving ? t('usersPanel.saving', 'Saving...') : t('usersPanel.saveChanges', 'Save Changes')}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Issue password reset — dialog stays open after issuance so the worker
+          can copy the one-time link (claimants without an inbox get it from
+          the counter). */}
+      <Dialog open={!!resetFor} onOpenChange={(open) => { if (!open) { setResetFor(null); setResetResult(null); setCopied(false); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('usersPanel.resetTitle', 'Issue Password Reset')}</DialogTitle>
+            <DialogDescription>
+              {t('usersPanel.resetDesc', 'Send a password-reset link to {{email}}', { email: resetFor?.email })}
+            </DialogDescription>
+          </DialogHeader>
+          {resetResult ? (
+            <div className="space-y-3 py-2">
+              <p className="text-sm text-muted-foreground">
+                {resetResult.message || t('usersPanel.resetIssued', 'Password reset issued — the claimant also received it by email.')}
+              </p>
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  value={resetResult.resetUrl}
+                  aria-label={t('usersPanel.resetLinkAria', 'Password reset link')}
+                  className="text-xs"
+                />
+                <Button variant="outline" size="sm" onClick={copyResetLink}>
+                  {copied ? <Check size={14} className="mr-1" /> : <Copy size={14} className="mr-1" />}
+                  {copied ? t('usersPanel.copied', 'Copied') : t('usersPanel.copyLink', 'Copy')}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t('usersPanel.resetExpiry', 'The link expires in 1 hour and works once.')}
+              </p>
+              <div className="flex justify-end pt-1">
+                <DialogClose asChild>
+                  <Button size="sm">{t('usersPanel.done', 'Done')}</Button>
+                </DialogClose>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3 py-2">
+              <p className="text-sm text-muted-foreground">
+                {t('usersPanel.resetConfirm', 'The claimant will receive the link by email, and the reset link will be shown here to hand over if needed.')}
+              </p>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline" size="sm">{t('usersPanel.cancel', 'Cancel')}</Button>
+                </DialogClose>
+                <Button size="sm" onClick={issueReset} disabled={resetting}>
+                  {resetting ? t('usersPanel.issuing', 'Issuing...') : t('usersPanel.issueReset', 'Issue Reset')}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

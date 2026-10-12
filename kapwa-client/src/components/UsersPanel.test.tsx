@@ -5,11 +5,14 @@ import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import UsersPanel from './UsersPanel';
 
-const { mockApiGet, mockApiPatch, mockApiPost } = vi.hoisted(() => ({
+const { mockApiGet, mockApiPatch, mockApiPost, currentUser } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
   mockApiPatch: vi.fn(),
   mockApiPost: vi.fn(),
+  currentUser: { role: 'admin' } as { role?: string } | null,
 }));
+
+vi.mock('@/lib/auth-context', () => ({ useAuth: () => ({ user: currentUser }) }));
 
 vi.mock('../lib/api', () => ({
   api: {
@@ -257,5 +260,59 @@ describe('UsersPanel', () => {
     await vi.waitFor(() => {
       expect(mockApiPost).toHaveBeenCalledWith('/auth/resend-verification', { email: 'pending@new.test' });
     });
+  });
+
+  const CLAIMANT_RESPONSE = {
+    data: [
+      {
+        id: 'c1', email: 'claimant@example.test', fullName: 'Maria Reyes',
+        firstName: 'Maria', lastName: 'Reyes', role: 'claimant',
+        assignedBarangay: 'Bigte', isActive: true, createdAt: '2026-01-03T00:00:00Z',
+      },
+    ],
+    total: 1, page: 1, limit: 10,
+  };
+
+  it('social worker gets the claimants-only surface', async () => {
+    (currentUser as { role?: string }).role = 'social_worker';
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = String(key);
+      if (k.includes('users')) return Promise.resolve(CLAIMANT_RESPONSE);
+      return Promise.resolve(null);
+    });
+    renderWithSWR(<UsersPanel />);
+
+    expect(await screen.findByText('claimant@example.test')).toBeTruthy();
+    // Staff tabs and staff-account controls are hidden from social workers.
+    expect(screen.queryByRole('tab', { name: /Active users/ })).toBeNull();
+    expect(screen.queryByRole('tab', { name: /Disabled users/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Edit claimant@example.test/ })).toBeNull();
+
+    (currentUser as { role?: string }).role = 'admin';
+  });
+
+  it('issues a password reset for a claimant and shows the one-time link', async () => {
+    (currentUser as { role?: string }).role = 'admin';
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = String(key);
+      if (k.includes('users')) return Promise.resolve(CLAIMANT_RESPONSE);
+      return Promise.resolve(null);
+    });
+    mockApiPost.mockResolvedValue({
+      message: 'Password reset link issued.',
+      resetUrl: 'https://app.test/reset-password?token=abc123',
+    });
+    const user = userEvent.setup();
+    renderWithSWR(<UsersPanel />);
+
+    await user.click(await screen.findByRole('tab', { name: 'Claimants' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Issue password reset for claimant@example.test' }));
+    await screen.findByRole('dialog', {}, { timeout: 10000 });
+    await user.click(screen.getByRole('button', { name: 'Issue Reset' }));
+
+    await vi.waitFor(() => {
+      expect(mockApiPost).toHaveBeenCalledWith('/auth/issue-password-reset', { userId: 'c1' });
+    });
+    expect(await screen.findByDisplayValue('https://app.test/reset-password?token=abc123')).toBeTruthy();
   });
 });

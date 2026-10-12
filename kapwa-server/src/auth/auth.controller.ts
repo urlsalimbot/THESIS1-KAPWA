@@ -3,8 +3,10 @@ import { ClassSerializerInterceptor, SerializeOptions } from '@nestjs/common';
 import type { Response } from 'express';
 import { AuthService, REFRESH_COOKIE, REFRESH_COOKIE_MAX_AGE_MS } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { RolesGuard } from './guards/roles.guard';
+import { Roles } from './decorators/roles.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
-import { UserCreateSchema, LoginSchema, MfaEnableSchema, MfaDisableSchema, MfaVerifySchema, MfaResendSchema, OtpVerifySchema, UserCreateInput, ChangePasswordSchema, ChangeEmailSchema, ChangePasswordInput, ChangeEmailInput, VerifyEmailSchema, ResendVerificationSchema, ForgotPasswordSchema, ResetPasswordSchema, ConfirmEmailChangeSchema, UpdatePhoneSchema, UpdatePhoneInput, PersonLinkRequestSchema, PersonLinkVerifySchema } from './dto/auth.zod';
+import { UserCreateSchema, LoginSchema, MfaEnableSchema, MfaDisableSchema, MfaVerifySchema, MfaResendSchema, OtpVerifySchema, UserCreateInput, ChangePasswordSchema, ChangeEmailSchema, ChangePasswordInput, ChangeEmailInput, VerifyEmailSchema, ResendVerificationSchema, ForgotPasswordSchema, ResetPasswordSchema, ConfirmEmailChangeSchema, UpdatePhoneSchema, UpdatePhoneInput, PersonLinkRequestSchema, PersonLinkVerifySchema, IssuePasswordResetSchema, IssuePasswordResetInput } from './dto/auth.zod';
 import { AuthenticatedRequest } from './types';
 
 @Controller('auth')
@@ -173,6 +175,19 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body(new ZodPipe(ResetPasswordSchema)) body: { token: string; password: string }) {
     return this.authService.resetPassword(body.token, body.password);
+  }
+
+  // Staff-issued reset: admins may reset anyone; social workers only claimant
+  // accounts. Returns the one-time link so the worker can hand it over when
+  // the claimant has no inbox of their own (the claimant also gets it by email).
+  @Post('issue-password-reset')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'social_worker')
+  async issuePasswordReset(
+    @Body(new ZodPipe(IssuePasswordResetSchema)) body: IssuePasswordResetInput,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.authService.issuePasswordReset(body.userId, { id: req.user.id, role: req.user.role });
   }
 
   @Post('change-email')

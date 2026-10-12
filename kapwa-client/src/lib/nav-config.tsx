@@ -48,6 +48,9 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { path: '/admin', label: 'Admin Panel', icon: <Shield size={20} />, roles: ['admin'] },
       { path: '/admin/programs', label: 'Programs', icon: <ScrollText size={20} />, roles: ['admin'] },
+      // Social workers' account-management surface: the claimant accounts tab
+      // (the server coerces the list and mutations to claimants for them).
+      { path: '/admin/users', label: 'Claimant Accounts', icon: <Users size={20} />, roles: ['social_worker'] },
     ],
   },
 

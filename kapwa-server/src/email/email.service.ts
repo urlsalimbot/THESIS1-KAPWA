@@ -193,6 +193,11 @@ export class EmailService {
     return this.appUrl();
   }
 
+  /** One-time password-reset link (1h, single-use — same link the email sends). */
+  passwordResetUrl(token: string): string {
+    return `${this.appUrl()}/reset-password?token=${token}`;
+  }
+
   async sendVerificationEmail(to: string, token: string): Promise<boolean> {
     const link = `${this.appUrl()}/verify-email?token=${token}`;
     const content =

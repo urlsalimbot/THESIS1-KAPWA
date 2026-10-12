@@ -1,5 +1,5 @@
 import { DEFAULT_PAGE_SIZE } from '../common/constants';
-import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, UseInterceptors, Request } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, UseInterceptors, Request, ForbiddenException } from '@nestjs/common';
 import { ClassSerializerInterceptor, SerializeOptions } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
@@ -28,8 +28,8 @@ export class UsersController {
   }
 
   @Get()
-  @Roles('admin')
-  @ApiOperation({ summary: 'List all users' })
+  @Roles('admin', 'social_worker')
+  @ApiOperation({ summary: 'List users (admins see all; social workers see claimant accounts only)' })
   async findAll(
     @Query('search') search?: string,
     @Query('role') role?: string,
@@ -40,9 +40,15 @@ export class UsersController {
     @Query('exclude') exclude?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Request() req?: AuthenticatedRequest,
   ) {
+    // A social worker's user-management surface is the claimant accounts tab:
+    // the list is coerced to claimant-only regardless of what the client asks.
+    const isSocialWorker = req?.user?.role === 'social_worker';
+    const effectiveRole = isSocialWorker ? 'claimant' : role;
+    const effectiveExclude = isSocialWorker ? undefined : exclude;
     const isActive = status === 'active' ? true : status === 'inactive' ? false : undefined;
-    return this.usersService.findAll(search, role, isActive, page ? parseInt(page) : 1, limit ? parseInt(limit) : DEFAULT_PAGE_SIZE, exclude);
+    return this.usersService.findAll(search, effectiveRole, isActive, page ? parseInt(page) : 1, limit ? parseInt(limit) : DEFAULT_PAGE_SIZE, effectiveExclude);
   }
 
   @Get(':id')
@@ -60,18 +66,30 @@ export class UsersController {
   }
 
   // Accounts are never deleted — disabling removes all access while preserving
-  // the user's history (audit trail, case attribution).
+  // the user's history (audit trail, case attribution). Social workers may only
+  // disable or re-enable claimant accounts (their management surface).
   @Patch(':id/disable')
-  @Roles('admin')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Disable a user (no access, reversible)' })
   async disable(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    await this.assertManageable(req, id);
     return this.usersService.setActive(id, false, req.user?.id);
   }
 
   @Patch(':id/enable')
-  @Roles('admin')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Re-enable a disabled user' })
   async enable(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    await this.assertManageable(req, id);
     return this.usersService.setActive(id, true, req.user?.id);
+  }
+
+  // A social worker may only manage claimant accounts; admins manage everyone.
+  private async assertManageable(req: AuthenticatedRequest, id: string): Promise<void> {
+    if (req.user?.role !== 'social_worker') return;
+    const target = await this.usersService.findOne(id);
+    if (!target || target.role !== 'claimant') {
+      throw new ForbiddenException('Social workers can only manage claimant accounts');
+    }
   }
 }
