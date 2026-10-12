@@ -739,10 +739,14 @@ export async function seedPrograms(dataSource: DataSource) {
       // a service the chosen program actually renders, so the logging UI
       // offers only these rows.
       for (const intervention of prog.interventions) {
+        // scsr_generated obliges the Social Case Study Report by default;
+        // a program can override (or clear) it via `requiredForms`.
+        const requiredForm = prog.requiredForms?.[intervention]
+          ?? (intervention === 'scsr_generated' ? 'social_case_study_report' : null);
         await q.query(
           `INSERT INTO program_interventions (program_id, intervention_type, required_form)
            VALUES ($1, $2, $3)`,
-          [prog.id, intervention, prog.requiredForms?.[intervention] ?? null],
+          [prog.id, intervention, requiredForm],
         );
       }
 

@@ -24,7 +24,7 @@ export class RenameProgramServicesToProgramInterventions0000000000093 implements
         `CREATE INDEX IF NOT EXISTS idx_program_interventions_program ON program_interventions(program_id)`,
       );
       await queryRunner.query(
-        `ALTER TABLE program_interventions RENAME CONSTRAINT uq_program_services_program_type TO uq_program_interventions_program_type`,
+        `DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_program_services_program_type' AND conrelid = 'program_interventions'::regclass) THEN ALTER TABLE program_interventions RENAME CONSTRAINT uq_program_services_program_type TO uq_program_interventions_program_type; END IF; END $$;`,
       );
     }
     await queryRunner.query(`ALTER TABLE program_interventions ADD COLUMN IF NOT EXISTS required_form TEXT`);

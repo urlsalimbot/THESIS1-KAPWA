@@ -75,6 +75,10 @@ export class ProgramsService {
       // (service rows not listed are dropped). requiredForm is upserted for the
       // rows that stay.
       if (Array.isArray(data.interventions)) {
+        // findById loaded the eager rows; the cascade save below would re-insert
+        // these STALE rows on top of the fresh ones and die on the unique
+        // (program_id, intervention_type) — clear them first.
+        prog.interventionRows = [];
         await this.interventionRepo.delete({ programId: id });
         for (const { interventionType, requiredForm } of data.interventions) {
           await this.interventionRepo.save(

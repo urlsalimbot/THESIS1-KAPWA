@@ -178,21 +178,6 @@ export async function migrate() {
   await q.query(`CREATE TABLE IF NOT EXISTS programs ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), name TEXT NOT NULL, category TEXT, approval_workflow JSONB, form_template JSONB, is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`ALTER TABLE programs DROP COLUMN IF EXISTS waiting_period_days`);
   await q.query(`ALTER TABLE programs ADD COLUMN IF NOT EXISTS program_type TEXT`);
-  // Mirrors ProgramServicesAndInterventionTypes0000000000080 — the
-  // Program → Services matrix.
-  // The Program → Interventions matrix (renamed from program_services; a
-  // guarded rename upgrades older DBs before the CREATE below no-ops).
-  await q.query(
-    `DO $$ BEGIN
-       IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'program_services' AND relnamespace = 'public'::regnamespace)
-          AND NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'program_interventions' AND relnamespace = 'public'::regnamespace) THEN
-         ALTER TABLE program_services RENAME TO program_interventions;
-         DROP INDEX IF EXISTS idx_program_services_program;
-         ALTER TABLE program_interventions RENAME CONSTRAINT IF EXISTS uq_program_services_program_type TO uq_program_interventions_program_type;
-       END IF;
-     END $$;`,
-  );
-  await q.query(`CREATE INDEX IF NOT EXISTS idx_program_interventions_program ON program_interventions(program_id)`);
   await q.query(`CREATE TABLE IF NOT EXISTS program_interventions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
     program_id UUID NOT NULL REFERENCES programs(id),
@@ -202,6 +187,22 @@ export async function migrate() {
     updated_at TIMESTAMP DEFAULT NOW(),
     CONSTRAINT uq_program_interventions_program_type UNIQUE (program_id, intervention_type)
   )`);
+  // The Program → Interventions matrix (renamed from program_services; a
+  // guarded rename upgrades older DBs — the CREATE above has already landed
+  // the new table, so the index below is safe either way).
+  await q.query(
+    `DO $$ BEGIN
+       IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'program_services' AND relnamespace = 'public'::regnamespace)
+          AND NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'program_interventions' AND relnamespace = 'public'::regnamespace) THEN
+         ALTER TABLE program_services RENAME TO program_interventions;
+         DROP INDEX IF EXISTS idx_program_services_program;
+         IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_program_services_program_type' AND conrelid = 'program_interventions'::regclass) THEN
+           ALTER TABLE program_interventions RENAME CONSTRAINT uq_program_services_program_type TO uq_program_interventions_program_type;
+         END IF;
+       END IF;
+     END $$;`,
+  );
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_program_interventions_program ON program_interventions(program_id)`);
   // F12 (deployability): the entity maps approval_workflow as jsonb ApprovalStep[];
   // a fresh boot must create it jsonb (not the legacy text[]) or POST /programs
   // with an approvalWorkflow array fails with "malformed array literal". The
@@ -1049,7 +1050,6 @@ export async function migrate() {
   await q.query(`CREATE INDEX IF NOT EXISTS idx_idempotency_key ON idempotency_keys(key)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_inter_referral_from ON inter_agency_referrals(from_agency_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_inter_referral_to ON inter_agency_referrals(to_agency_id)`);
-  await q.query(`CREATE INDEX IF NOT EXISTS idx_inter_referral_status ON inter_agency_referrals(status)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_inter_referral_person ON inter_agency_referrals(person_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_inter_referral_case ON inter_agency_referrals(case_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_cases_worker ON cases(assigned_worker_id)`);

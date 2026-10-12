@@ -207,7 +207,12 @@ describe('ProgramsService', () => {
     });
 
     it('replaces the matrix on update and persists required_form', async () => {
-      repoMock.findOne.mockResolvedValue({ id: 'p1', interventionRows: [] });
+      // findById loads the eager rows; the update must not cascade-resave them
+      // on top of the fresh rows (unique violation) — the stale relation is
+      // cleared before the replacement.
+      const staleRow = { interventionType: 'old_service', requiredForm: null };
+      const prog = { id: 'p1', interventionRows: [staleRow] };
+      repoMock.findOne.mockResolvedValue(prog);
       repoMock.update.mockResolvedValue({});
 
       await service.update('p1', {
@@ -217,6 +222,7 @@ describe('ProgramsService', () => {
         ],
       } as any);
 
+      expect(prog.interventionRows).toEqual([]);
       expect(interventionRepoMock.delete).toHaveBeenCalledWith({ programId: 'p1' });
       expect(interventionRepoMock.save).toHaveBeenCalledWith(expect.objectContaining({
         programId: 'p1', interventionType: 'burial_assistance', requiredForm: null,
@@ -224,6 +230,9 @@ describe('ProgramsService', () => {
       expect(interventionRepoMock.save).toHaveBeenCalledWith(expect.objectContaining({
         programId: 'p1', interventionType: 'scsr_generated', requiredForm: 'social_case_study_report',
       }));
+      // The program save (cascade) receives the cleared relation, so no stale
+      // row is re-inserted.
+      expect(repoMock.save).toHaveBeenCalledWith(prog);
     });
   });
 });
