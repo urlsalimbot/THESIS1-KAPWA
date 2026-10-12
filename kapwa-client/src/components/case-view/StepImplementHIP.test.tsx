@@ -5,6 +5,11 @@ import useSWR, { SWRConfig } from 'swr';
 import { StepImplementHIP } from './StepImplementHIP';
 import { formatDate } from '@/lib/format';
 
+async function pickSelect(user: ReturnType<typeof userEvent.setup>, label: RegExp | string, optionName: RegExp | string) {
+  await user.click(await screen.findByLabelText(label));
+  await user.click(await screen.findByRole('option', { name: optionName }));
+}
+
 const { mockApiGet, mockApiPost, mockApiPatch, mockUpload } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
   mockApiPost: vi.fn(),
@@ -122,6 +127,7 @@ describe('StepImplementHIP adhoc intervention', () => {
     }
 
     it('opens defaulted to the first enrollment and derives services from it', async () => {
+      const user = userEvent.setup();
       renderWithEnrollment();
       fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
       await screen.findByRole('dialog');
@@ -129,25 +135,23 @@ describe('StepImplementHIP adhoc intervention', () => {
       // The program select carries the enrollment (not a catalog re-pick) and
       // defaults to the case's first enrollment.
       const programSelect = screen.getAllByRole('combobox')[0];
-      expect(programSelect).toHaveValue('enr:enr-1');
+      expect(programSelect).toHaveTextContent('Juvenile Diversion & Intervention Program (CICL)');
 
       // The Service select is scoped to that enrollment's program services —
       // not the 22-code full catalog.
-      const serviceSelect = screen.getAllByRole('combobox')[1] as HTMLSelectElement;
-      expect([...serviceSelect.options].map(o => o.textContent)).toEqual(
-        expect.arrayContaining(['Crisis Counseling', 'Community Service']),
-      );
-      expect([...serviceSelect.options].map(o => o.textContent))
-        .not.toEqual(expect.arrayContaining(['Home Visit']));
+      await user.click(screen.getAllByRole('combobox')[1]);
+      const serviceTexts = (await screen.findAllByRole('option')).map(o => o.textContent ?? '');
+      expect(serviceTexts).toEqual(expect.arrayContaining(['Crisis Counseling', 'Community Service']));
+      expect(serviceTexts).not.toEqual(expect.arrayContaining(['Home Visit']));
     });
 
     it('saves the intervention under the enrollment, with the enrollment program', async () => {
+      const user = userEvent.setup();
       renderWithEnrollment();
       fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
       await screen.findByRole('dialog');
 
-      const serviceSelect = screen.getAllByRole('combobox')[1];
-      fireEvent.change(serviceSelect, { target: { value: 'crisis_counseling' } });
+      await pickSelect(user, 'Service *', /Crisis Counseling/);
       fireEvent.click(screen.getByRole('button', { name: /Save Intervention/ }));
 
       await waitFor(() => expect(mockApiPost).toHaveBeenCalledTimes(1));
@@ -177,6 +181,7 @@ describe('StepImplementHIP adhoc intervention', () => {
     });
 
     it('lists enrolled programs A–Z and each program\x27s services A–Z within', async () => {
+      const user = userEvent.setup();
       mockApiGet.mockImplementation(async (key: unknown) => {
         const k = JSON.stringify(key);
         if (k.includes('interventions')) return [];
@@ -199,49 +204,84 @@ describe('StepImplementHIP adhoc intervention', () => {
       fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
       await screen.findByRole('dialog');
 
-      const programSelect = screen.getAllByRole('combobox')[0] as HTMLSelectElement;
-      const programs = [...programSelect.options].map((o) => o.textContent ?? '').slice(1);
+      await user.click(screen.getAllByRole('combobox')[0]);
+      const programs = (await screen.findAllByRole('option')).map(o => o.textContent ?? '');
       expect(programs).toEqual([
         'AICS — Assistance to Individuals in Crisis Situation',
         'Medical Assistance Program',
         'Zambales Livelihood',
       ]);
 
-      // fireEvent.change never sticks on this native select (React restores the
-      // tracked value), so drive it the way a user would: userEvent.selectOptions.
-      const user = userEvent.setup();
-      await user.selectOptions(programSelect, 'enr:enr-a');
-      const serviceSelect = screen.getByLabelText('Service *') as HTMLSelectElement;
-      const services = [...serviceSelect.options].map((o) => o.textContent ?? '').slice(1);
+      await user.click(await screen.findByRole('option', { name: /^AICS/ }));
+      await user.click(await screen.findByLabelText('Service *'));
+      const services = (await screen.findAllByRole('option')).map(o => o.textContent ?? '');
       expect(services).toEqual([...services].sort());
       expect(services[0]).toBe('Burial Assistance');
       expect(services[services.length - 1]).toBe('Medical Assistance');
     });
 
+    it('shows the program-configured required form for an intervention that obliges one', async () => {
+      mockApiGet.mockImplementation(async (key: unknown) => {
+        const k = JSON.stringify(key);
+        if (k.includes('interventions')) return [];
+        if (k.includes('enrollments')) {
+          return [{ id: 'enr-1', programId: 'p1', programName: 'AICS — Assistance to Individuals in Crisis Situation', services: ['scsr_generated', 'financial_grant'] }];
+        }
+        if (k.includes('programs')) {
+          return [{
+            id: 'p1',
+            name: 'AICS — Assistance to Individuals in Crisis Situation',
+            interventions: ['scsr_generated', 'financial_grant'],
+            interventionForms: { scsr_generated: 'social_case_study_report' },
+          }];
+        }
+        return [];
+      });
+      const user = userEvent.setup();
+      render(
+        <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0, provider: () => new Map() }}>
+          <StepImplementHIP caseId="case-1" caseData={{ status: 'enrolled' }} userRole="social_worker" />
+        </SWRConfig>,
+      );
+      fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
+      await screen.findByRole('dialog');
+
+      // No hint while nothing is selected or the picked service has no form.
+      expect(screen.queryByText(/Must accomplish/)).toBeNull();
+      await pickSelect(user, 'Service *', /Social Case Study Report/);
+      expect(await screen.findByText(/Must accomplish: Social Case Study Report \(SCSR\)/)).toBeTruthy();
+
+      // A service without a form obligation stays quiet again.
+      await pickSelect(user, 'Service *', /Financial Grant/);
+      expect(screen.queryByText(/Must accomplish/)).toBeNull();
+    });
+
     it('shows the financial fields only for a financial service', async () => {
+      const user = userEvent.setup();
       renderWithEnrollment();
       fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
       await screen.findByRole('dialog');
 
       // Non-financial service: the money half of the form is absent entirely.
-      fireEvent.change(screen.getByLabelText('Service *'), { target: { value: 'crisis_counseling' } });
+      await pickSelect(user, 'Service *', /Crisis Counseling/);
       expect(screen.queryByLabelText(/Amount/)).toBeNull();
       expect(screen.queryByLabelText(/Mode of Delivery/)).toBeNull();
       expect(screen.queryByLabelText(/Fund Source/)).toBeNull();
 
       // Financial service: the same fields are back.
-      fireEvent.change(screen.getByLabelText('Service *'), { target: { value: 'financial_grant' } });
+      await pickSelect(user, 'Service *', /Financial Grant/);
       expect(screen.getByLabelText(/Amount/)).toBeTruthy();
       expect(screen.getByLabelText(/Mode of Delivery/)).toBeTruthy();
       expect(screen.getByLabelText(/Fund Source/)).toBeTruthy();
     });
 
     it('never sends financial fields for a non-financial service', async () => {
+      const user = userEvent.setup();
       renderWithEnrollment();
       fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
       await screen.findByRole('dialog');
 
-      fireEvent.change(screen.getByLabelText('Service *'), { target: { value: 'crisis_counseling' } });
+      await pickSelect(user, 'Service *', /Crisis Counseling/);
       fireEvent.click(screen.getByRole('button', { name: /Save Intervention/ }));
 
       await waitFor(() => expect(mockApiPost).toHaveBeenCalledTimes(1));
@@ -354,11 +394,11 @@ describe('StepImplementHIP — completing step 2', () => {
   });
 
   it('discards a half-typed intervention when the modal is cancelled', async () => {
+    const user = userEvent.setup();
     renderWith(caseData);
 
     fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
-    fireEvent.change(await screen.findByLabelText(/Program \/ Service/), { target: { value: 'enr:enr-1' } });
-    fireEvent.change(screen.getByLabelText('Service *'), { target: { value: 'financial_grant' } });
+    await pickSelect(user, 'Service *', /Financial Grant/);
 
     fireEvent.click(screen.getByRole('button', { name: /Cancel/ }));
     fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
@@ -366,7 +406,7 @@ describe('StepImplementHIP — completing step 2', () => {
     // Reopening must not resurrect the abandoned draft: the program select is
     // back on its default (the first enrollment), and the service choice —
     // the half that was typed — is empty again.
-    expect(await screen.findByLabelText('Service *')).toHaveValue('');
+    expect(await screen.findByLabelText('Service *')).toHaveTextContent(/select the service rendered/i);
   });
 
   it('records "no interventions issued" through the decision endpoint', async () => {
@@ -686,7 +726,9 @@ describe('StepImplementHIP — the merged intervention card', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
-    fireEvent.change(await screen.findByLabelText(/Program \/ Service/), { target: { value: 'enr:enr-1' } });
+    await screen.findByRole('dialog');
+    // The program select opens on the first enrollment, which is this program;
+    // no pick needed — asserting below is the point.
 
     // The dialog's overlay hides the card behind it, so the select says what
     // the choice obliges the worker to — while it can still change their mind.

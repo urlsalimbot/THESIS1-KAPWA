@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { ProgramIntervention } from './program-intervention.entity';
 import { FormVersionHistory } from './form-version-history.entity';
 import { ProgramsService } from './programs.service';
 import { Program } from './program.entity';
@@ -7,6 +8,7 @@ import { Program } from './program.entity';
 describe('ProgramsService', () => {
   let service: ProgramsService;
   let repoMock: any;
+  let interventionRepoMock: any;
 
   beforeEach(async () => {
     repoMock = {
@@ -18,11 +20,17 @@ describe('ProgramsService', () => {
       query: jest.fn(),
       manager: { create: jest.fn((_entity: any, dto: any) => dto) },
     };
+    interventionRepoMock = {
+      delete: jest.fn().mockResolvedValue({}),
+      create: jest.fn((d: unknown) => d),
+      save: jest.fn((d: unknown) => Promise.resolve(d)),
+    };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProgramsService,
         { provide: getRepositoryToken(Program), useValue: repoMock },
         { provide: getRepositoryToken(FormVersionHistory), useValue: { create: jest.fn(), save: jest.fn() } },
+        { provide: getRepositoryToken(ProgramIntervention), useValue: interventionRepoMock },
       ],
     }).compile();
     service = module.get<ProgramsService>(ProgramsService);
@@ -174,6 +182,48 @@ describe('ProgramsService', () => {
       expect(result.legalBasis).toBe('RA 11223');
       expect(result.approvalWorkflow).toHaveLength(1);
       expect((result.approvalWorkflow as any[])[0].approverRole).toBe('social_worker');
+    });
+  });
+
+  describe('interventions matrix', () => {
+    it('creates a program with intervention rows and form formats', async () => {
+      repoMock.save.mockImplementation(async (p: any) => ({ id: 'p1', ...p }));
+      const created = await service.create({
+        name: 'AICS',
+        interventions: [
+          { interventionType: 'financial_grant', requiredForm: null },
+          { interventionType: 'scsr_generated', requiredForm: 'social_case_study_report' },
+        ],
+      } as any);
+
+      expect(repoMock.manager.create).toHaveBeenCalledWith(ProgramIntervention, {
+        interventionType: 'financial_grant', requiredForm: null,
+      });
+      expect(repoMock.manager.create).toHaveBeenCalledWith(ProgramIntervention, {
+        interventionType: 'scsr_generated', requiredForm: 'social_case_study_report',
+      });
+      expect(repoMock.save).toHaveBeenCalled();
+      expect(created.id).toBe('p1');
+    });
+
+    it('replaces the matrix on update and persists required_form', async () => {
+      repoMock.findOne.mockResolvedValue({ id: 'p1', interventionRows: [] });
+      repoMock.update.mockResolvedValue({});
+
+      await service.update('p1', {
+        interventions: [
+          { interventionType: 'burial_assistance', requiredForm: null },
+          { interventionType: 'scsr_generated', requiredForm: 'social_case_study_report' },
+        ],
+      } as any);
+
+      expect(interventionRepoMock.delete).toHaveBeenCalledWith({ programId: 'p1' });
+      expect(interventionRepoMock.save).toHaveBeenCalledWith(expect.objectContaining({
+        programId: 'p1', interventionType: 'burial_assistance', requiredForm: null,
+      }));
+      expect(interventionRepoMock.save).toHaveBeenCalledWith(expect.objectContaining({
+        programId: 'p1', interventionType: 'scsr_generated', requiredForm: 'social_case_study_report',
+      }));
     });
   });
 });

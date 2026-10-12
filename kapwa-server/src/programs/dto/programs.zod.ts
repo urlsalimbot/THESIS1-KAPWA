@@ -7,6 +7,12 @@ export const ApprovalStepSchema = z.object({
   order: z.number().int().min(0),
 });
 
+/** One row of the Program → Interventions matrix: an intervention the program renders, with an optional form format it obliges. */
+export const ProgramInterventionInputSchema = z.object({
+  interventionType: z.string().min(1, 'Intervention is required'),
+  requiredForm: z.string().nullish(), // key of the form format, e.g. 'social_case_study_report'
+});
+
 export const CreateProgramSchema = z.object({
   name: z.string().min(1, 'Program name is required'),
   category: z.string().optional(),
@@ -15,6 +21,7 @@ export const CreateProgramSchema = z.object({
   approvalWorkflow: z.array(ApprovalStepSchema).optional(),   // WAS: z.array(z.string())
   legalBasis: z.string().optional(),                            // NEW
   formTemplate: z.record(z.any()).optional(),
+  interventions: z.array(ProgramInterventionInputSchema).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -26,8 +33,10 @@ export const UpdateProgramSchema = z.object({
   approvalWorkflow: z.array(ApprovalStepSchema).optional(),
   legalBasis: z.string().optional(),
   formTemplate: z.record(z.any()).optional(),
+  interventions: z.array(ProgramInterventionInputSchema).optional(),
   isActive: z.boolean().optional(),
 });
 
 export type CreateProgramInput = z.infer<typeof CreateProgramSchema>;
 export type UpdateProgramInput = z.infer<typeof UpdateProgramSchema>;
+export type ProgramInterventionInput = z.infer<typeof ProgramInterventionInputSchema>;

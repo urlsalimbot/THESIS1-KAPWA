@@ -8,11 +8,16 @@ import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 import { humanizeError } from '@/lib/errors';
 import {
-  ArrowRight, ClipboardList, Coins, FileText, Landmark, Plus, Scale, Trash2,
+  ArrowRight, ClipboardList, Coins, FileText, Landmark, ListChecks, Plus, Scale, Trash2,
 } from 'lucide-react';
+import { ProgramInterventionsEditor, type InterventionRowInput } from '@/components/programs/ProgramInterventionsEditor';
 
 interface WorkflowStep { stepName: string; approverRole: string; slaDays: string; }
 const emptyStep = (): WorkflowStep => ({ stepName: '', approverRole: '', slaDays: '3' });
@@ -53,6 +58,7 @@ export function CreateProgramPage() {
   const [legalBasis, setLegalBasis] = useState('');
   const [fundSources, setFundSources] = useState<string[]>(['']);
   const [requiredDocuments, setRequiredDocuments] = useState<string[]>(['']);
+  const [interventions, setInterventions] = useState<InterventionRowInput[]>([{ interventionType: '', requiredForm: null }]);
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([emptyStep()]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -82,6 +88,12 @@ export function CreateProgramPage() {
         legalBasis: legalBasis.trim() || undefined,
         fundSources: fundSources.map(s => s.trim()).filter(Boolean),
         requiredDocuments: requiredDocuments.map(s => s.trim()).filter(Boolean),
+        interventions: interventions
+          .filter(row => row.interventionType.trim())
+          .map(row => ({
+            interventionType: row.interventionType.trim(),
+            requiredForm: row.requiredForm || null,
+          })),
         approvalWorkflow: workflowSteps
           .filter(s => s.stepName.trim() && s.approverRole.trim())
           .map((s, idx) => ({
@@ -136,7 +148,7 @@ export function CreateProgramPage() {
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground" htmlFor="program-legal">{t('programs.legalBasis', 'Legal Basis / Law *')}</label>
-            <textarea
+            <Textarea
               id="program-legal"
               required
               value={legalBasis}
@@ -187,6 +199,14 @@ export function CreateProgramPage() {
               ))}
             </div>
           </Section>
+
+          {/* Interventions */}
+          <Section
+            icon={<ListChecks size={14} />}
+            title={t('programs.interventions', 'Interventions & Form Formats')}
+          >
+            <ProgramInterventionsEditor value={interventions} onChange={setInterventions} />
+          </Section>
         </div>
 
         {/* Approval Workflow */}
@@ -209,17 +229,22 @@ export function CreateProgramPage() {
                   )}
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2 pl-8">
-                  <select
+                  <Select
                     value={s.approverRole}
-                    onChange={e => updateStep(i, 'approverRole', e.target.value)}
-                    className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-                    aria-label={t('programs.approverRoleAria', 'Step {{n}} approver role', { n: i + 1 })}
+                    onValueChange={v => updateStep(i, 'approverRole', v)}
                   >
-                    <option value="">{t('programs.selectRole', 'Approver role...')}</option>
-                    {APPROVER_ROLES.map(r => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger
+                      aria-label={t('programs.approverRoleAria', 'Step {{n}} approver role', { n: i + 1 })}
+                      className="h-8 text-xs"
+                    >
+                      <SelectValue placeholder={t('programs.selectRole', 'Approver role...')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {APPROVER_ROLES.map(r => (
+                        <SelectItem key={r} value={r}>{r}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <div className="flex items-center gap-2">
                     <span className="whitespace-nowrap text-xs text-muted-foreground">{t('programs.slaDays', 'SLA days')}</span>
                     <Input type="number" min={1} value={s.slaDays} onChange={e => updateStep(i, 'slaDays', e.target.value)} className="h-8 text-xs" aria-label={t('programs.slaDaysAria', 'Step {{n}} SLA days', { n: i + 1 })} />

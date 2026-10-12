@@ -17,8 +17,13 @@ interface ProgramSeed {
    * enrollments/AICS-budget phase does not key off.
    */
   programType: string | null;
-  /** The intervention types this program renders (Program → Services matrix). */
-  services: string[];
+  /** The intervention types this program renders (Program → Interventions matrix). */
+  interventions: string[];
+  /**
+   * interventionType → form format key the intervention obliges (e.g.
+   * scsr_generated → 'social_case_study_report'). Absent = no form required.
+   */
+  requiredForms?: Record<string, string>;
 }
 
 // Documents that only apply in some situations (written as "... (if ...)" or
@@ -69,7 +74,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'DSWD MC No. 5 s.2021 (AICS Operational Guidelines)',
     isActive: true,
     programType: 'aics',
-    services: [
+    interventions: [
       'financial_grant', 'medical_assistance', 'burial_assistance',
       'transport_assistance', 'food_pack', 'educational_assistance',
       'scsr_generated', 'crisis_counseling',
@@ -91,7 +96,8 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 11223 (Universal Health Care Act); DSWD MC No. 5 s.2021 (AICS Guidelines)',
     isActive: true,
     programType: null,
-    services: ['medical_assistance', 'financial_grant', 'scsr_generated'],
+    interventions: ['medical_assistance', 'financial_grant', 'scsr_generated'],
+    requiredForms: { scsr_generated: 'social_case_study_report' },
   },
   {
     id: uuidv7(),
@@ -108,7 +114,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 7160 (Local Government Code); DSWD MC No. 5 s.2021',
     isActive: true,
     programType: null,
-    services: ['burial_assistance'],
+    interventions: ['burial_assistance'],
   },
   {
     id: uuidv7(),
@@ -124,7 +130,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 7160 (Local Government Code)',
     isActive: true,
     programType: null,
-    services: ['transport_assistance'],
+    interventions: ['transport_assistance'],
   },
   {
     id: uuidv7(),
@@ -139,7 +145,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 7160 (Local Government Code); DSWD MC No. 5 s.2021',
     isActive: true,
     programType: null,
-    services: ['food_pack'],
+    interventions: ['food_pack'],
   },
   {
     id: uuidv7(),
@@ -155,7 +161,8 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 7160 (Local Government Code); DSWD MC No. 5 s.2021',
     isActive: true,
     programType: null,
-    services: ['financial_grant', 'scsr_generated'],
+    interventions: ['financial_grant', 'scsr_generated'],
+    requiredForms: { scsr_generated: 'social_case_study_report' },
   },
   {
     id: uuidv7(),
@@ -172,7 +179,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 9155 (Governance of Basic Education Act); RA 10931 (Universal Access to Quality Tertiary Education Act)',
     isActive: true,
     programType: null,
-    services: ['educational_assistance', 'training_seminar'],
+    interventions: ['educational_assistance', 'training_seminar'],
   },
 
   // ----------------------------------------------------------- Family welfare
@@ -191,7 +198,8 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 8972 (Solo Parents\' Welfare Act); RA 11861 (Expanded Solo Parents Act)',
     isActive: true,
     programType: 'family_welfare',
-    services: ['financial_grant', 'crisis_counseling', 'legal_assistance', 'training_seminar', 'scsr_generated'],
+    interventions: ['financial_grant', 'crisis_counseling', 'legal_assistance', 'training_seminar', 'scsr_generated'],
+    requiredForms: { scsr_generated: 'social_case_study_report' },
   },
   {
     id: uuidv7(),
@@ -207,7 +215,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 7160 (Local Government Code); DSWD family-welfare service guidelines',
     isActive: true,
     programType: 'family_welfare',
-    services: ['parent_effectiveness', 'training_seminar', 'crisis_counseling'],
+    interventions: ['parent_effectiveness', 'training_seminar', 'crisis_counseling'],
   },
   {
     id: uuidv7(),
@@ -222,7 +230,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 7160 (Local Government Code)',
     isActive: true,
     programType: 'family_welfare',
-    services: ['crisis_counseling', 'home_visit'],
+    interventions: ['crisis_counseling', 'home_visit'],
   },
 
   // ---------------------------------------------------------- Women's welfare
@@ -240,7 +248,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 9262 (Anti-VAWC Act); RA 9710 (Magna Carta of Women)',
     isActive: true,
     programType: 'women_welfare',
-    services: [
+    interventions: [
       'crisis_counseling', 'psychosocial_support', 'legal_assistance',
       'medico_legal_assistance', 'protection_order_issued', 'shelter_assistance', 'referral_pao',
     ],
@@ -261,7 +269,8 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 7432 (Senior Citizens Act); RA 9994 (Expanded Senior Citizens Act)',
     isActive: true,
     programType: 'social_pension',
-    services: ['financial_grant', 'scsr_generated', 'home_visit'],
+    interventions: ['financial_grant', 'scsr_generated', 'home_visit'],
+    requiredForms: { scsr_generated: 'social_case_study_report' },
   },
   {
     id: uuidv7(),
@@ -278,7 +287,8 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 7277 (Magna Carta for Disabled Persons); RA 10754 (Expanded Benefits and Privileges of PWDs)',
     isActive: true,
     programType: 'disability_aid',
-    services: ['medical_assistance', 'financial_grant', 'health_checkup', 'scsr_generated'],
+    interventions: ['medical_assistance', 'financial_grant', 'health_checkup', 'scsr_generated'],
+    requiredForms: { scsr_generated: 'social_case_study_report' },
   },
 
   // --------------------------------------------------------------- Children
@@ -297,7 +307,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 7610 (Special Protection of Children Against Abuse, Exploitation and Discrimination Act)',
     isActive: true,
     programType: 'child_welfare',
-    services: [
+    interventions: [
       'financial_grant', 'crisis_counseling', 'legal_assistance',
       'medico_legal_assistance', 'educational_assistance', 'protective_custody', 'shelter_assistance',
     ],
@@ -315,7 +325,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 11037 (Masustansyang Pagkain para sa Batang Pilipino Act)',
     isActive: true,
     programType: 'supplemental_feeding',
-    services: ['food_pack', 'health_checkup'],
+    interventions: ['food_pack', 'health_checkup'],
   },
 
   // -------------------------------------------------- CICL diversion & aftercare
@@ -338,7 +348,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 9344 (Juvenile Justice and Welfare Act, as amended by RA 10630); DSWD AO 10 s. 2007',
     isActive: true,
     programType: 'diversion',
-    services: [
+    interventions: [
       'crisis_counseling', 'psychosocial_support', 'training_seminar',
       'community_service', 'youth_engagement', 'parent_effectiveness',
       'legal_assistance', 'home_visit',
@@ -357,7 +367,8 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'DSWD AO 10 s. 2007 §VIII.G; DSWD aftercare guidelines',
     isActive: true,
     programType: 'aftercare',
-    services: ['home_visit', 'crisis_counseling', 'psychosocial_support', 'scsr_generated'],
+    interventions: ['home_visit', 'crisis_counseling', 'psychosocial_support', 'scsr_generated'],
+    requiredForms: { scsr_generated: 'social_case_study_report' },
   },
 
   // --------------------------------------------------------------- Livelihood
@@ -376,7 +387,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 8425 (Social Reform and Poverty Alleviation Act); DSWD SLP Guidelines',
     isActive: true,
     programType: 'livelihood',
-    services: ['livelihood_seed', 'training_seminar', 'home_visit'],
+    interventions: ['livelihood_seed', 'training_seminar', 'home_visit'],
   },
   {
     id: uuidv7(),
@@ -392,7 +403,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 8425 (Social Reform and Poverty Alleviation Act)',
     isActive: true,
     programType: 'disaster_relief',
-    services: ['food_pack', 'financial_grant'],
+    interventions: ['food_pack', 'financial_grant'],
   },
 
   // ----------------------------------------------------------- Crisis support
@@ -409,7 +420,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 11036 (Mental Health Act); RA 9433 (Magnificat Act — MSWDO)',
     isActive: true,
     programType: 'counseling',
-    services: ['crisis_counseling', 'psychosocial_support'],
+    interventions: ['crisis_counseling', 'psychosocial_support'],
   },
   {
     id: uuidv7(),
@@ -424,7 +435,8 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 7160 (Local Government Code)',
     isActive: true,
     programType: 'legal_referral',
-    services: ['referral_pao', 'legal_assistance', 'scsr_generated'],
+    interventions: ['referral_pao', 'legal_assistance', 'scsr_generated'],
+    requiredForms: { scsr_generated: 'social_case_study_report' },
   },
 
   // ------------------------------------------------------------ 4Ps & feeding
@@ -443,7 +455,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 11310 (Pantawid Pamilyang Pilipino Program Act)',
     isActive: true,
     programType: 'cct',
-    services: ['financial_grant', 'crisis_counseling', 'parent_effectiveness', 'health_checkup', 'educational_assistance'],
+    interventions: ['financial_grant', 'crisis_counseling', 'parent_effectiveness', 'health_checkup', 'educational_assistance'],
   },
 
   // ------------------------------------------------------------- Calamities
@@ -461,7 +473,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 10121 (Disaster Risk Reduction and Management Act); RA 7160',
     isActive: true,
     programType: 'shelter',
-    services: ['shelter_assistance', 'financial_grant', 'home_visit'],
+    interventions: ['shelter_assistance', 'financial_grant', 'home_visit'],
   },
   {
     id: uuidv7(),
@@ -476,7 +488,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 10121 (Disaster Risk Reduction and Management Act); RA 7160',
     isActive: true,
     programType: 'disaster_relief',
-    services: ['food_pack', 'transport_assistance', 'financial_grant', 'crisis_counseling', 'home_visit'],
+    interventions: ['food_pack', 'transport_assistance', 'financial_grant', 'crisis_counseling', 'home_visit'],
   },
 
   // ------------------------------------------------------------------ Medical
@@ -494,7 +506,8 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 7160 (Local Government Code)',
     isActive: true,
     programType: 'medical',
-    services: ['medical_assistance', 'scsr_generated'],
+    interventions: ['medical_assistance', 'scsr_generated'],
+    requiredForms: { scsr_generated: 'social_case_study_report' },
   },
 
   // ------------------------------------------- National CDD / economic programs
@@ -512,7 +525,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 7160 (Local Government Code); DSWD KALAHI-CIDSS NCDDP Program Guidelines (NEDA Board-approved, 2013)',
     isActive: true,
     programType: 'livelihood',
-    services: ['training_seminar', 'community_service'],
+    interventions: ['training_seminar', 'community_service'],
   },
   {
     id: uuidv7(),
@@ -528,7 +541,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'EO 44 s. 2023 (Walang Gutom 2027: Food Stamp Program)',
     isActive: true,
     programType: 'supplemental_feeding',
-    services: ['food_pack', 'health_checkup'],
+    interventions: ['food_pack', 'health_checkup'],
   },
   {
     id: uuidv7(),
@@ -544,7 +557,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'EO 110 s. 2026 (Unified Package for Livelihoods, Industry, Food, and Transport)',
     isActive: true,
     programType: 'livelihood',
-    services: ['livelihood_seed', 'training_seminar'],
+    interventions: ['livelihood_seed', 'training_seminar'],
   },
 
   // ---- GAD summary-report technical/legal programs (2026-09-28) ----------
@@ -566,7 +579,8 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 7277 (Magna Carta for Disabled Persons); RA 10754',
     isActive: true,
     programType: 'disability_aid',
-    services: ['medical_assistance', 'scsr_generated'],
+    interventions: ['medical_assistance', 'scsr_generated'],
+    requiredForms: { scsr_generated: 'social_case_study_report' },
   },
   {
     id: uuidv7(),
@@ -577,7 +591,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 9999 (Free Legal Assistance Act); PAO Operations Manual',
     isActive: true,
     programType: 'legal_referral',
-    services: ['referral_pao', 'legal_assistance'],
+    interventions: ['referral_pao', 'legal_assistance'],
   },
   {
     id: uuidv7(),
@@ -588,7 +602,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 7160 (Local Government Code)',
     isActive: true,
     programType: 'legal_referral',
-    services: ['referral_pao'],
+    interventions: ['referral_pao'],
   },
   {
     id: uuidv7(),
@@ -603,7 +617,8 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 9048; RA 10172 (clerical error / correction of first name)',
     isActive: true,
     programType: null,
-    services: ['scsr_generated'],
+    interventions: ['scsr_generated'],
+    requiredForms: { scsr_generated: 'social_case_study_report' },
   },
   {
     id: uuidv7(),
@@ -614,7 +629,8 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 9433 (Magnificat Act — MSWDO)',
     isActive: true,
     programType: null,
-    services: ['scsr_generated'],
+    interventions: ['scsr_generated'],
+    requiredForms: { scsr_generated: 'social_case_study_report' },
   },
   {
     id: uuidv7(),
@@ -625,7 +641,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 7160 (Local Government Code)',
     isActive: true,
     programType: null,
-    services: ['home_visit'],
+    interventions: ['home_visit'],
   },
   {
     id: uuidv7(),
@@ -640,7 +656,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 11223 (Universal Health Care Act)',
     isActive: true,
     programType: 'medical',
-    services: ['medical_assistance', 'health_checkup'],
+    interventions: ['medical_assistance', 'health_checkup'],
   },
   {
     id: uuidv7(),
@@ -651,7 +667,8 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 7610; Family Code of the Philippines (EO 209)',
     isActive: true,
     programType: 'child_welfare',
-    services: ['legal_assistance', 'crisis_counseling', 'scsr_generated'],
+    interventions: ['legal_assistance', 'crisis_counseling', 'scsr_generated'],
+    requiredForms: { scsr_generated: 'social_case_study_report' },
   },
   {
     id: uuidv7(),
@@ -666,7 +683,8 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'EO 114 s. 2020 (Balik Probinsya, Bagong Pag-asa Program)',
     isActive: true,
     programType: 'disaster_relief',
-    services: ['transport_assistance', 'financial_grant', 'scsr_generated'],
+    interventions: ['transport_assistance', 'financial_grant', 'scsr_generated'],
+    requiredForms: { scsr_generated: 'social_case_study_report' },
   },
   {
     id: uuidv7(),
@@ -677,7 +695,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 7160 (Local Government Code)',
     isActive: true,
     programType: null,
-    services: ['transport_assistance'],
+    interventions: ['transport_assistance'],
   },
 ];
 
@@ -720,15 +738,15 @@ export async function seedPrograms(dataSource: DataSource) {
       // Program → Services matrix (spec Appendix B): a logged intervention is
       // a service the chosen program actually renders, so the logging UI
       // offers only these rows.
-      for (const service of prog.services) {
+      for (const intervention of prog.interventions) {
         await q.query(
-          `INSERT INTO program_services (program_id, intervention_type)
-           VALUES ($1, $2)`,
-          [prog.id, service],
+          `INSERT INTO program_interventions (program_id, intervention_type, required_form)
+           VALUES ($1, $2, $3)`,
+          [prog.id, intervention, prog.requiredForms?.[intervention] ?? null],
         );
       }
 
-      inserted.push(`  SEED  ${prog.name} [${prog.programType ?? 'untyped'}] (${prog.services.length} services)`);
+      inserted.push(`  SEED  ${prog.name} [${prog.programType ?? 'untyped'}] (${prog.interventions.length} interventions)`);
     }
 
     console.log(`Seeded ${inserted.filter(l => l.includes('SEED')).length} programs:`);

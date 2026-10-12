@@ -101,7 +101,7 @@ export class CaseEnrollmentsService {
         programId: r.programId,
         programName: p?.name ?? '(unknown program)',
         programType: p?.programType,
-        services: p?.services,
+        services: p?.interventions,
         enrolledAt: r.enrolledAt,
         status: r.status,
         createdAt: r.createdAt,

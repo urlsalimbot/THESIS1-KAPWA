@@ -3,7 +3,7 @@ import { Expose, Exclude } from 'class-transformer';
 import { BaseEntity } from '../common/base.entity';
 import { ProgramFundSource } from './program-fund-source.entity';
 import { ProgramRequiredDocument } from './program-required-document.entity';
-import { ProgramService } from './program-service.entity';
+import { ProgramIntervention } from './program-intervention.entity';
 
 export interface ApprovalStep {
   stepName: string;
@@ -57,14 +57,25 @@ export class Program extends BaseEntity {
   }
 
   @Exclude()
-  @OneToMany(() => ProgramService, s => s.program, { eager: true, cascade: true, orphanedRowAction: 'delete' })
-  serviceRows!: ProgramService[];
+  @OneToMany(() => ProgramIntervention, s => s.program, { eager: true, cascade: true, orphanedRowAction: 'delete' })
+  interventionRows!: ProgramIntervention[];
 
-  /** The intervention types this program renders (Program → Services matrix). */
+  /** The intervention types this program renders (Program → Interventions matrix). */
   @Expose()
-  get services(): string[] | undefined {
-    if (!this.serviceRows || this.serviceRows.length === 0) return undefined;
-    return this.serviceRows.map(s => s.interventionType);
+  get interventions(): string[] | undefined {
+    if (!this.interventionRows || this.interventionRows.length === 0) return undefined;
+    return this.interventionRows.map(s => s.interventionType);
+  }
+
+  /** interventionType → required form format for the interventions that oblige one. */
+  @Expose()
+  get interventionForms(): Record<string, string> | undefined {
+    if (!this.interventionRows || this.interventionRows.length === 0) return undefined;
+    const forms: Record<string, string> = {};
+    for (const s of this.interventionRows) {
+      if (s.requiredForm) forms[s.interventionType] = s.requiredForm;
+    }
+    return Object.keys(forms).length > 0 ? forms : undefined;
   }
 
   @Column({ type: 'jsonb', name: 'approval_workflow', nullable: true })

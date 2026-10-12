@@ -179,7 +179,8 @@ const ALLOWED_IDENTICAL = new Set([
   'usersPanel.role.auditor',
   'usersPanel.role.claimant',
   'usersPanel.role.coordinator',
-  ...Object.keys(flat(en)).filter(k => k.startsWith('category.') || k.startsWith('interventionType.')),
+  'programs.interventionAria', // placeholder-only string ("Intervention {{n}}")
+  ...Object.keys(flat(en)).filter(k => k.startsWith('category.') || k.startsWith('interventionType.') || k.startsWith('interventionForms.')),
 ]);
 
 describe('locale parity', () => {

@@ -29,6 +29,24 @@ export function isFinancialIntervention(code: string | null | undefined): boolea
   return !!code && FINANCIAL_INTERVENTION_TYPES.includes(code);
 }
 
+/**
+ * The form-format vocabulary for per-intervention obligations: an
+ * intervention configured with one of these keys must be accomplished using
+ * that specific form. Unknown keys render as the raw key (`t` fallback).
+ */
+export const INTERVENTION_FORM_FORMATS: ReadonlyArray<{ key: string; fallback: string }> = [
+  { key: 'social_case_study_report', fallback: 'Social Case Study Report (SCSR)' },
+  { key: 'incident_report_form', fallback: 'Incident Report Form (IRF)' },
+  { key: 'medical_certificate', fallback: 'Medical Certificate' },
+  { key: 'death_certificate', fallback: 'Death Certificate' },
+  { key: 'referral_form', fallback: 'Referral Form' },
+];
+export function interventionFormLabel(key: string, t?: (k: string, fb: string) => string): string {
+  const known = INTERVENTION_FORM_FORMATS.find((f) => f.key === key);
+  if (known) return t ? t(`interventionForms.${key}`, known.fallback) : known.fallback;
+  return key;
+}
+
 /** Typed programs applicable per statutory case category (catalog Appendix B). */
 export const PROGRAM_TYPES_BY_CASE_CATEGORY: Record<string, readonly string[]> = {
   'Children in Conflict with the Law (CICL)': [

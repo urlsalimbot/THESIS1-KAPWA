@@ -6,11 +6,12 @@ import { ProgramsPublicController } from './programs-public.controller';
 import { Program } from './program.entity';
 import { ProgramFundSource } from './program-fund-source.entity';
 import { ProgramRequiredDocument } from './program-required-document.entity';
+import { ProgramIntervention } from './program-intervention.entity';
 import { FormVersionHistory } from './form-version-history.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Program, ProgramFundSource, ProgramRequiredDocument, FormVersionHistory]),
+    TypeOrmModule.forFeature([Program, ProgramFundSource, ProgramRequiredDocument, ProgramIntervention, FormVersionHistory]),
   ],
   controllers: [ProgramsPublicController, ProgramsController],
   providers: [ProgramsService],

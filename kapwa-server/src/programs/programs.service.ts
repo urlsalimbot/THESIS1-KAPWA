@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Program, ApprovalStep } from './program.entity';
 import { ProgramFundSource } from './program-fund-source.entity';
 import { ProgramRequiredDocument } from './program-required-document.entity';
+import { ProgramIntervention } from './program-intervention.entity';
 import { FormVersionHistory } from './form-version-history.entity';
 import { UpdateProgramInput } from './dto/programs.zod';
 
@@ -12,14 +13,15 @@ export class ProgramsService {
   constructor(
     @InjectRepository(Program) private progRepo: Repository<Program>,
     @InjectRepository(FormVersionHistory) private versionRepo: Repository<FormVersionHistory>,
+    @InjectRepository(ProgramIntervention) private interventionRepo: Repository<ProgramIntervention>,
   ) {}
 
-  async create(data: Partial<Program>) {
+  async create(data: Omit<Partial<Program>, 'interventions'> & { interventions?: Array<{ interventionType: string; requiredForm?: string | null }> }) {
     if (data.approvalWorkflow) {
       this.validateWorkflow(data.approvalWorkflow);
     }
-    const { fundSources, requiredDocuments, ...rest } = data;
-    const hasChildren = Array.isArray(fundSources) || Array.isArray(requiredDocuments);
+    const { fundSources, requiredDocuments, interventions, ...rest } = data;
+    const hasChildren = Array.isArray(fundSources) || Array.isArray(requiredDocuments) || Array.isArray(interventions);
     const prog = this.progRepo.create(
       hasChildren
         ? {
@@ -29,6 +31,11 @@ export class ProgramsService {
               : undefined,
             requiredDocumentRows: Array.isArray(requiredDocuments)
               ? requiredDocuments.map(d => this.progRepo.manager.create(ProgramRequiredDocument, { documentKey: d, mandatory: true }))
+              : undefined,
+            interventionRows: Array.isArray(interventions)
+              ? interventions.map(({ interventionType, requiredForm }) =>
+                  this.progRepo.manager.create(ProgramIntervention, { interventionType, requiredForm: requiredForm || null }),
+                )
               : undefined,
           }
         : rest,
@@ -53,7 +60,7 @@ export class ProgramsService {
       this.validateWorkflow(data.approvalWorkflow);
     }
     // Upsert child rows (orphanedRowAction:'delete' removes rows dropped from the array).
-    if (Array.isArray(data.fundSources) || Array.isArray(data.requiredDocuments)) {
+    if (Array.isArray(data.fundSources) || Array.isArray(data.requiredDocuments) || Array.isArray(data.interventions)) {
       if (Array.isArray(data.fundSources)) {
         prog.fundSourceRows = data.fundSources.map(f =>
           this.progRepo.manager.create(ProgramFundSource, { programId: id, name: f }),
@@ -64,9 +71,24 @@ export class ProgramsService {
           this.progRepo.manager.create(ProgramRequiredDocument, { programId: id, documentKey: d, mandatory: true }),
         );
       }
+      // The Program → Services matrix: submitted rows replace the current set
+      // (service rows not listed are dropped). requiredForm is upserted for the
+      // rows that stay.
+      if (Array.isArray(data.interventions)) {
+        await this.interventionRepo.delete({ programId: id });
+        for (const { interventionType, requiredForm } of data.interventions) {
+          await this.interventionRepo.save(
+            this.interventionRepo.create({
+              programId: id,
+              interventionType,
+              requiredForm: requiredForm || null,
+            }),
+          );
+        }
+      }
       await this.progRepo.save(prog);
     }
-    const { fundSources, requiredDocuments, ...rest } = data;
+    const { fundSources, requiredDocuments, interventions, ...rest } = data;
     const changed = 'formTemplate' in data && JSON.stringify(data.formTemplate) !== JSON.stringify(prog.formTemplate);
     await this.progRepo.update(id, rest as any);
     if (changed) {

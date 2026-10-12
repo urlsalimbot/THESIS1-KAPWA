@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { interventionRequirementsMet, requiredDocumentKeys } from '@/lib/case-progress';
-import { INTERVENTION_TYPES, isFinancialIntervention } from '@/lib/constants';
+import { INTERVENTION_TYPES, isFinancialIntervention, interventionFormLabel } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,10 @@ import { useTranslation } from 'react-i18next';
 import { formatDate, formatPeso } from '../../lib/format';
 import { humanizeError } from '@/lib/errors';
 import { toastSaved } from '@/lib/toast';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 
 interface Intervention {
   id: string;
@@ -41,7 +45,8 @@ interface Program {
   name: string;
   category?: string;
   requiredDocuments?: string[];
-  services?: string[];
+  interventions?: string[];
+  interventionForms?: Record<string, string>;
 }
 
 interface StepImplementHIPProps {
@@ -148,8 +153,8 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
   const serviceOptions =
     (selectedEnrollment?.services && selectedEnrollment.services.length > 0)
       ? selectedEnrollment.services
-      : (dialogProgram?.services && dialogProgram.services.length > 0)
-        ? dialogProgram.services
+      : (dialogProgram?.interventions && dialogProgram.interventions.length > 0)
+        ? dialogProgram.interventions
         : [...INTERVENTION_TYPES];
   // A non-financial service renders no money: amount, mode and fund source are
   // financial-form fields and disappear with the service choice that made them
@@ -440,23 +445,23 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="intv-program">{t('caseView.implement.programService', 'Program / Service *')}</Label>
-              <select
-                id="intv-program"
-                className="form-select"
+              <Select
                 value={form.programId}
-                onChange={e => setForm(f => ({ ...f, programId: e.target.value, interventionType: '' }))}
+                onValueChange={(v) => setForm(f => ({ ...f, programId: v, interventionType: '' }))}
               >
-                <option value="">
-                  {t('caseView.implement.selectProgram', '— Select an enrolled program —')}
-                </option>
+                <SelectTrigger id="intv-program">
+                  <SelectValue placeholder={t('caseView.implement.selectProgram', '— Select an enrolled program —')} />
+                </SelectTrigger>
+                <SelectContent>
                 {/* An intervention is a service under a program ASSIGNED to this
                     case (the treatment plan): the select lists the case's
                     enrollments — A–Z by program name — and nothing else, no
                     re-picking from the whole catalog, no ad-hoc service. */}
                 {[...enrollments].sort((a, b) => a.programName.localeCompare(b.programName)).map(e => (
-                  <option key={e.id} value={`enr:${e.id}`}>{e.programName}</option>
+                  <SelectItem key={e.id} value={`enr:${e.id}`}>{e.programName}</SelectItem>
                 ))}
-              </select>
+                </SelectContent>
+              </Select>
               {/* The checklist in the card behind this dialog lists the same
                   documents, but the modal's overlay hides it — so the select
                   says here what the choice will oblige the worker to, which is
@@ -476,12 +481,10 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
             {form.programId && (
               <div className="space-y-1.5">
                 <Label htmlFor="intv-service-type">{t('caseView.implement.serviceType', 'Service *')}</Label>
-                <select
-                  id="intv-service-type"
-                  className=""
+                <Select
                   value={form.interventionType}
-                  onChange={e => setForm(f => {
-                    const next = { ...f, interventionType: e.target.value };
+                  onValueChange={(v) => setForm(f => {
+                    const next = { ...f, interventionType: v };
                     // A service that carries no money leaves the financial half
                     // of the form behind — including whatever was typed into it.
                     if (next.interventionType && !isFinancialIntervention(next.interventionType)) {
@@ -492,15 +495,19 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
                     return next;
                   })}
                 >
-                  <option value="">{t('caseView.implement.selectService', '— Select the service rendered —')}</option>
+                  <SelectTrigger id="intv-service-type">
+                    <SelectValue placeholder={t('caseView.implement.selectService', '— Select the service rendered —')} />
+                  </SelectTrigger>
+                  <SelectContent>
                   {/* Alphabetical, whatever the source order (enrollment services,
                       program services or the full catalog). */}
                   {[...serviceOptions].sort((a, b) =>
                     t(`interventionType.${a}`, a).localeCompare(t(`interventionType.${b}`, b)),
                   ).map((code) => (
-                    <option key={code} value={code}>{t(`interventionType.${code}`, code)}</option>
+                    <SelectItem key={code} value={code}>{t(`interventionType.${code}`, code)}</SelectItem>
                   ))}
-                </select>
+                </SelectContent>
+              </Select>
               </div>
             )}
 
@@ -517,6 +524,16 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
               )}
             </div>
 
+            {/* The program's configured obligation: this intervention must be
+                accomplished on the specific form format. */}
+            {dialogProgram?.interventionForms?.[form.interventionType] && (
+              <p className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary">
+                {t('caseView.implement.requiredFormHint', 'Must accomplish: {{form}}', {
+                  form: interventionFormLabel(dialogProgram.interventionForms[form.interventionType], t),
+                })}
+              </p>
+            )}
+
             {/* The financial half of the form exists only for services that
                 carry money or in-kind value — the non-financial services omit
                 it entirely (and the server strips it if anyone still sends
@@ -525,8 +542,11 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="intv-mode">{t('caseView.implement.modeOfDeliveryLabel', 'Mode of Delivery')}</Label>
-                  <select id="intv-mode" className=""value={form.modeOfDelivery} onChange={e => setForm(f => ({ ...f, modeOfDelivery: e.target.value }))}>
-                    <option value="">—</option>
+                  <Select value={form.modeOfDelivery} onValueChange={v => setForm(f => ({ ...f, modeOfDelivery: v }))}>
+                    <SelectTrigger id="intv-mode">
+                      <SelectValue placeholder="—" />
+                    </SelectTrigger>
+                    <SelectContent>
                     {[
                       { value: 'Cash', label: t('caseView.implement.modeOfDelivery.cash', 'Cash') },
                       { value: 'Cheque', label: t('caseView.implement.modeOfDelivery.cheque', 'Cheque') },
@@ -534,14 +554,18 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
                       { value: 'In-kind', label: t('caseView.implement.modeOfDelivery.inKind', 'In-kind') },
                       { value: 'Service', label: t('caseView.implement.modeOfDelivery.service', 'Service') },
                     ].map(o => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                     ))}
-                  </select>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="intv-fund">{t('caseView.implement.fundSourceLabel', 'Fund Source')}</Label>
-                  <select id="intv-fund" className=""value={form.fundSource} onChange={e => setForm(f => ({ ...f, fundSource: e.target.value }))}>
-                    <option value="">—</option>
+                  <Select value={form.fundSource} onValueChange={v => setForm(f => ({ ...f, fundSource: v }))}>
+                    <SelectTrigger id="intv-fund">
+                      <SelectValue placeholder="—" />
+                    </SelectTrigger>
+                    <SelectContent>
                     {[
                       { value: 'DSWD', label: t('caseView.implement.fundSource.dswd', 'DSWD') },
                       { value: 'LGU', label: t('caseView.implement.fundSource.lgu', 'LGU') },
@@ -549,18 +573,19 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
                       { value: 'Donation', label: t('caseView.implement.fundSource.donation', 'Donation') },
                       { value: 'Other', label: t('caseView.implement.fundSource.other', 'Other') },
                     ].map(o => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                     ))}
-                  </select>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             )}
 
             <div className="space-y-1.5">
               <Label htmlFor="intv-notes">{t('caseView.implement.notes', 'Notes')}</Label>
-              <textarea
+              <Textarea
                 id="intv-notes"
-                className="form-input min-h-[60px]"
+                className="min-h-[60px]"
                 value={form.notes}
                 onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
                 placeholder={t('caseView.implement.notesPlaceholder', 'Additional details about this intervention...')}

@@ -16,10 +16,11 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  Calendar, CheckCircle, Coins, FileText, Landmark, Power, ScrollText, Shield, Trash2, XCircle,
+  Calendar, CheckCircle, Coins, FileText, Landmark, ListChecks, Power, ScrollText, Shield, Trash2, XCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDate } from '../lib/format';
+import { ProgramInterventionsEditor, programInterventionRows, type InterventionRowInput } from '@/components/programs/ProgramInterventionsEditor';
 
 interface ApprovalStep {
   stepName: string;
@@ -35,6 +36,8 @@ interface ProgramDetail {
   legalBasis?: string;
   requiredDocuments?: string[];
   fundSources?: string[];
+  interventions?: string[];
+  interventionForms?: Record<string, string>;
   approvalWorkflow?: ApprovalStep[];
   formTemplate?: Record<string, unknown>;
   formVersion: number;
@@ -62,6 +65,14 @@ export function ProgramDetailPage() {
   );
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Editable Program → Interventions matrix (with per-intervention form
+  // formats). Loaded once the program detail arrives; dirty only after edit.
+  const [interventionRows, setInterventionRows] = useState<InterventionRowInput[]>([]);
+  const [matrixDirty, setMatrixDirty] = useState(false);
+  const [savingMatrix, setSavingMatrix] = useState(false);
+  useEffect(() => {
+    if (program) setInterventionRows(programInterventionRows(program));
+  }, [program]);
 
   // Breadcrumb should read the program name, not the UUID.
   useEffect(() => {
@@ -81,6 +92,26 @@ export function ProgramDetailPage() {
     } finally {
       setBusy(false);
       setDeleteOpen(false);
+    }
+  }
+
+  async function saveMatrix() {
+    if (!id || savingMatrix) return;
+    setSavingMatrix(true);
+    try {
+      await api.patch(`/programs/${id}`, {
+        interventions: interventionRows
+          .filter(row => row.interventionType.trim())
+          .map(row => ({ interventionType: row.interventionType.trim(), requiredForm: row.requiredForm || null })),
+      });
+      await mutate();
+      await globalMutate(queryKeys.programs.list());
+      setMatrixDirty(false);
+      toast.success(t('programs.matrixSaved', 'Interventions saved'));
+    } catch (err) {
+      toast.error(t('programs.updateFailed', 'Could not update program'), { description: humanizeError(err) });
+    } finally {
+      setSavingMatrix(false);
     }
   }
 
@@ -170,6 +201,35 @@ export function ProgramDetailPage() {
                   </span>
                 </InfoRow>
               </div>
+            </div>
+          </section>
+
+          {/* Interventions & Form Formats (editable) */}
+          <section className="rounded-xl border bg-card">
+            <header className="flex items-center gap-2 px-4 py-3">
+              <ListChecks size={16} className="text-accent" aria-hidden="true" />
+              <h2 className="text-sm font-semibold">{t('programs.interventions', 'Interventions & Form Formats')}</h2>
+            </header>
+            <Separator />
+            <div className="px-4 py-3">
+              <ProgramInterventionsEditor
+                value={interventionRows.length ? interventionRows : programInterventionRows(program)}
+                onChange={(rows) => { setInterventionRows(rows); setMatrixDirty(true); }}
+              />
+              {matrixDirty && (
+                <div className="mt-3 flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setInterventionRows(programInterventionRows(program)); setMatrixDirty(false); }}
+                  >
+                    {t('programs.cancel', 'Cancel')}
+                  </Button>
+                  <Button size="sm" disabled={savingMatrix} onClick={saveMatrix}>
+                    {savingMatrix ? t('programs.saving', 'Saving...') : t('programs.saveInterventions', 'Save Interventions')}
+                  </Button>
+                </div>
+              )}
             </div>
           </section>
 

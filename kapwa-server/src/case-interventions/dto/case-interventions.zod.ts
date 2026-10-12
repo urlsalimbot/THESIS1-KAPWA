@@ -7,7 +7,7 @@ export const CreateCaseInterventionSchema = z.object({
   programId: z.string().uuid(),
   // Typed service from the intervention catalog (spec §4.4) — a *service
   // rendered under a program*, so the service comes from that program's
-  // `program_services` rows.
+  // `program_interventions` rows.
   interventionType: z.enum(INTERVENTION_TYPE_VALUES).nullable().optional(),
   // The program enrollment the service was delivered under — validated to
   // belong to this case (and to the named program).

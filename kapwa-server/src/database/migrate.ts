@@ -180,15 +180,28 @@ export async function migrate() {
   await q.query(`ALTER TABLE programs ADD COLUMN IF NOT EXISTS program_type TEXT`);
   // Mirrors ProgramServicesAndInterventionTypes0000000000080 — the
   // Program → Services matrix.
-  await q.query(`CREATE TABLE IF NOT EXISTS program_services (
+  // The Program → Interventions matrix (renamed from program_services; a
+  // guarded rename upgrades older DBs before the CREATE below no-ops).
+  await q.query(
+    `DO $$ BEGIN
+       IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'program_services' AND relnamespace = 'public'::regnamespace)
+          AND NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'program_interventions' AND relnamespace = 'public'::regnamespace) THEN
+         ALTER TABLE program_services RENAME TO program_interventions;
+         DROP INDEX IF EXISTS idx_program_services_program;
+         ALTER TABLE program_interventions RENAME CONSTRAINT IF EXISTS uq_program_services_program_type TO uq_program_interventions_program_type;
+       END IF;
+     END $$;`,
+  );
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_program_interventions_program ON program_interventions(program_id)`);
+  await q.query(`CREATE TABLE IF NOT EXISTS program_interventions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
     program_id UUID NOT NULL REFERENCES programs(id),
     intervention_type TEXT NOT NULL,
+    required_form TEXT,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    CONSTRAINT uq_program_services_program_type UNIQUE (program_id, intervention_type)
+    CONSTRAINT uq_program_interventions_program_type UNIQUE (program_id, intervention_type)
   )`);
-  await q.query(`CREATE INDEX IF NOT EXISTS idx_program_services_program ON program_services(program_id)`);
   // F12 (deployability): the entity maps approval_workflow as jsonb ApprovalStep[];
   // a fresh boot must create it jsonb (not the legacy text[]) or POST /programs
   // with an approvalWorkflow array fails with "malformed array literal". The

@@ -1,6 +1,6 @@
 import { DataSource } from 'typeorm';
 import { Program } from './program.entity';
-import { ProgramService } from './program-service.entity';
+import { ProgramIntervention } from './program-intervention.entity';
 import { ProgramFundSource } from './program-fund-source.entity';
 import { ProgramRequiredDocument } from './program-required-document.entity';
 import { FormVersionHistory } from './form-version-history.entity';
@@ -17,14 +17,14 @@ import { FormVersionHistory } from './form-version-history.entity';
  * shipped and was caught by driving the dev server; this spec builds the same
  * metadata TypeORM builds at boot, so the mistake cannot ship again.
  */
-describe('Program ↔ ProgramService relation', () => {
+describe('Program ↔ ProgramIntervention relation', () => {
   let dataSource: DataSource;
 
   beforeAll(async () => {
     // buildMetadatas() resolves relations without opening a connection.
     dataSource = new DataSource({
       type: 'postgres',
-      entities: [Program, ProgramService, ProgramFundSource, ProgramRequiredDocument, FormVersionHistory],
+      entities: [Program, ProgramIntervention, ProgramFundSource, ProgramRequiredDocument, FormVersionHistory],
     });
     // buildMetadatas() resolves relations without opening a connection. It is
     // `protected` on the type but callable at runtime — the metadata it builds
@@ -36,22 +36,22 @@ describe('Program ↔ ProgramService relation', () => {
     if (dataSource?.isInitialized) await dataSource.destroy();
   });
 
-  it('resolves Program.serviceRows to a many-to-one with join columns', () => {
+  it('resolves Program.interventionRows to a many-to-one with join columns', () => {
     const meta = dataSource.entityMetadatas.find((m) => m.target === Program);
-    const relation = meta?.relations.find((r) => r.propertyName === 'serviceRows');
+    const relation = meta?.relations.find((r) => r.propertyName === 'interventionRows');
     expect(relation).toBeDefined();
     expect(relation?.relationType).toBe('one-to-many');
     // The inverse relation TypeORM resolved. When the second argument is a
     // column rather than the relation property, this is undefined and the query
     // builder throws on `joinColumns` — the runtime 500 this spec guards.
     expect(relation?.inverseRelation?.propertyName).toBe('program');
-    expect(relation?.inverseEntityMetadata?.target).toBe(ProgramService);
+    expect(relation?.inverseEntityMetadata?.target).toBe(ProgramIntervention);
     // The owning side carries the FK, so the one-to-many join is resolvable.
     expect(relation?.inverseRelation?.joinColumns.map((c) => c.databaseName)).toEqual(['program_id']);
   });
 
   it('keeps program_id as a real column alongside the relation', () => {
-    const meta = dataSource.entityMetadatas.find((m) => m.target === ProgramService);
+    const meta = dataSource.entityMetadatas.find((m) => m.target === ProgramIntervention);
     const column = meta?.columns.find((c) => c.propertyName === 'programId');
     expect(column?.databaseName).toBe('program_id');
     // And the relation maps the same column, so `programId` writes stay in sync

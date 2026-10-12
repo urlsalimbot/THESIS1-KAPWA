@@ -1460,10 +1460,28 @@ const fil: EnLocale = {
     "tryAgain": "Pakisubukang muli.",
     "view": "Tingnan"
   },
+
+  "interventionForms": {
+    "social_case_study_report": "Social Case Study Report (SCSR)",
+    "incident_report_form": "Incident Report Form (IRF)",
+    "medical_certificate": "Medical Certificate",
+    "death_certificate": "Death Certificate",
+    "referral_form": "Referral Form"
+  },
   "programs": {
     "active": "Aktibo",
+    "addIntervention": "Magdagdag ng Intervention",
     "addRequirement": "Idagdag ang requirement",
     "addStep": "Idagdag ang hakbang",
+    "interventions": "Mga Intervention at Form Format",
+    "interventionsHint": "Ang mga uri ng intervention na ibinibigay ng programang ito. Ang intervention na may form format ay nag-oobliga sa manggagawa na tapusin ang form na iyon.",
+    "interventionAria": "Intervention {{n}}",
+    "formFormatAria": "Kinakailangang form para sa intervention {{n}}",
+    "selectIntervention": "Pumili ng intervention...",
+    "noFormFormat": "Walang kinakailangang form",
+    "removeIntervention": "Alisin ang intervention {{n}}",
+    "saveInterventions": "I-save ang mga Intervention",
+    "matrixSaved": "Na-save ang mga intervention",
     "approvalWorkflow": "Daloy ng Pag-apruba",
     "approver": "Tag-apruba: {{role}} · SLA: {{days}} araw",
     "backToPrograms": "Bumalik sa Mga Programa",
