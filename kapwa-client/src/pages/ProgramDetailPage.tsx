@@ -16,7 +16,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  Calendar, CheckCircle, Coins, FileText, Landmark, ListChecks, Power, ScrollText, Shield, Trash2, XCircle,
+  CheckCircle, FileText, Power, Trash2, XCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDate } from '../lib/format';
@@ -181,8 +181,7 @@ export function ProgramDetailPage() {
           {/* Overview */}
           <section className="rounded-xl border bg-card">
             <header className="flex items-center gap-2 px-4 py-3">
-              <ScrollText size={16} className="text-accent" aria-hidden="true" />
-              <h2 className="text-sm font-semibold">{t('programs.overview', 'Overview')}</h2>
+<h2 className="text-sm font-semibold">{t('programs.overview', 'Overview')}</h2>
             </header>
             <Separator />
             <div className="px-4 py-3">
@@ -207,8 +206,7 @@ export function ProgramDetailPage() {
           {/* Interventions & Form Formats (editable) */}
           <section className="rounded-xl border bg-card">
             <header className="flex items-center gap-2 px-4 py-3">
-              <ListChecks size={16} className="text-accent" aria-hidden="true" />
-              <h2 className="text-sm font-semibold">{t('programs.interventions', 'Interventions & Form Formats')}</h2>
+<h2 className="text-sm font-semibold">{t('programs.interventions', 'Interventions & Form Formats')}</h2>
             </header>
             <Separator />
             <div className="px-4 py-3">
@@ -236,8 +234,7 @@ export function ProgramDetailPage() {
           {/* Required Documents */}
           <section className="rounded-xl border bg-card">
             <header className="flex items-center gap-2 px-4 py-3">
-              <FileText size={16} className="text-accent" aria-hidden="true" />
-              <h2 className="text-sm font-semibold">{t('programs.requiredDocuments', 'Required Documents')}</h2>
+<h2 className="text-sm font-semibold">{t('programs.requiredDocuments', 'Required Documents')}</h2>
               <span className="ml-auto text-xs text-muted-foreground">{t('programs.itemCount', '{{count}} item', { count: program.requiredDocuments?.length ?? 0 })}</span>
             </header>
             <Separator />
@@ -257,8 +254,7 @@ export function ProgramDetailPage() {
           {/* Approval Workflow */}
           <section className="rounded-xl border bg-card">
             <header className="flex items-center gap-2 px-4 py-3">
-              <Shield size={16} className="text-accent" aria-hidden="true" />
-              <h2 className="text-sm font-semibold">{t('programs.approvalWorkflow', 'Approval Workflow')}</h2>
+<h2 className="text-sm font-semibold">{t('programs.approvalWorkflow', 'Approval Workflow')}</h2>
               <span className="ml-auto text-xs text-muted-foreground">{t('programs.stepCount', '{{count}} step', { count: program.approvalWorkflow?.length ?? 0 })}</span>
             </header>
             <Separator />
@@ -289,8 +285,7 @@ export function ProgramDetailPage() {
           {/* Fund Sources */}
           <section className="rounded-xl border bg-card">
             <header className="flex items-center gap-2 px-4 py-3">
-              <Coins size={16} className="text-accent" aria-hidden="true" />
-              <h2 className="text-sm font-semibold">{t('programs.fundSources', 'Fund Sources')}</h2>
+<h2 className="text-sm font-semibold">{t('programs.fundSources', 'Fund Sources')}</h2>
             </header>
             <Separator />
             <div className="px-4 py-3">
@@ -307,8 +302,7 @@ export function ProgramDetailPage() {
           {/* Form Template */}
           <section className="rounded-xl border bg-card">
             <header className="flex items-center gap-2 px-4 py-3">
-              <Landmark size={16} className="text-accent" aria-hidden="true" />
-              <h2 className="text-sm font-semibold">{t('programs.formTemplate', 'Form Template')}</h2>
+<h2 className="text-sm font-semibold">{t('programs.formTemplate', 'Form Template')}</h2>
             </header>
             <Separator />
             <div className="px-4 py-3">
@@ -326,8 +320,7 @@ export function ProgramDetailPage() {
           {/* Metadata */}
           <section className="rounded-xl border bg-card">
             <header className="flex items-center gap-2 px-4 py-3">
-              <Calendar size={16} className="text-accent" aria-hidden="true" />
-              <h2 className="text-sm font-semibold">{t('programs.metadata', 'Metadata')}</h2>
+<h2 className="text-sm font-semibold">{t('programs.metadata', 'Metadata')}</h2>
             </header>
             <Separator />
             <div className="px-4 py-2">

@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, FileText, Plus, ScrollText, Search } from 'lucide-react';
+import { ChevronRight, FileText, Plus, Search } from 'lucide-react';
 import { api } from '../lib/api';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 interface ApprovalStep {
@@ -90,8 +88,8 @@ export function ProgramsPage() {
         <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive mb-4">{msg}</div>
       )}
 
-      {/* Summary + filters */}
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+      {/* Summary + filters — a quiet segmented row, not stat cards */}
+      <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
         {stats.map((s) => (
           <button
             key={s.key}
@@ -99,12 +97,13 @@ export function ProgramsPage() {
             onClick={() => setStatusFilter(s.key)}
             aria-pressed={statusFilter === s.key}
             className={cn(
-              'rounded-xl border bg-card px-4 py-3 text-left transition-colors',
-              statusFilter === s.key ? 'border-accent/50 ring-1 ring-accent/30' : 'border-border/60 hover:border-accent/30',
+              'transition-colors',
+              statusFilter === s.key
+                ? 'font-medium text-foreground'
+                : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            <p className="font-heading text-2xl font-bold tabular-nums tracking-tight text-accent">{s.value}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{s.label}</p>
+            {s.label} <span className="tabular-nums text-muted-foreground">({s.value})</span>
           </button>
         ))}
       </div>
@@ -129,13 +128,16 @@ export function ProgramsPage() {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" aria-hidden="true">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-52 animate-pulse rounded-xl border border-border/60 bg-card" />
+        <div className="overflow-hidden rounded-lg border border-border/60 bg-card" aria-hidden="true">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 border-b border-border/50 px-4 py-3.5 last:border-b-0">
+              <div className="h-2 w-2 rounded-full bg-muted" />
+              <div className="h-4 w-1/3 animate-pulse rounded bg-muted" />
+            </div>
           ))}
         </div>
       ) : filteredRecords.length === 0 ? (
-        <div className="rounded-xl border bg-card py-16 text-center text-muted-foreground">
+        <div className="rounded-lg border bg-card py-16 text-center text-muted-foreground">
           <FileText className="mx-auto mb-3 opacity-30" size={40} aria-hidden="true" />
           <p className="text-sm">
             {records.length === 0
@@ -149,62 +151,36 @@ export function ProgramsPage() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="overflow-hidden rounded-lg border border-border/60 bg-card">
           {filteredRecords.map((r) => (
             <Link
               key={r.id}
               to={`/admin/programs/${r.id}`}
-              className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="flex items-center justify-between gap-4 border-b border-border/50 px-4 py-3.5 transition-colors last:border-b-0 hover:bg-muted/40"
               aria-label={t('programs.viewDetailsFor', 'View details for {{name}}', { name: r.name })}
             >
-              <Card className="flex h-full flex-col border-border/60 transition-all duration-200 group-hover:-translate-y-1 group-hover:border-accent/30 group-hover:shadow-md">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 transition-colors group-hover:bg-accent/20">
-                        <ScrollText size={20} className="text-accent" aria-hidden="true" />
-                      </span>
-                      <div className="min-w-0">
-                        <CardTitle className="truncate font-heading text-base tracking-tight">{r.name}</CardTitle>
-                        {r.category && <p className="truncate text-xs text-muted-foreground">{r.category}</p>}
-                      </div>
-                    </div>
-                    <Badge
-                      variant={r.isActive ? 'default' : 'secondary'}
-                      className={cn('shrink-0', r.isActive && 'bg-success')}
-                    >
-                      {r.isActive ? t('programs.active', 'Active') : t('programs.inactive', 'Inactive')}
-                    </Badge>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="flex flex-1 flex-col gap-3">
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    {r.fundSources?.length ? (
-                      <span>{t('programs.fundsCount', '{{count}} fund source(s)', { count: r.fundSources.length })}</span>
-                    ) : null}
-                    {r.approvalWorkflow?.length ? (
-                      <span>{t('programs.stepsCount', 'Steps: {{count}}', { count: r.approvalWorkflow.length })}</span>
-                    ) : null}
-                  </div>
-
-                  {r.requiredDocuments && r.requiredDocuments.length > 0 && (
-                    <div className="border-t pt-3">
-                      <p className="mb-2 text-xs font-semibold text-muted-foreground">{t('programs.requiredDocuments', 'Required Documents')}</p>
-                      <ul className="flex flex-wrap gap-1.5">
-                        {r.requiredDocuments.map((doc, i) => (
-                          <li key={i}><Badge variant="outline" className="text-xs font-normal">{doc}</Badge></li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  <span className="mt-auto inline-flex items-center gap-1 pt-1 text-sm font-medium text-accent">
-                    {t('programs.viewDetails', 'View details')}
-                    <ArrowRight size={14} aria-hidden="true" />
-                  </span>
-                </CardContent>
-              </Card>
+              <div className="flex min-w-0 items-center gap-3">
+                <span
+                  aria-hidden="true"
+                  className={cn('h-2 w-2 shrink-0 rounded-full', r.isActive ? 'bg-success' : 'bg-muted-foreground/40')}
+                />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">{r.name}</p>
+                  {r.category && <p className="truncate text-xs text-muted-foreground">{r.category}</p>}
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-4 text-xs text-muted-foreground">
+                {r.fundSources?.length ? (
+                  <span>{t('programs.fundsCount', '{{count}} fund source(s)', { count: r.fundSources.length })}</span>
+                ) : null}
+                {r.approvalWorkflow?.length ? (
+                  <span>{t('programs.stepsCount', 'Steps: {{count}}', { count: r.approvalWorkflow.length })}</span>
+                ) : null}
+                {r.isActive
+                  ? t('programs.active', 'Active')
+                  : t('programs.inactive', 'Inactive')}
+                <ChevronRight size={14} className="text-muted-foreground/60" aria-hidden="true" />
+              </div>
             </Link>
           ))}
         </div>

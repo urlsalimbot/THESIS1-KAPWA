@@ -15,7 +15,7 @@ import {
 import { toast } from 'sonner';
 import { humanizeError } from '@/lib/errors';
 import {
-  ArrowRight, ClipboardList, Coins, FileText, Landmark, ListChecks, Plus, Scale, Trash2,
+  ArrowRight, ClipboardList, Plus, Trash2,
 } from 'lucide-react';
 import { ProgramInterventionsEditor, type InterventionRowInput } from '@/components/programs/ProgramInterventionsEditor';
 
@@ -25,20 +25,18 @@ const emptyStep = (): WorkflowStep => ({ stepName: '', approverRole: '', slaDays
 const APPROVER_ROLES = ['admin', 'social_worker', 'coordinator'];
 
 function Section({
-  icon, title, action, children, description,
+  title, action, children, description,
 }: {
-  icon: React.ReactNode;
   title: string;
   action?: React.ReactNode;
   children: React.ReactNode;
   description?: string;
 }) {
   return (
-    <section className="rounded-xl border bg-card shadow-sm">
-      <header className="flex items-center gap-2 border-b bg-muted/30 px-4 py-2.5">
-        <span className="text-accent" aria-hidden="true">{icon}</span>
+    <section className="rounded-lg border border-border/60 bg-card">
+      <header className="border-b px-4 py-2.5">
         <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-        {action && <div className="ml-auto">{action}</div>}
+        {action && <div className="mt-1">{action}</div>}
       </header>
       <div className="space-y-3 p-4">
         {description && <p className="text-xs text-muted-foreground">{description}</p>}
@@ -130,7 +128,6 @@ export function CreateProgramPage() {
       <form onSubmit={handleSubmit} className="space-y-4 pb-20">
         {/* Program identity + legal basis */}
         <Section
-          icon={<Scale size={14} />}
           title={t('programs.programInfo', 'Program Info & Legal Basis')}
           description={t('programs.programInfoHint', 'The public name, the assistance category, and the law or issuance the program is implemented under.')}
         >
@@ -162,7 +159,6 @@ export function CreateProgramPage() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {/* Fund Sources */}
           <Section
-            icon={<Coins size={14} />}
             title={t('programs.fundSources', 'Fund Sources')}
             action={addButton(t('programs.add', 'Add'), () => addList(setFundSources, fundSources))}
           >
@@ -182,7 +178,6 @@ export function CreateProgramPage() {
 
           {/* Required Documents */}
           <Section
-            icon={<FileText size={14} />}
             title={t('programs.requiredDocuments', 'Required Documents')}
             action={addButton(t('programs.add', 'Add'), () => addList(setRequiredDocuments, requiredDocuments))}
           >
@@ -202,7 +197,6 @@ export function CreateProgramPage() {
 
           {/* Interventions */}
           <Section
-            icon={<ListChecks size={14} />}
             title={t('programs.interventions', 'Interventions & Form Formats')}
           >
             <ProgramInterventionsEditor value={interventions} onChange={setInterventions} />
@@ -211,7 +205,6 @@ export function CreateProgramPage() {
 
         {/* Approval Workflow */}
         <Section
-          icon={<Landmark size={14} />}
           title={t('programs.approvalWorkflow', 'Approval Workflow')}
           description={t('programs.workflowHint', 'Ordered approval steps a case must pass. Each step names the approving role and its service-level agreement in days.')}
           action={addButton(t('programs.addStep', 'Add step'), addStep)}

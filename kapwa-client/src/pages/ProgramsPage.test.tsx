@@ -67,12 +67,16 @@ describe('ProgramsPage', () => {
     ]);
 
     render(<MemoryRouter><ProgramsPage /></MemoryRouter>);
-    expect(await screen.findByText('Medical Assistance')).toBeTruthy();
-    expect(screen.getByText('Certificate of Indigency')).toBeTruthy();
-    expect(screen.getByText('Medical Abstract')).toBeTruthy();
-    expect(screen.getByText('Death Certificate')).toBeTruthy();
-    expect(screen.getByText('Burial Invoice')).toBeTruthy();
-    expect(screen.queryByText(/Docs:/)).toBeNull();
-    expect(screen.getAllByText(/Required Documents/).length).toBe(2);
+    // A quiet list: each program is one link row; status and meta are inline.
+    const links = await screen.findAllByRole('link');
+    expect(links).toHaveLength(3);
+    expect(links[0].getAttribute('href')).toBe('/admin/programs/p1');
+    expect(screen.getByText('Medical Assistance')).toBeTruthy();
+    expect(screen.getByText('Burial Assistance')).toBeTruthy();
+    expect(screen.getByText('No Docs Program')).toBeTruthy();
+    // The filter row reports the counts instead of stat cards.
+    expect(screen.getByRole('button', { name: /Total/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Inactive/ })).toBeTruthy();
+    expect(screen.queryByText(/Required Documents/)).toBeNull();
   });
 });
