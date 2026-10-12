@@ -47,12 +47,11 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
             drawer on small screens. */}
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <button
+            <Button variant="ghost"
               className="touch-sm flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:hidden"
-              aria-label={t('public.openMenu', 'Open menu')}
-            >
+              aria-label={t('public.openMenu', 'Open menu')}>
               <Menu size={20} aria-hidden="true" />
-            </button>
+            </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-72 p-0">
             <div className="flex h-14 items-center justify-between border-b px-6">
@@ -122,7 +121,10 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
                 key={link.to}
                 to={link.to}
                 className={cn(
-                  'flex shrink-0 items-center rounded-md px-3 py-2 text-sm font-medium transition-colors duration-200 lg:px-4',
+                  /* touch-sm: the header row is a compact 36px unit (menu
+                     trigger, Login CTA); without it the global 44px a[href]
+                     minimum stretches each link taller than its neighbours. */
+                  'touch-sm flex shrink-0 items-center rounded-md px-3 py-2 text-sm font-medium transition-colors duration-200 lg:px-4',
                   'hover:bg-muted hover:text-foreground',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                   active ? 'font-semibold text-accent' : 'text-muted-foreground'

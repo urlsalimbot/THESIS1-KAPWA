@@ -18,6 +18,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Input } from '@/components/ui/input';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { useAuth } from '../lib/auth-context';
 import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
 
@@ -79,10 +82,14 @@ function FilterSelect({ label, value, onChange, options, className }: {
   return (
     <div className="flex flex-col gap-0.5">
       <label className="text-xs text-muted-foreground font-medium">{label}</label>
-      <select aria-label={label} className={`flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${className || ''}`}
-        value={value} onChange={e => onChange(e.target.value)}>
-        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger aria-label={label} className={className}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -270,7 +277,10 @@ export function CasesPage() {
 
   return (
     <PageShell title={t('cases.title', 'Case Tracker')} description={t('cases.description', 'Real-time view of processed interventions and logs.')} cachedAt={lastSync ?? undefined}>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+      {/* items-end: the filter columns carry a label above their control, the
+          search group does not — bottom-aligning puts every control on the
+          same line instead of centring search against the label+control box. */}
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
         <div className="flex items-center gap-2 flex-wrap">
           <FilterSelect label={t('cases.barangay', 'Barangay')} value={urlBarangay} onChange={(v) => updateURL({ barangay: v || undefined, page: '1' })}
             options={barangayOptions} className="w-40" />
@@ -303,7 +313,7 @@ export function CasesPage() {
             <Input type="text" aria-label={t('cases.searchCases', 'Search cases')} placeholder={t('cases.searchPlaceholder', 'Search records...')} className="w-48 pl-8"
               value={searchInput} onChange={e => setSearchInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }} />
           </div>
-          <Button size="sm" onClick={handleSearch}>{t('cases.search', 'Search')}</Button>
+          <Button size="sm" className="h-10" onClick={handleSearch}>{t('cases.search', 'Search')}</Button>
         </div>
       </div>
 

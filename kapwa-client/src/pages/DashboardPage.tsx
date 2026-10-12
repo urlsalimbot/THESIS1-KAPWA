@@ -14,6 +14,9 @@ import { EmptyState } from '@/components/EmptyState';
 import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-context';
@@ -103,17 +106,23 @@ export function DashboardPage() {
 
   const summaryExportControls = (
     <>
-      <select aria-label={t('reports.summaryYear', 'Summary report year')} value={summaryYear}
-        onChange={(e) => setSummaryYear(Number(e.target.value))}
-        className="h-8 rounded-md border bg-background px-2 text-xs">
-        {[0, 1, 2, 3].map((d) => { const y = now.getFullYear() - d; return <option key={y} value={y}>{y}</option>; })}
-      </select>
-      <select aria-label={t('reports.summarySemester', 'Summary report semester')} value={summarySemester}
-        onChange={(e) => setSummarySemester(Number(e.target.value))}
-        className="h-8 rounded-md border bg-background px-2 text-xs">
-        <option value={1}>{t('reports.semester1', '1st Semester (Q1+Q2)')}</option>
-        <option value={2}>{t('reports.semester2', '2nd Semester (Q3+Q4)')}</option>
-      </select>
+      <Select value={String(summaryYear)} onValueChange={(v) => setSummaryYear(Number(v))}>
+        <SelectTrigger aria-label={t('reports.summaryYear', 'Summary report year')} className="h-8 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {[0, 1, 2, 3].map((d) => { const y = now.getFullYear() - d; return <SelectItem key={y} value={String(y)}>{y}</SelectItem>; })}
+        </SelectContent>
+      </Select>
+      <Select value={String(summarySemester)} onValueChange={(v) => setSummarySemester(Number(v))}>
+        <SelectTrigger aria-label={t('reports.summarySemester', 'Summary report semester')} className="h-8 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="1">{t('reports.semester1', '1st Semester (Q1+Q2)')}</SelectItem>
+          <SelectItem value="2">{t('reports.semester2', '2nd Semester (Q3+Q4)')}</SelectItem>
+        </SelectContent>
+      </Select>
       <Button size="sm" variant="outline" onClick={handleExportSummary} disabled={summaryExporting}>
         <Download size={14} className="mr-1" /> {summaryExporting ? t('dashboard.generating', 'Generating...') : t('reports.exportSummary', 'Export Summary Report')}
       </Button>
@@ -222,21 +231,21 @@ export function DashboardPage() {
           fed the same value so its window matches the numbers it sits beside. */}
       <div className="mt-2 mb-1 flex flex-wrap items-center gap-3">
         <span className="text-xs font-medium text-muted-foreground">{t('dashboard.trendRange', 'Trend range')}</span>
-        <div className="flex items-center rounded-md border border-border p-0.5 bg-muted/30" role="group" aria-label={t('dashboard.trendRange', 'Trend range')}>
+        <div className="flex items-center rounded-lg bg-muted p-1" role="group" aria-label={t('dashboard.trendRange', 'Trend range')}>
           {TREND_RANGES.map((r) => (
-            <button
+            <Button variant="ghost"
               key={r.value}
               type="button"
               onClick={() => setRange(r.value)}
               aria-pressed={range === r.value}
-              className={`px-2.5 py-1 text-xs rounded font-medium transition-colors ${
+              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${
                 range === r.value
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-transparent hover:text-foreground'
               }`}
             >
               {t(r.labelKey, r.label)}
-            </button>
+            </Button>
           ))}
         </div>
       </div>

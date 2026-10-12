@@ -143,9 +143,9 @@ export function RegisterPage() {
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground text-center">
               {t('auth.didntReceiveEmail', "Didn't receive the email? Check your spam folder or")}{' '}
-              <button
+              <Button variant="link"
                 type="button"
-                className="text-primary underline underline-offset-2 hover:no-underline"
+                className="h-auto p-0"
                 onClick={async () => {
                   try {
                     await api.post('/auth/resend-verification', { email: registeredEmail });
@@ -156,7 +156,7 @@ export function RegisterPage() {
                 }}
               >
                 {t('auth.resend', 'resend')}
-              </button>
+              </Button>
             </p>
           </CardContent>
           <CardFooter className="justify-center pt-2 pb-6">
@@ -360,15 +360,15 @@ export function RegisterPage() {
                               {...field}
                             />
                           </FormControl>
-                          <button
+                          <Button variant="ghost" size="icon"
                             type="button"
                             onClick={() => setShowPassword(v => !v)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
                             aria-label={showPassword ? t('auth.hidePassword', 'Hide password') : t('auth.showPassword', 'Show password')}
                             aria-pressed={showPassword}
                           >
                             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
+                          </Button>
                         </div>
                         {/* Proactive length hint: don't wait for an invalid submit
                             to teach the constraint. Replaced by the error message
@@ -395,15 +395,15 @@ export function RegisterPage() {
                               {...field}
                             />
                           </FormControl>
-                          <button
+                          <Button variant="ghost" size="icon"
                             type="button"
                             onClick={() => setShowConfirmPassword(v => !v)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
                             aria-label={showConfirmPassword ? t('auth.hidePassword', 'Hide password') : t('auth.showPassword', 'Show password')}
                             aria-pressed={showConfirmPassword}
                           >
                             {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
+                          </Button>
                         </div>
                         <FormMessage />
                       </FormItem>

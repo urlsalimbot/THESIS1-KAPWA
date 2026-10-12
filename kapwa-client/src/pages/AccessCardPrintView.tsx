@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { AccessCard } from '../components/cards/AccessCard';
 import { Printer } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export function AccessCardPrintView() {
   const { t } = useTranslation();
@@ -60,13 +61,13 @@ export function AccessCardPrintView() {
   return (
     <div className="print-container">
       <div className="no-print mb-4 flex justify-end">
-        <button
+        <Button variant="ghost"
           onClick={() => window.print()}
           className="flex items-center gap-2 rounded bg-primary px-4 py-2 text-sm text-white hover:bg-primary-dark"
         >
           <Printer size={16} />
           {t('accessCard.printCard', 'Print Card')}
-        </button>
+        </Button>
       </div>
       {/* Printed output is always white-paper, whatever the app's theme — the
           PDF preview must not print a dark card. */}

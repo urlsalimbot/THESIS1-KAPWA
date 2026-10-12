@@ -170,7 +170,7 @@ export function ClusteringTab({ filters }: { filters: Record<string, unknown> })
           <CardHeader className="pb-1"><CardTitle className="text-sm">{t('analytics.clustering.runs', 'Runs')}</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             {(runs ?? []).map(run => (
-              <button
+              <Button variant="ghost"
                 key={run.id}
                 type="button"
                 onClick={() => { setSelectedRunId(run.id); setMemberCluster(null); setMemberPage(1); }}
@@ -183,7 +183,7 @@ export function ClusteringTab({ filters }: { filters: Record<string, unknown> })
                 <span className="text-muted-foreground">
                   {t('analytics.clustering.chosenK', 'Chosen k')}: {(run.params as { chosen_k?: number })?.chosen_k ?? '—'}
                 </span>
-              </button>
+              </Button>
             ))}
             {(runs ?? []).length === 0 && <p className="text-xs text-muted-foreground">{t('analytics.noData', 'No data for the selected filters')}</p>}
           </CardContent>

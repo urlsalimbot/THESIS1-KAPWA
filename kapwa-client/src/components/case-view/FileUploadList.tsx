@@ -244,7 +244,7 @@ export function FileUploadList({
                 )}
                 {/* The row itself is the preview target — no link styling, so it
                     cannot be mistaken for one of several similar-looking links. */}
-                <button
+                <Button variant="ghost"
                   type="button"
                   onClick={() => setPreview(doc)}
                   aria-label={t('caseView.documents.previewNamed', 'Preview {{name}}', { name })}
@@ -253,7 +253,7 @@ export function FileUploadList({
                 >
                   <span className="block truncate font-medium text-foreground">{name}</span>
                   <span className="block text-xs text-muted-foreground">{(doc.fileSize / 1024).toFixed(0)} KB</span>
-                </button>
+                </Button>
                 {renderDocExtras?.(doc)}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

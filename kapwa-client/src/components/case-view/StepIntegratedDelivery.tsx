@@ -13,6 +13,10 @@ import { api, downloadEndorsementLetter, downloadEndorsementLetterById } from '@
 import { Agency } from '@/components/referrals/referral-utils';
 import { StepLockBar, type StepLock } from './StepLockBar';
 import { useTranslation } from 'react-i18next';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 
 interface ReferralRow {
   id: string;
@@ -219,24 +223,26 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
               <label htmlFor="endorse-agency" className="text-xs font-medium text-muted-foreground">
                 {t('caseView.integrated.targetAgency', 'Target Agency *')}
               </label>
-              <select
-                id="endorse-agency"
-                required
+              <Select
+                aria-required="true"
                 value={toAgencyId}
-                onChange={(e) => setToAgencyId(e.target.value)}
-                className=""
+                onValueChange={(v) => setToAgencyId(v)}
               >
-                <option value="">{t('caseView.integrated.selectAgency', 'Select agency...')}</option>
-                {(agencies || []).map((a) => (
-                  <option key={a.id} value={a.id}>{a.code} — {a.name}</option>
-                ))}
-              </select>
+                <SelectTrigger id="endorse-agency">
+                  <SelectValue placeholder={t('caseView.integrated.selectAgency', 'Select agency...')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(agencies || []).map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{a.code} — {a.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
               <label htmlFor="endorse-reason" className="text-xs font-medium text-muted-foreground">
                 {t('caseView.integrated.reason', 'Reason *')}
               </label>
-              <textarea
+              <Textarea
                 id="endorse-reason"
                 required
                 rows={2}
@@ -249,7 +255,7 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
               <label htmlFor="endorse-notes" className="text-xs font-medium text-muted-foreground">
                 {t('caseView.integrated.notes', 'Notes (optional)')}
               </label>
-              <textarea
+              <Textarea
                 id="endorse-notes"
                 rows={2}
                 value={notes}

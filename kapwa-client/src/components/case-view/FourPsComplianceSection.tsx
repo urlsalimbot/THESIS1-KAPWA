@@ -267,7 +267,7 @@ export function FourPsComplianceSection({ caseId }: { caseId: string }) {
             return (
               <div key={period.label} className="rounded-lg border bg-card">
                 <div className="flex flex-wrap items-center gap-2 px-4 py-2.5">
-                  <button
+                  <Button variant="ghost"
                     type="button"
                     onClick={() => setCollapsed(prev => ({ ...prev, [period.label]: !isCollapsed }))}
                     aria-expanded={!isCollapsed}
@@ -283,7 +283,7 @@ export function FourPsComplianceSection({ caseId }: { caseId: string }) {
                     >
                       {period.complied}/{period.total}
                     </Badge>
-                  </button>
+                  </Button>
                   {!complete && (
                     <Button
                       size="sm"

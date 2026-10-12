@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { useTranslation } from 'react-i18next';
 import { statusLabel } from '@/i18n/display';
+import { Input } from '@/components/ui/input';
 
 export function CoordinatorWidgets() {
   const { t } = useTranslation();
@@ -125,12 +126,12 @@ export function CoordinatorWidgets() {
           <form onSubmit={handleSearch} className="flex gap-2">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-              <input
+              <Input
                 type="text"
                 value={searchId}
                 onChange={e => setSearchId(e.target.value)}
                 placeholder={t('dashboard.enterCaseId', 'Enter Case ID...')}
-                className="w-full pl-8 pr-3 py-1.5 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="pl-8 pr-3"
               />
             </div>
             <Button type="submit" disabled={searching} size="sm">
@@ -142,12 +143,12 @@ export function CoordinatorWidgets() {
             <div className="mt-3 p-3 border rounded bg-muted/50">
               <p className="text-sm"><strong>{t('dashboard.case', 'Case:')}</strong> {searchResult.id}</p>
               <p className="text-sm"><strong>{t('dashboard.status', 'Status:')}</strong> {statusLabel(t, searchResult.status)}</p>
-              <button
+              <Button variant="ghost"
                 onClick={() => navigate(`/cases/${searchResult.id}`)}
                 className="text-primary text-xs mt-1 flex items-center gap-1 hover:underline"
               >
                 {t('dashboard.viewDetails', 'View details')} <ArrowRight size={14} />
-              </button>
+              </Button>
             </div>
           )}
         </CardContent>

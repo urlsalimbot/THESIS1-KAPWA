@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShieldAlert, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   KAPWA_ACCESS_DENIED_EVENT,
   type AccessDeniedDetail,
@@ -67,14 +68,13 @@ export function AccessDeniedBanner({ routeKey }: AccessDeniedBannerProps) {
         </span>
         {isInformative(denial.message) && <span className="ml-1">{denial.message}</span>}
       </div>
-      <button
+      <Button variant="ghost" size="icon"
         type="button"
         onClick={dismiss}
         aria-label={t('accessDenied.dismiss', 'Dismiss access denied notice')}
-        className="shrink-0 cursor-pointer rounded p-0.5 hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
-      >
+        className="shrink-0 cursor-pointer rounded p-0.5 hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive">
         <X size={14} aria-hidden="true" />
-      </button>
+      </Button>
     </div>
   );
 }

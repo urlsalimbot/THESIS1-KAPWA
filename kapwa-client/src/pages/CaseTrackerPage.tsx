@@ -18,6 +18,7 @@ import { formatDateTime } from '../lib/format';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/StatusBadge';
 import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
+import { Input } from '@/components/ui/input';
 
 interface TrackerEntry {
   id: string;
@@ -150,25 +151,25 @@ export function CaseTrackerPage() {
       {/* Status Segregation */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-sm font-medium text-foreground">{t('tracker.status', 'Status')}</span>
-        <div className="flex items-center rounded-md border border-border p-0.5 bg-muted/30" role="group" aria-label={t('tracker.statusFilter', 'Filter by status')}>
-          <button
+        <div className="flex items-center rounded-lg bg-muted p-1" role="group" aria-label={t('tracker.statusFilter', 'Filter by status')}>
+          <Button variant="ghost"
             type="button"
             onClick={() => setStatusFilter('all')}
             aria-pressed={statusFilter === 'all'}
-            className={`px-2.5 py-1 text-xs rounded font-medium transition-colors ${statusFilter === 'all' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${statusFilter === 'all' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:bg-transparent hover:text-foreground'}`}
           >
             {t('tracker.allStatuses', 'All')}
-          </button>
+          </Button>
           {TRACKER_STATUSES.map((s) => (
-            <button
+            <Button variant="ghost"
               key={s}
               type="button"
               onClick={() => setStatusFilter(s)}
               aria-pressed={statusFilter === s}
-              className={`px-2.5 py-1 text-xs rounded font-medium transition-colors ${statusFilter === s ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`px-4 py-2 text-sm rounded-md font-medium transition-colors ${statusFilter === s ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:bg-transparent hover:text-foreground'}`}
             >
               {statusLabel(t, s)}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -176,9 +177,9 @@ export function CaseTrackerPage() {
       {/* Date Range Selectors */}
       <div className="flex flex-wrap items-center gap-3">
         <label className="text-sm font-medium text-foreground">{t('tracker.from', 'From:')}</label>
-        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} aria-label={t('tracker.dateFrom', 'Date from')} className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
+        <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} aria-label={t('tracker.dateFrom', 'Date from')} className="w-40" />
         <label className="text-sm font-medium text-foreground">{t('tracker.to', 'To:')}</label>
-        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} aria-label={t('tracker.dateTo', 'Date to')} className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
+        <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} aria-label={t('tracker.dateTo', 'Date to')} className="w-40" />
       </div>
 
       {/* Entries Table */}

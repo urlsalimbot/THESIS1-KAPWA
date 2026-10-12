@@ -78,33 +78,33 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
       </span>
       <div
         aria-label="Trend range"
-        class="flex items-center rounded-md border border-border p-0.5 bg-muted/30"
+        class="flex items-center rounded-lg bg-muted p-1"
         role="group"
       >
         <button
           aria-pressed="false"
-          class="px-2.5 py-1 text-xs rounded font-medium transition-colors text-muted-foreground hover:text-foreground"
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-transparent hover:border-border h-10 px-4 py-2 text-sm rounded-md font-medium transition-colors text-muted-foreground hover:bg-transparent hover:text-foreground"
           type="button"
         >
           1 Week
         </button>
         <button
           aria-pressed="false"
-          class="px-2.5 py-1 text-xs rounded font-medium transition-colors text-muted-foreground hover:text-foreground"
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-transparent hover:border-border h-10 px-4 py-2 text-sm rounded-md font-medium transition-colors text-muted-foreground hover:bg-transparent hover:text-foreground"
           type="button"
         >
           1 Month
         </button>
         <button
           aria-pressed="false"
-          class="px-2.5 py-1 text-xs rounded font-medium transition-colors text-muted-foreground hover:text-foreground"
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-transparent hover:border-border h-10 px-4 py-2 text-sm rounded-md font-medium transition-colors text-muted-foreground hover:bg-transparent hover:text-foreground"
           type="button"
         >
           3 Months
         </button>
         <button
           aria-pressed="true"
-          class="px-2.5 py-1 text-xs rounded font-medium transition-colors bg-primary text-primary-foreground shadow-sm"
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-transparent hover:bg-accent hover:text-accent-foreground hover:border-border h-10 px-4 py-2 text-sm rounded-md font-medium transition-colors bg-background text-foreground shadow-sm"
           type="button"
         >
           6 Months

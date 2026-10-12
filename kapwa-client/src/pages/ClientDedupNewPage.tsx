@@ -4,14 +4,14 @@ import { FileSpreadsheet, Plus, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import i18n from '@/i18n';
 import { api } from '../lib/api';
-import { INTERVENTION_TYPES } from '../lib/constants';
+import { INTERVENTION_TYPE_GROUPS } from '../lib/constants';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 
 const t = i18n.t.bind(i18n);
@@ -146,13 +146,17 @@ function DefineUploadView({
       description="An import run is a batch serving: it declares the intervention type, then matches clients against prior servings."
       backTo={{ label: t('dedup.operations', 'Operations'), onClick: onBack }}
     >
-      <Card>
+      {/* Same measure as the intake form's section cards: a wide field grid
+          needs the 5xl container to breathe, not the 1600px shell. */}
+      <Card className="mx-auto w-full max-w-5xl">
         {/* Tinted section bar, copied from IntakePage's card headers. */}
         <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
           <FileSpreadsheet size={16} className="text-muted-foreground" aria-hidden="true" />
           <h2 className="text-sm font-semibold">{t('dedup.defineTitle', 'Define the client list')}</h2>
         </div>
-        <CardContent className="space-y-6">
+        {/* pt-6: CardContent's base is pt-0, so without this the intro sits
+            ~10px under the section bar. Same body rhythm as intake sections. */}
+        <CardContent className="space-y-6 pt-6">
           <p className="text-sm text-muted-foreground">
             {t(
               'dedup.defineDesc',
@@ -181,10 +185,17 @@ function DefineUploadView({
                 <SelectValue placeholder="Pick the intervention this list serves" />
               </SelectTrigger>
               <SelectContent className="max-h-72 overflow-y-auto">
-                {INTERVENTION_TYPES.map((code) => (
-                  <SelectItem key={code} value={code}>
-                    {typeLabel(code)}
-                  </SelectItem>
+                {/* Groups: constrained lists beat a 22-item wall. Radix has no
+                    optgroup element, so shadcn's SelectLabel is the header. */}
+                {INTERVENTION_TYPE_GROUPS.map((group) => (
+                  <SelectGroup key={group.key}>
+                    <SelectLabel>{t(group.key, group.fallback)}</SelectLabel>
+                    {group.codes.map((code) => (
+                      <SelectItem key={code} value={code}>
+                        {typeLabel(code)}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))}
                 <SelectItem value={OTHER_TYPE}>{t('dedup.others', 'Others…')}</SelectItem>
               </SelectContent>

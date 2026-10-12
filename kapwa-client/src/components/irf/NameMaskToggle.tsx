@@ -3,6 +3,8 @@ import { api } from '../../lib/api';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { humanizeError } from '../../lib/errors';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 interface NameMaskToggleProps {
   irfId: string;
@@ -38,15 +40,15 @@ export default function NameMaskToggle({ irfId, legalBasis: initialLegalBasis, o
 
   return (
     <div className="flex items-center gap-2 mt-2">
-      <input className="rounded border border-border p-2 text-sm w-48"
+      <Input className="w-48"
         placeholder={t('irf.legalBasisPlaceholder', 'Legal basis code')}
         value={legalBasis}
         onChange={e => setLegalBasis(e.target.value)}
         aria-label={t('irf.legalBasisPlaceholder', 'Legal basis code')} />
-      <button onClick={handleUnlock} disabled={!legalBasis || loading}
+      <Button variant="ghost" size="icon" onClick={handleUnlock} disabled={!legalBasis || loading}
         className="text-xs text-primary hover:underline">
         {loading ? t('irf.unlocking', 'Unlocking...') : t('irf.unlockNames', 'Unlock Names')}
-      </button>
+      </Button>
     </div>
   );
 }

@@ -5,10 +5,14 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { AccessCardViewPage } from './AccessCardViewPage';
 import { ApiError } from '../lib/api-error';
+import { categoryLabel } from '@/i18n/display';
+import i18n from '@/i18n';
 import {
   ACCESS_CARD_CATEGORIES,
   ACCESS_CARD_CATEGORY_TABS,
 } from '../lib/constants';
+
+const t = i18n.t.bind(i18n);
 
 const { mockApiGet, mockApiPost, mockDownloadAccessCardPdf, mockUseAuth } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
@@ -164,7 +168,7 @@ describe('AccessCardViewPage', () => {
     renderWithSWR(<AccessCardViewPage />);
     (await screen.findByRole('button', { name: /Add Entry/ })).click();
 
-    expect((await screen.findByLabelText('Category')).tagName).toBe('SELECT');
+    expect((await screen.findByLabelText('Category')).tagName).toBe('BUTTON');
     expect(((await screen.findByLabelText('Service Date *')) as HTMLInputElement).type).toBe('date');
     expect((await screen.findByLabelText('Service Rendered *')).tagName).toBe('INPUT');
     expect(((await screen.findByLabelText('Cost (₱)')) as HTMLInputElement).type).toBe('number');
@@ -172,14 +176,17 @@ describe('AccessCardViewPage', () => {
   });
 
   it('offers the same sanctioned categories as the other logging forms', async () => {
+    const user = userEvent.setup();
     renderWithSWR(<AccessCardViewPage />);
     (await screen.findByRole('button', { name: /Add Entry/ })).click();
 
-    const select = await screen.findByLabelText('Category');
-    const offered = within(select).getAllByRole('option').map(o => (o as HTMLOptionElement).value);
-    expect([...offered].sort()).toEqual(
-      ['case_service', 'referral', 'community_service', 'seminar', 'payout', 'compliance'].sort(),
-    );
+    // Radix items expose their label, not the code — the label map is 1:1.
+    await user.click(await screen.findByLabelText('Category'));
+    const offered = [...document.querySelectorAll('[role="option"]')].map(o => o.textContent ?? '');
+    await user.keyboard('{Escape}');
+    const expected = ['case_service', 'referral', 'community_service', 'seminar', 'payout', 'compliance']
+      .map(c => categoryLabel(t, c));
+    expect([...offered].sort()).toEqual([...expected].sort());
   });
 
   it('opens the add-entry form with the Manila day already filled in', async () => {
@@ -213,7 +220,8 @@ describe('AccessCardViewPage', () => {
     (await screen.findByRole('button', { name: /Add Entry/ })).click();
 
     await user.type(await screen.findByLabelText('Service Rendered *'), 'Medical Referral');
-    await user.selectOptions(await screen.findByLabelText('Agency *'), 'ag-1');
+    await user.click(await screen.findByLabelText('Agency *'));
+    await user.click(await screen.findByRole('option', { name: /MSWDO/i }));
     await user.click(screen.getByRole('button', { name: /Save Entry/ }));
 
     const alert = await screen.findByRole('alert');

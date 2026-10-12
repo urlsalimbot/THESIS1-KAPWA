@@ -8,6 +8,9 @@ import {
   PaginationPrevious,
   PaginationNext,
 } from '@/components/ui/pagination';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { useTranslation } from 'react-i18next';
 
 export interface DataTablePaginationProps<TData> {
@@ -70,16 +73,22 @@ export function DataTablePagination<TData>({
         </p>
         <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
           {t('dataTable.perPage', 'Per page')}
-          <select
-            aria-label={t('dataTable.perPage', 'Per page')}
-            value={pageSize}
-            onChange={(e) => table.setPageSize(Number(e.target.value))}
-            className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs"
+          <Select
+            value={String(pageSize)}
+            onValueChange={(v) => table.setPageSize(Number(v))}
           >
-            {pageSizeOptions.map(n => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </select>
+            <SelectTrigger
+              aria-label={t('dataTable.perPage', 'Per page')}
+              className="h-8 w-[4.5rem] text-xs"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {pageSizeOptions.map(n => (
+                <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </label>
       </div>
       <div className="flex items-center gap-1 overflow-x-auto">

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { ForecastTab } from './ForecastTab';
 
@@ -61,9 +62,11 @@ describe('ForecastTab', () => {
   });
 
   it('refetches when the metric changes', async () => {
+    const user = userEvent.setup();
     renderTab();
     await screen.findByText('8.0%');
-    fireEvent.change(screen.getByLabelText('Metric'), { target: { value: 'disbursement' } });
+    await user.click(screen.getByLabelText('Metric'));
+    await user.click(await screen.findByRole('option', { name: /disbursement/i }));
     await waitFor(() => {
       const called = mockApiGet.mock.calls.some(args => JSON.stringify(args[0]).includes('disbursement'));
       expect(called).toBe(true);
@@ -71,11 +74,13 @@ describe('ForecastTab', () => {
   });
 
   it('names the value legend after the selected metric', async () => {
+    const user = userEvent.setup();
     globalWithObserver.ResizeObserver = ResizeObserverStub;
     try {
       renderTab();
       await screen.findByText('8.0%');
-      fireEvent.change(screen.getByLabelText('Metric'), { target: { value: 'disbursement' } });
+      await user.click(screen.getByLabelText('Metric'));
+      await user.click(await screen.findByRole('option', { name: /disbursement/i }));
       await waitFor(() => {
         expect(screen.getByText('Disbursement', { selector: '.recharts-legend-item-text' })).toBeTruthy();
       });

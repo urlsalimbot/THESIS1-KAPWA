@@ -7,6 +7,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/lib/theme-context';
 import { useLanguage } from '@/i18n/useLanguage';
+import { Button } from '@/components/ui/button';
 
 /** The drawer stretches its triggers to share the row; the desktop row sizes to content. */
 const DRAWER_TRIGGER =
@@ -48,14 +49,14 @@ export function AppearanceLanguageControls({ showLabel = true }: AppearanceLangu
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className={triggerClass} aria-label={t('topbar.theme', 'Theme')}>
+          <Button variant="ghost" className={triggerClass} aria-label={t('topbar.theme', 'Theme')}>
             {mounted && resolvedTheme === 'dark' ? (
               <Moon size={16} aria-hidden="true" />
             ) : (
               <Sun size={16} aria-hidden="true" />
             )}
             {showLabel && t('topbar.theme', 'Theme')}
-          </button>
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={8} className="w-44">
           <DropdownMenuLabel className="font-semibold">{t('topbar.theme', 'Theme')}</DropdownMenuLabel>
@@ -79,10 +80,10 @@ export function AppearanceLanguageControls({ showLabel = true }: AppearanceLangu
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className={triggerClass} aria-label={t('topbar.language', 'Language')}>
+          <Button variant="ghost" className={triggerClass} aria-label={t('topbar.language', 'Language')}>
             <Languages size={16} aria-hidden="true" />
             {showLabel && t('topbar.language', 'Language')}
-          </button>
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={8} className="w-44">
           <DropdownMenuLabel className="font-semibold">{t('topbar.language', 'Language')}</DropdownMenuLabel>

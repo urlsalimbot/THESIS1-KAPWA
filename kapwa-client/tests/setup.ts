@@ -35,6 +35,16 @@ if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
   });
 }
 
+// jsdom lacks ResizeObserver; Radix's use-size (RadioGroup, Checkbox) needs it.
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  class ResizeObserverStub {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  vi.stubGlobal('ResizeObserver', ResizeObserverStub);
+}
+
 // jsdom's scrollTo is a not-implemented stub that logs a virtual-console error
 // on every call; Radix and the app shell call it on navigation, so always override it.
 if (typeof window !== 'undefined') {

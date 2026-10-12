@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 export interface TeamStatusBarProps {
   statuses: TeamStatus[];
@@ -66,11 +67,10 @@ export function TeamStatusBar({ statuses, staff, myUserId, canEdit = true, onSet
           return (
             <DropdownMenu key={member.userId} open={open} onOpenChange={setOpen}>
               <DropdownMenuTrigger asChild>
-                <button
+                <Button variant="ghost"
                   type="button"
                   aria-label={t('team.statusBar.setMyStatus')}
-                  className="flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/5 px-2.5 py-1 text-xs font-medium hover:bg-primary/10"
-                >
+                  className="flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/5 px-2.5 py-1 text-xs font-medium hover:bg-primary/10">
                   <span
                     className={`h-2 w-2 rounded-full ${
                       status ? (STATUS_COLORS[status.status] ?? STATUS_COLOR_FALLBACK) : STATUS_COLOR_FALLBACK
@@ -86,7 +86,7 @@ export function TeamStatusBar({ statuses, staff, myUserId, canEdit = true, onSet
                     </span>
                   )}
                   <ChevronDown size={12} className="text-muted-foreground" />
-                </button>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" sideOffset={6} className="w-64">
                 <DropdownMenuLabel className="font-normal">

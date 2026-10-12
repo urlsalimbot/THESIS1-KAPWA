@@ -381,22 +381,22 @@ export function ClaimantDashboardPage() {
             </p>
             <div className="flex flex-wrap gap-x-5 gap-y-1.5">
               {myCase.certificateUrl && (
-                <button
+                <Button variant="ghost"
                   type="button"
                   onClick={() => viewGeneratedDoc(myCase.certificateUrl, 'certificate-of-eligibility.pdf')}
                   className="inline-flex items-center gap-1.5 rounded text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   {t('claims.viewCertificate', 'View Certificate of Eligibility')}
-                </button>
+                </Button>
               )}
               {myCase.pettyCashVoucherUrl && (
-                <button
+                <Button variant="ghost"
                   type="button"
                   onClick={() => viewGeneratedDoc(myCase.pettyCashVoucherUrl, 'petty-cash-voucher.pdf')}
                   className="inline-flex items-center gap-1.5 rounded text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   {t('claims.viewPettyCashVoucher', 'View Petty Cash Voucher')}
-                </button>
+                </Button>
               )}
             </div>
           </CardContent>

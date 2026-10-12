@@ -91,7 +91,7 @@ export function ProgramsPage() {
       {/* Summary + filters — a quiet segmented row, not stat cards */}
       <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
         {stats.map((s) => (
-          <button
+          <Button variant="ghost"
             key={s.key}
             type="button"
             onClick={() => setStatusFilter(s.key)}
@@ -104,7 +104,7 @@ export function ProgramsPage() {
             )}
           >
             {s.label} <span className="tabular-nums text-muted-foreground">({s.value})</span>
-          </button>
+          </Button>
         ))}
       </div>
 

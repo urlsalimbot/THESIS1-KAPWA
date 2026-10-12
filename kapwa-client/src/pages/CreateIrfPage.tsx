@@ -7,6 +7,10 @@ import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Shield, User, Phone, Calendar, Flag } from 'lucide-react';
 
@@ -37,6 +41,11 @@ export function CreateIrfPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.caseCategory) {
+      // Radix Selects have no native `required`; the select carried it before.
+      toast.error(t('irf.select', 'Select a case category'));
+      return;
+    }
     setSubmitting(true);
     try {
       await api.post('/irf', {
@@ -76,19 +85,17 @@ export function CreateIrfPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground font-medium">{t('irf.caseCategory', 'Case Category *')}</label>
-                <select
-                  value={form.caseCategory}
-                  onChange={e => setForm({ ...form, caseCategory: e.target.value })}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  aria-label={t('irf.caseCategory', 'Case Category')}
-                  required
-                >
-                  <option value="">{t('irf.select', 'Select...')}</option>
-                  <option value="Abuse">{t('irf.catAbuse', 'Abuse')}</option>
-                  <option value="Neglect">{t('irf.catNeglect', 'Neglect')}</option>
-                  <option value="Exploitation">{t('irf.catExploitation', 'Exploitation')}</option>
-                  <option value="Criminal">{t('irf.catCriminal', 'Criminal')}</option>
-                </select>
+                <Select value={form.caseCategory} onValueChange={(v) => setForm(f => ({ ...f, caseCategory: v }))}>
+                  <SelectTrigger aria-label={t('irf.caseCategory', 'Case Category')} aria-required="true" className="h-9 w-full text-sm">
+                    <SelectValue placeholder={t('irf.select', 'Select...')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Abuse">{t('irf.catAbuse', 'Abuse')}</SelectItem>
+                    <SelectItem value="Neglect">{t('irf.catNeglect', 'Neglect')}</SelectItem>
+                    <SelectItem value="Exploitation">{t('irf.catExploitation', 'Exploitation')}</SelectItem>
+                    <SelectItem value="Criminal">{t('irf.catCriminal', 'Criminal')}</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground font-medium flex items-center gap-1">
@@ -143,7 +150,7 @@ export function CreateIrfPage() {
             <span className="text-xs text-muted-foreground ml-auto">{t('irf.encrypted', 'AES-256 encrypted at rest')}</span>
           </div>
           <div className="p-4">
-            <textarea
+            <Textarea
               value={form.narration}
               onChange={e => setForm({ ...form, narration: e.target.value })}
               className="w-full rounded-md border border-input bg-background px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y min-h-[200px]"

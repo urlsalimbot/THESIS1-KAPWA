@@ -11,6 +11,9 @@ import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { AccessCardCategorySelect } from '@/components/cards/AccessCardCategorySelect';
 import { CategoryBadge } from '@/components/cards/CategoryBadge';
 import { FormError } from '@/components/FormError';
@@ -18,6 +21,7 @@ import { ACCESS_CARD_CATEGORY_TABS, type AccessCardCategory } from '@/lib/consta
 import { CreditCard, User, MapPin, Calendar, Phone, Users, Plus, Building2, ArrowLeftRight, Download } from 'lucide-react';
 import { formatDate, todayInManila, personFullName, formatPeso } from '../lib/format';
 import { humanizeError } from '../lib/errors';
+import { Input } from '@/components/ui/input';
 
 interface AccessCardService {
   id: string;
@@ -134,6 +138,11 @@ export function AccessCardViewPage() {
   async function handleAddEntry(e: React.FormEvent) {
     e.preventDefault();
     if (!cardData?.code) return;
+    if (!addForm.agencyId) {
+      // Radix Selects have no native `required`; the select carried it before.
+      setAddError(t('accessCard.selectAgency', 'Select agency...'));
+      return;
+    }
     setAdding(true);
     setAddError(null);
     try {
@@ -259,7 +268,7 @@ export function AccessCardViewPage() {
             // `shrink-0`: the strip scrolls (`overflow-x-auto`), but a flex
             // child still shrinks to fit before the parent ever scrolls —
             // without this the labels were squeezed to 44px and clipped.
-            <button
+            <Button variant="ghost"
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
@@ -269,7 +278,7 @@ export function AccessCardViewPage() {
               }`}
             >
               {CATEGORY_TAB_LABELS[tab] ? t(CATEGORY_TAB_LABELS[tab].key, CATEGORY_TAB_LABELS[tab].label) : tab}
-            </button>
+            </Button>
           ))}
         </div>
 
@@ -289,10 +298,9 @@ export function AccessCardViewPage() {
               </div>
               <div className="space-y-1">
                 <label htmlFor="access-card-service-date" className="text-xs font-medium">{t('accessCard.serviceDate', 'Service Date *')}</label>
-                <input
+                <Input
                   id="access-card-service-date"
                   type="date"
-                  className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
                   value={addForm.serviceDate}
                   onChange={e => setAddForm(f => ({ ...f, serviceDate: e.target.value }))}
                   required
@@ -301,9 +309,8 @@ export function AccessCardViewPage() {
             </div>
             <div className="space-y-1">
               <label htmlFor="access-card-service-rendered" className="text-xs font-medium">{t('accessCard.serviceRendered', 'Service Rendered *')}</label>
-              <input
+              <Input
                 id="access-card-service-rendered"
-                className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
                 value={addForm.serviceRendered}
                 onChange={e => setAddForm(f => ({ ...f, serviceRendered: e.target.value }))}
                 placeholder={t('accessCard.servicePlaceholder', 'e.g., Medical Referral to Norzagaray RHU')}
@@ -315,26 +322,27 @@ export function AccessCardViewPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
                 <label htmlFor="access-card-cost" className="text-xs font-medium">{t('accessCard.cost', 'Cost (₱)')}</label>
-                <input id="access-card-cost" type="number" className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm" value={addForm.cost} onChange={e => setAddForm(f => ({ ...f, cost: e.target.value }))} />
+                <Input id="access-card-cost" type="number" value={addForm.cost} onChange={e => setAddForm(f => ({ ...f, cost: e.target.value }))} />
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium" htmlFor="access-card-agency">{t('accessCard.agency', 'Agency *')}</label>
-                <select
-                  id="access-card-agency"
-                  className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                <Select
                   value={addForm.agencyId}
-                  onChange={e => setAddForm(f => ({ ...f, agencyId: e.target.value }))}
-                  required
+                  onValueChange={v => setAddForm(f => ({ ...f, agencyId: v }))}
                 >
-                  <option value="">{t('accessCard.selectAgency', 'Select agency...')}</option>
-                  {(agencies || []).map(a => (
-                    <option key={a.id} value={a.id}>{a.code} — {a.name}</option>
-                  ))}
-                </select>
+                  <SelectTrigger id="access-card-agency" aria-required="true">
+                    <SelectValue placeholder={t('accessCard.selectAgency', 'Select agency...')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(agencies || []).map(a => (
+                      <SelectItem key={a.id} value={a.id}>{a.code} — {a.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <label htmlFor="access-card-worker" className="text-xs font-medium">{t('accessCard.workerName', 'Worker Name')}</label>
-                <input id="access-card-worker" className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm" value={addForm.workerNameSign} onChange={e => setAddForm(f => ({ ...f, workerNameSign: e.target.value }))} />
+                <Input id="access-card-worker" value={addForm.workerNameSign} onChange={e => setAddForm(f => ({ ...f, workerNameSign: e.target.value }))} />
               </div>
             </div>
             <FormError>{addError}</FormError>

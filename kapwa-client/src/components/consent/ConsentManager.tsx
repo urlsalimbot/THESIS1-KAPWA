@@ -4,6 +4,8 @@ import { api } from '../../lib/api';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { formatDate } from '../../lib/format';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 
 interface ConsentLedgerEntry {
   id: string;
@@ -87,21 +89,20 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
           </div>
         </div>
         {status === 'active' && (
-          <button
+          <Button variant="ghost"
             onClick={() => setShowRevokeDialog(true)}
             className="rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-white hover:bg-destructive/90"
           >
             {t('consent.revoke', 'Revoke Consent')}
-          </button>
+          </Button>
         )}
         {status !== 'active' && (
           <div className="group relative">
-            <button
+            <Button variant="ghost"
               disabled
-              className="cursor-not-allowed rounded-lg bg-muted-foreground/25 px-4 py-2 text-sm font-medium text-muted-foreground"
-            >
+              className="cursor-not-allowed rounded-lg bg-muted-foreground/25 px-4 py-2 text-sm font-medium text-muted-foreground">
               {t('consent.reinstate', 'Reinstate Consent')}
-            </button>
+            </Button>
             <div className="absolute bottom-full right-0 mb-2 hidden w-48 rounded-lg bg-foreground p-2 text-xs text-white shadow-lg group-hover:block">
               <Info size={12} className="mr-1 inline" />
               {t('consent.contactAdmin', 'Contact Admin to reinstate consent')}
@@ -119,12 +120,12 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
                 <AlertTriangle size={20} />
                 <h3 className="text-lg font-semibold">{t('consent.revokeTitle', 'Revoke Consent')}</h3>
               </div>
-              <button
+              <Button variant="ghost"
                 onClick={() => setShowRevokeDialog(false)}
                 className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-muted-foreground"
               >
                 <X size={20} />
-              </button>
+              </Button>
             </div>
 
             <p className="mb-4 text-sm text-muted-foreground">
@@ -135,7 +136,7 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
               <label className="mb-1 block text-sm font-medium text-muted-foreground">
                 {t('consent.revokeReason', 'Reason for revocation (optional)')}
               </label>
-              <textarea
+              <Textarea
                 value={revokeReason}
                 onChange={(e) => setRevokeReason(e.target.value)}
                 placeholder={t('consent.revokeReasonPlaceholder', 'e.g., No longer receiving services, Withdrawn request...')}
@@ -149,20 +150,19 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
             )}
 
             <div className="flex justify-end gap-3">
-              <button
+              <Button variant="ghost"
                 onClick={() => setShowRevokeDialog(false)}
                 className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
               >
                 {t('consent.cancel', 'Cancel')}
-              </button>
-              <button
+              </Button>
+              <Button variant="ghost"
                 onClick={handleRevoke}
                 disabled={revoking}
-                className="flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-white hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
-              >
+                className="flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-white hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50">
                 {revoking && <Loader2 className="h-4 w-4 animate-spin" />}
                 {t('consent.confirmRevoke', 'Confirm Revoke')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

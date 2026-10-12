@@ -13,6 +13,11 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Separator } from '@/components/ui/separator';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { psgcNameFor } from '@/lib/psgc';
 import { IntakeAddressBlock } from '@/components/IntakeAddressBlock';
@@ -119,9 +124,14 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">{t('intake.extension', 'Extension')}</label>
-            <select className="form-select" value={form.extension} onChange={e => onChange('extension', e.target.value)} aria-label={`${prefix}-extension`}>
-              {NAME_EXTENSIONS.map(e => <option key={e} value={e === 'N/A' ? '' : e}>{e}</option>)}
-            </select>
+            <Select key={form.extension} value={form.extension} onValueChange={v => onChange('extension', v)}>
+              <SelectTrigger aria-label={`${prefix}-extension`} >
+                <SelectValue placeholder={t('intake.extension', 'Extension')} />
+              </SelectTrigger>
+              <SelectContent>
+                {NAME_EXTENSIONS.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
@@ -130,14 +140,19 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
         <FieldError error={getError('gender')}>
           <div className="space-y-2">
             <label className="text-sm font-medium">{t('intake.sex', 'Sex *')}</label>
-            <div className="flex h-10 items-center gap-4">
+            <RadioGroup
+              value={form.gender}
+              onValueChange={(v) => onChange('gender', v)}
+              className="flex h-10 items-center gap-4"
+              required
+            >
               {['Male', 'Female'].map(s => (
                 <label key={s} className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input type="radio" name={`${prefix}-gender`} value={s} checked={form.gender === s} onChange={e => onChange('gender', e.target.value)} className="text-primary" required />
+                  <RadioGroupItem value={s} aria-label={t(`intake.${s.toLowerCase()}`, s)} />
                   {t(`intake.${s.toLowerCase()}`, s)}
                 </label>
               ))}
-            </div>
+            </RadioGroup>
           </div>
         </FieldError>
         {showAge && (
@@ -149,7 +164,7 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
         <FieldError error={getError('dob')}>
           <div className="space-y-2">
             <label className="text-sm font-medium">{t('intake.dateOfBirth', 'Date of Birth *')}</label>
-            <Input type="date" required value={form.dob} onChange={e => onChange('dob', e.target.value)} aria-label={`${prefix}-dob`} className={cn('[&::-webkit-calendar-picker-indicator]:ml-auto [&::-webkit-calendar-picker-indicator]:opacity-60', getError('dob') && 'border-destructive')} />
+            <Input type="date" required value={form.dob} onChange={e => onChange('dob', e.target.value)} aria-label={`${prefix}-dob`} className={cn(getError('dob') && 'border-destructive')} />
           </div>
         </FieldError>
         <FieldError error={getError('placeOfBirth')}>
@@ -164,10 +179,14 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
         <FieldError error={getError('civilStatus')}>
           <div className="space-y-2">
             <label className="text-sm font-medium">{t('intake.civilStatus', 'Civil Status *')}</label>
-            <select className={`flex h-10 w-full rounded-md border ${getError('civilStatus') ? 'border-destructive' : 'border-input'} bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`} required value={form.civilStatus} onChange={e => onChange('civilStatus', e.target.value)} aria-label={`${prefix}-civilStatus`}>
-              <option value="">{t('intake.select', 'Select...')}</option>
-              {CIVIL_STATUSES.map(s => <option key={s}>{s}</option>)}
-            </select>
+            <Select key={form.civilStatus} value={form.civilStatus} onValueChange={v => onChange('civilStatus', v)} aria-required="true">
+              <SelectTrigger aria-label={`${prefix}-civilStatus`} className={getError('civilStatus') ? 'border-destructive' : ''}>
+                <SelectValue placeholder={t('intake.select', 'Select...')}>{form.civilStatus === '' ? undefined : form.civilStatus}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {CIVIL_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
         </FieldError>
         <FieldError error={getError('cellularNumber')}>
@@ -374,7 +393,7 @@ export function IntakePage() {
     }
 
     if (!prefill) return;
-
+    
     const address = prefill.currentAddress;
     setBeneficiary(prev => ({
       ...prev,
@@ -822,12 +841,10 @@ export function IntakePage() {
           <div className="p-6">
             <PersonFields prefix="ben" form={beneficiary} onChange={updateBeneficiary} onAddressChange={updateBenAddress} errors={benErrors} contactRequired={beneficiaryIsClaimant} />
             <div className="mt-4 flex items-center gap-2">
-              <input
+              <Checkbox
                 id="ben-is-indigenous"
-                type="checkbox"
                 checked={beneficiary.isIndigenous}
-                onChange={e => setBeneficiary(prev => ({ ...prev, isIndigenous: e.target.checked }))}
-                className="rounded border-input text-primary"
+                onCheckedChange={(v) => setBeneficiary(prev => ({ ...prev, isIndigenous: v === true }))}
               />
               <label htmlFor="ben-is-indigenous" className="text-sm text-muted-foreground cursor-pointer select-none">
                 {t('intake.isIndigenous', 'Is an Indigenous Person (IP)')}
@@ -843,13 +860,12 @@ export function IntakePage() {
             <h2 className="text-sm font-semibold">{t('intake.sectionClaimant', 'II. Claimant Information')}</h2>
             <div className="ml-auto">
               <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={beneficiaryIsClaimant}
-                  onChange={e => {
-                    setBeneficiaryIsClaimant(e.target.checked);
+                  onCheckedChange={(checked) => {
+                    setBeneficiaryIsClaimant(checked === true);
                     setError('');
-                    if (e.target.checked) {
+                    if (checked === true) {
                       setClaimant(emptyPerson);
                       setRelationshipToBeneficiary('');
                       setClaimErrors({});
@@ -871,10 +887,14 @@ export function IntakePage() {
                 <PersonFields prefix="claim" form={claimant} onChange={updateClaimant} onAddressChange={updateClaimAddress} errors={claimErrors} />
                 <div className="mt-4 space-y-2">
                   <label className="text-sm font-medium">{t('intake.relationshipToBeneficiary', 'Relationship to Beneficiary *')}</label>
-                  <select className="flex h-10 w-full max-w-xs rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" required value={relationshipToBeneficiary} onChange={e => setRelationshipToBeneficiary(e.target.value)} aria-label={t('intake.relationshipToBeneficiary', 'Relationship to beneficiary')}>
-                    <option value="">{t('intake.select', 'Select...')}</option>
-                    {['Spouse', 'Child', 'Parent', 'Sibling', 'Legal Guardian', 'Relative', 'Unrelated Caretaker'].map(r => <option key={r}>{r}</option>)}
-                  </select>
+                  <Select key={relationshipToBeneficiary} value={relationshipToBeneficiary} onValueChange={setRelationshipToBeneficiary} aria-required="true">
+                  <SelectTrigger aria-label={t('intake.relationshipToBeneficiary', 'Relationship to beneficiary')} className="w-full max-w-xs">
+                    <SelectValue placeholder={t('intake.select', 'Select...')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {['Spouse', 'Child', 'Parent', 'Sibling', 'Legal Guardian', 'Relative', 'Unrelated Caretaker'].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                  </SelectContent>
+                </Select>
                 </div>
               </>
             )}
@@ -923,20 +943,30 @@ export function IntakePage() {
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs text-muted-foreground">{t('intake.ext', 'Ext')}</label>
-                      <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={m.extension} onChange={e => updateFamilyMember(m.id, 'extension', e.target.value)} aria-label="FM extension" disabled={m.done}>
-                        {NAME_EXTENSIONS.map(e => <option key={e} value={e === 'N/A' ? '' : e}>{e}</option>)}
-                      </select>
+                      <Select key={`ext:${m.extension}`} value={m.extension} onValueChange={v => updateFamilyMember(m.id, 'extension', v)} disabled={m.done}>
+                        <SelectTrigger aria-label="FM extension" className="h-8 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {NAME_EXTENSIONS.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs text-muted-foreground">{t('intake.sex', 'Sex *')}</label>
-                      <div className="flex gap-3 h-8 items-center">
+                      <RadioGroup
+                        value={m.gender}
+                        onValueChange={(v) => updateFamilyMember(m.id, 'gender', v)}
+                        className="flex gap-3 h-8 items-center"
+                        disabled={m.done}
+                      >
                         {(['Male', 'Female'] as const).map(s => (
                           <label key={s} className="flex items-center gap-1 text-sm cursor-pointer">
-                            <input type="radio" name={`fm-${m.id}-gender`} value={s} checked={m.gender === s} onChange={() => updateFamilyMember(m.id, 'gender', s)} aria-label="FM gender" disabled={m.done} />
+                            <RadioGroupItem value={s} aria-label="FM gender" />
                             {t(`intake.${s.toLowerCase()}`, s)}
                           </label>
                         ))}
-                      </div>
+                      </RadioGroup>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-2">
@@ -948,9 +978,14 @@ export function IntakePage() {
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs text-muted-foreground">{t('intake.relationship', 'Relationship *')}</label>
-                      <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={m.relationship} onChange={e => updateFamilyMember(m.id, 'relationship', e.target.value)} aria-label="FM relationship" disabled={m.done}>
-                        {['Spouse','Child','Parent','Sibling','Grandparent','Other'].map(r => <option key={r}>{r}</option>)}
-                      </select>
+                      <Select key={`rel:${m.relationship}`} value={m.relationship} onValueChange={v => updateFamilyMember(m.id, 'relationship', v)} disabled={m.done}>
+                        <SelectTrigger aria-label="FM relationship" className="h-8 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {['Spouse','Child','Parent','Sibling','Grandparent','Other'].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs text-muted-foreground">{t('intake.occupation', 'Occupation')}</label>
@@ -958,9 +993,14 @@ export function IntakePage() {
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs text-muted-foreground">{t('intake.status', 'Status *')}</label>
-                      <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={m.status} onChange={e => updateFamilyMember(m.id, 'status', e.target.value)} aria-label="FM status" disabled={m.done}>
-                        {FAMILY_MEMBER_STATUSES.map(s => <option key={s}>{s}</option>)}
-                      </select>
+                      <Select key={`st:${m.status}`} value={m.status} onValueChange={v => updateFamilyMember(m.id, 'status', v)} disabled={m.done}>
+                        <SelectTrigger aria-label="FM status" className="h-8 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {FAMILY_MEMBER_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs text-muted-foreground">{t('intake.monthlyIncome', 'Monthly Income')}</label>
@@ -1001,14 +1041,14 @@ export function IntakePage() {
                 {pendingPreview ? (
                   <img src={pendingPreview} className="h-24 w-24 rounded border object-cover" alt={t('intake.idPhoto.benPreviewAlt', 'Beneficiary ID preview')} />
                 ) : (
-                  <button type="button" onClick={() => benPhotoRef.current?.click()} className="rounded border px-3 py-2 text-xs">
+                  <Button variant="ghost" type="button" onClick={() => benPhotoRef.current?.click()} className="rounded border px-3 py-2 text-xs">
                     {t('intake.idPhoto.pickBeneficiary', 'Choose beneficiary ID photo')}
-                  </button>
+                  </Button>
                 )}
                 {pendingPreview && (
-                  <button type="button" onClick={() => { setPendingBeneficiaryIdPhoto(null); clearBenPreview(); }} className="text-xs text-destructive">
+                  <Button variant="ghost" type="button" onClick={() => { setPendingBeneficiaryIdPhoto(null); clearBenPreview(); }} className="text-xs text-destructive">
                     {t('intake.idPhoto.remove', 'Remove')}
-                  </button>
+                  </Button>
                 )}
                 <input ref={benPhotoRef} type="file" accept="image/*" className="hidden" aria-label={t('intake.idPhoto.pickBeneficiary', 'Choose beneficiary ID photo')} onChange={(e) => {
                   const file = e.target.files?.[0] ?? null;
@@ -1024,14 +1064,14 @@ export function IntakePage() {
                 {claimPreview ? (
                   <img src={claimPreview} className="h-24 w-24 rounded border object-cover" alt={t('intake.idPhoto.claimPreviewAlt', 'Claimant ID preview')} />
                 ) : (
-                  <button type="button" onClick={() => claimPhotoRef.current?.click()} className="rounded border px-3 py-2 text-xs">
+                  <Button variant="ghost" type="button" onClick={() => claimPhotoRef.current?.click()} className="rounded border px-3 py-2 text-xs">
                     {t('intake.idPhoto.pickClaimant', 'Choose claimant ID photo')}
-                  </button>
+                  </Button>
                 )}
                 {claimPreview && (
-                  <button type="button" onClick={() => { setPendingClaimantIdPhoto(null); clearClaimPreview(); }} className="text-xs text-destructive">
+                  <Button variant="ghost" type="button" onClick={() => { setPendingClaimantIdPhoto(null); clearClaimPreview(); }} className="text-xs text-destructive">
                     {t('intake.idPhoto.remove', 'Remove')}
-                  </button>
+                  </Button>
                 )}
                 <input ref={claimPhotoRef} type="file" accept="image/*" className="hidden" aria-label={t('intake.idPhoto.pickClaimant', 'Choose claimant ID photo')} onChange={(e) => {
                   const file = e.target.files?.[0] ?? null;
@@ -1050,7 +1090,7 @@ export function IntakePage() {
           </div>
           <div className="p-6">
             <label className="flex items-start gap-2 text-sm cursor-pointer">
-              <input type="checkbox" checked={hasConsent} onChange={e => { setHasConsent(e.target.checked); setError(''); }} className="mt-0.5 rounded border-input text-primary" />
+              <Checkbox checked={hasConsent} onCheckedChange={(v) => { setHasConsent(v === true); setError(''); }} className="mt-0.5" />
               <span>{t('intake.consentText', 'I confirm the beneficiary has given consent per Data Privacy Act (RA 10173) and this data will be logged in the consent ledger')}</span>
             </label>
           </div>

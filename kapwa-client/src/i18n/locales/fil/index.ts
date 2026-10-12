@@ -66,6 +66,14 @@ const fil: EnLocale = {
     "payout": "Payout",
     "compliance": "Pagsunod"
   },
+  "interventionGroups": {
+    "capacity": "Pagpapaunlad ng Kakayahan at Komunidad",
+    "documents": "Case Management at Dokumento",
+    "financial": "Tulong Pinansyal at Materyal",
+    "health": "Kalusugan at Home Visit",
+    "legal": "Legal at Proteksyon",
+    "psychosocial": "Pagpapayo at Psychosocial",
+  },
   "interventionType": {
     "FA": "Tulong Pinansyal",
     "C": "Pagpapayo",

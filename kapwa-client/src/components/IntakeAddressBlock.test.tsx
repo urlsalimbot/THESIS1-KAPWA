@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { IntakeAddressBlock } from './IntakeAddressBlock';
 import type { AddressFields } from './IntakeAddressBlock';
 
@@ -20,11 +21,12 @@ describe('IntakeAddressBlock', () => {
     expect(screen.getByText('Barangay not listed? Enter manually')).toBeInTheDocument();
   });
 
-  it('auto-fills postal code when city is selected', () => {
+  it('auto-fills postal code when city is selected', async () => {
+    const user = userEvent.setup();
     const onChange = vi.fn();
     render(<IntakeAddressBlock value={emptyValue} onChange={onChange} label="Address" />);
-    const citySelect = screen.getByLabelText('Address City');
-    fireEvent.change(citySelect, { target: { value: '0301413000' } });
+    await user.click(screen.getByLabelText('Address City'));
+    await user.click(await screen.findByRole('option', { name: 'Norzagaray' }));
     expect(onChange).toHaveBeenCalledWith('postalCode', '3012');
   });
 });

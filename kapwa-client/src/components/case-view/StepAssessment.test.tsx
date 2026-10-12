@@ -103,11 +103,15 @@ describe('StepAssessment — step completion gate and save flow', () => {
     expect(screen.queryByRole('button', { name: /Complete Assessment/ })).toBeNull();
   });
 
-  it('offers the grouped MSWDO case categories in step 1', () => {
+  it('offers the grouped MSWDO case categories in step 1', async () => {
+    const user = userEvent.setup();
     renderAssessment(filledCaseData());
-    expect(screen.getByLabelText(/Case Category \*/i)).toBeTruthy();
-    expect(screen.getByRole('option', { name: 'Children in Conflict with the Law (CICL)' })).toBeTruthy();
+    const trigger = screen.getByLabelText(/Case Category \*/i);
+    expect(trigger).toBeTruthy();
+    await user.click(trigger);
+    expect(await screen.findByRole('option', { name: 'Children in Conflict with the Law (CICL)' })).toBeTruthy();
     expect(screen.getByRole('option', { name: 'Emergency Shelter Assistance (ESA)' })).toBeTruthy();
+    await user.keyboard('{Escape}');
   });
 
   // The positive half of `CaseActionBar`'s `ownedByStepCard` suppression, and it

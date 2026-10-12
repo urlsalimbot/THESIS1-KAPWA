@@ -5,10 +5,12 @@ import { useSWRConfig } from 'swr';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { CheckCircle, Clock, Download, Lock } from 'lucide-react';
 import { downloadCsrPdf } from '@/lib/api';
 import { StepLockBar, type StepLock } from './StepLockBar';
 import { useTranslation } from 'react-i18next';
+import { Textarea } from '@/components/ui/textarea';
 
 interface StepClosureProps {
   caseId: string;
@@ -77,7 +79,12 @@ export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = false, 
           <h3 className="text-sm font-semibold">{t('caseView.closure.closureOutcome', 'Closure Outcome *')}</h3>
         </div>
         <Separator />
-        <div className="px-4 py-3 space-y-2">
+        <RadioGroup
+            value={closure.closureOutcome}
+            onValueChange={(v) => setClosure(c => ({ ...c, closureOutcome: v }))}
+            className="px-4 py-3 space-y-2"
+            disabled={isClosed || readOnly}
+          >
           {CLOSURE_OUTCOMES.map(outcome => (
             <label
               key={outcome.value}
@@ -87,14 +94,10 @@ export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = false, 
                   : 'hover:bg-muted border border-transparent'
               }`}
             >
-              <input
-                type="radio"
-                name="closureOutcome"
+              <RadioGroupItem
                 value={outcome.value}
-                checked={closure.closureOutcome === outcome.value}
-                onChange={e => setClosure(c => ({ ...c, closureOutcome: e.target.value }))}
                 className="mt-0.5"
-                disabled={isClosed || readOnly}
+                aria-label={outcome.label}
               />
               <div>
                 <p className="text-sm font-medium">{outcome.label}</p>
@@ -102,7 +105,7 @@ export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = false, 
               </div>
             </label>
           ))}
-        </div>
+        </RadioGroup>
       </div>
 
       {/* Exit Notes */}
@@ -112,8 +115,8 @@ export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = false, 
         </div>
         <Separator />
         <div className="px-4 py-3">
-          <textarea
-            className="form-input min-h-[100px]"
+          <Textarea
+            className="min-h-[100px]"
             value={closure.exitNotes}
             onChange={e => setClosure(c => ({ ...c, exitNotes: e.target.value }))}
             placeholder={t('caseView.closure.exitNotesPlaceholder', 'Final notes before case closure...')}

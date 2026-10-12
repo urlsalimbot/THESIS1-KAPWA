@@ -6,7 +6,10 @@ import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import {
+  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+} from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { humanizeError } from '@/lib/errors';
@@ -126,14 +129,19 @@ export function CoordinatorReferralFormPage() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <fieldset className="space-y-1.5">
                 <legend className="text-xs text-muted-foreground font-medium">{t('coordinator.sex', 'Sex *')}</legend>
-                <div className="flex h-9 items-center gap-4">
+                <RadioGroup
+                  value={form.gender}
+                  onValueChange={(v) => update('gender', v)}
+                  className="flex h-9 items-center gap-4"
+                  required
+                >
                   {['Male', 'Female'].map(s => (
                     <label key={s} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input type="radio" name="gender" value={s} checked={form.gender === s} onChange={e => update('gender', e.target.value)} className="text-primary" required />
+                      <RadioGroupItem value={s} aria-label={t(`coordinator.${s.toLowerCase()}`, s)} />
                       {t(`coordinator.${s.toLowerCase()}`, s)}
                     </label>
                   ))}
-                </div>
+                </RadioGroup>
               </fieldset>
               <div className="space-y-1.5">
                 <label htmlFor="crf-dob" className="text-xs text-muted-foreground font-medium">{t('coordinator.dateOfBirth', 'Date of Birth *')}</label>
@@ -164,17 +172,19 @@ export function CoordinatorReferralFormPage() {
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="crf-barangay" className="text-xs text-muted-foreground font-medium">{t('coordinator.barangay', 'Barangay')}</label>
-                <select
-                  id="crf-barangay"
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                <Select
                   value={form.barangay}
-                  onChange={e => update('barangay', e.target.value)}
+                  onValueChange={v => update('barangay', v)}
                 >
-                  <option value="">{t('coordinator.selectBarangay', 'Select...')}</option>
-                  {barangays.map(b => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
+                  <SelectTrigger id="crf-barangay" className="h-9 w-full text-sm">
+                    <SelectValue placeholder={t('coordinator.selectBarangay', 'Select...')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {barangays.map(b => (
+                      <SelectItem key={b} value={b}>{b}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

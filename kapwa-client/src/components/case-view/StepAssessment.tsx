@@ -11,6 +11,12 @@ import { CLIENT_CATEGORIES_V2, CASE_CATEGORY_GROUPS } from '@/lib/constants';
 import { ClipboardList, Lock, Stethoscope } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { StepLockBar, type StepLock } from './StepLockBar';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Input } from '@/components/ui/input';
 
 interface StepAssessmentProps {
   caseId: string;
@@ -110,17 +116,19 @@ export function StepAssessment({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium">{t('caseView.assessment.clientCategory', 'Client Category *')}</label>
-              <div className="mt-1 space-y-1">
-                {CLIENT_CATEGORIES_V2.map(cat => (
-                  <label key={cat} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="radio" name="clientCategory" value={cat}
-                      checked={assessment.clientCategory === cat}
-                      onChange={e => onAssessmentChange(a => ({ ...a, clientCategory: e.target.value }))}
-                      className="text-primary" disabled={readOnly} />
-                    {cat}
-                  </label>
-                ))}
-              </div>
+              <RadioGroup
+                  value={assessment.clientCategory}
+                  onValueChange={(v) => onAssessmentChange(a => ({ ...a, clientCategory: v }))}
+                  className="mt-1 space-y-1"
+                  disabled={readOnly}
+                >
+                  {CLIENT_CATEGORIES_V2.map(cat => (
+                    <label key={cat} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <RadioGroupItem value={cat} aria-label={cat} />
+                      {cat}
+                    </label>
+                  ))}
+                </RadioGroup>
               <div className="mt-4 space-y-1.5">
                 <label htmlFor="case-category" className="text-sm font-medium">
                   {t('caseView.assessment.caseCategory', 'Case Category *')}
@@ -128,30 +136,37 @@ export function StepAssessment({
                 {/* The MSWDO case category: required with the rest of step 1, so
                     the Case Category column in the cases, dashboard and tracker
                     tables has something to show from day one. */}
-                <select
-                  id="case-category"
-                  className="" form-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+                <Select
                   value={assessment.caseCategory || ''}
-                  onChange={e => onAssessmentChange(a => ({ ...a, caseCategory: e.target.value }))}
+                  onValueChange={v => onAssessmentChange(a => ({ ...a, caseCategory: v }))}
                   disabled={readOnly}
                 >
-                  <option value="">{t('caseView.assessment.selectCaseCategory', 'Select a category…')}</option>
-                  {CASE_CATEGORY_GROUPS.map(group => (
-                    <optgroup key={group.key} label={t(group.key, group.fallback)}>
-                      {group.items.map(item => (
-                        <option key={item} value={item}>{item}</option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
+                  <SelectTrigger id="case-category" aria-required="true">
+                    <SelectValue placeholder={t('caseView.assessment.selectCaseCategory', 'Select a category…')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* Radix has no optgroup: quiet header items carry the
+                        group labels, then the selectable entries. */}
+                    {CASE_CATEGORY_GROUPS.map(group => (
+                      <div key={group.key} role="none">
+                        <SelectItem value={`__group:${group.key}`} disabled className="pointer-events-none text-xs font-semibold text-muted-foreground">
+                          {t(group.key, group.fallback)}
+                        </SelectItem>
+                        {group.items.map(item => (
+                          <SelectItem key={item} value={item}>{item}</SelectItem>
+                        ))}
+                      </div>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <label htmlFor="problems-presented" className="text-sm font-medium">{t('caseView.assessment.problemsPresented', 'Problem/s Presented *')}</label>
-                <textarea
+                <Textarea
                   id="problems-presented"
-                  className="form-input min-h-[80px]"
+                  className="min-h-[80px]"
                   value={assessment.problemsPresented}
                   onChange={e => onAssessmentChange(a => ({ ...a, problemsPresented: e.target.value }))}
                   disabled={readOnly}
@@ -159,9 +174,9 @@ export function StepAssessment({
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="social-worker-assessment" className="text-sm font-medium">{t('caseView.assessment.socialWorkerAssessment', "Social Worker's Assessment *")}</label>
-                <textarea
+                <Textarea
                   id="social-worker-assessment"
-                  className="form-input min-h-[80px]"
+                  className="min-h-[80px]"
                   value={assessment.socialWorkerAssessment}
                   onChange={e => onAssessmentChange(a => ({ ...a, socialWorkerAssessment: e.target.value }))}
                   disabled={readOnly}
@@ -185,16 +200,14 @@ export function StepAssessment({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium">{t('caseView.assessment.frvaScore', 'FRVA Score (0-100)')}</label>
-                  <input type="number" min="0" max="100"
-                    className=""
+                  <Input type="number" min="0" max="100"
                     value={assessment.frvaScore || ''}
                     onChange={e => onAssessmentChange(a => ({ ...a, frvaScore: e.target.value ? Number(e.target.value) : null }))}
                     placeholder={t('caseView.assessment.frvaPlaceholder', 'Family Risk & Vulnerability Assessment')} disabled={readOnly} />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium">{t('caseView.assessment.swdiScore', 'SWDI Score (0-100)')}</label>
-                  <input type="number" min="0" max="100"
-                    className=""
+                  <Input type="number" min="0" max="100"
                     value={assessment.swdiScore || ''}
                     onChange={e => onAssessmentChange(a => ({ ...a, swdiScore: e.target.value ? Number(e.target.value) : null }))}
                     placeholder={t('caseView.assessment.swdiPlaceholder', 'Social Welfare Development Index')} disabled={readOnly} />
@@ -202,8 +215,8 @@ export function StepAssessment({
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">{t('caseView.assessment.familyDialogueNotes', 'Family Dialogue Notes')}</label>
-                <textarea
-                  className="form-input min-h-[80px]"
+                <Textarea
+                  className="min-h-[80px]"
                   value={assessment.familyDialogueNotes || ''}
                   onChange={e => onAssessmentChange(a => ({ ...a, familyDialogueNotes: e.target.value }))}
                   placeholder={t('caseView.assessment.familyDialoguePlaceholder', 'Notes from family dialogue session...')} disabled={readOnly} />

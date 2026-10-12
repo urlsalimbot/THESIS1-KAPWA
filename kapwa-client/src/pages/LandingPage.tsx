@@ -79,9 +79,14 @@ export function LandingPage() {
                   variant="brand"
                   className="h-12 px-8 text-base font-semibold"
                   onClick={() =>
-                    document
-                      .getElementById('services')
-                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    document.getElementById('services')?.scrollIntoView({
+                      // matchMedia, not the CSS block: scrollIntoView's behavior
+                      // is script-driven and ignores `scroll-behavior`.
+                      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                        ? 'auto'
+                        : 'smooth',
+                      block: 'start',
+                    })
                   }
                 >
                   Access Services

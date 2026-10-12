@@ -26,12 +26,8 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
           </p>
         </div>
       </div>
-    </div>
-    <div
-      class="flex flex-wrap items-center justify-between gap-3"
-    >
       <div
-        class="flex items-center gap-2"
+        class="flex items-center gap-2 shrink-0"
       >
         <button
           aria-label="+ New Beneficiary"
@@ -40,6 +36,98 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
         >
           + New Beneficiary
         </button>
+      </div>
+    </div>
+    <div
+      class="flex flex-wrap items-end justify-between gap-3 mb-4"
+    >
+      <div
+        class="flex items-center gap-2 flex-wrap"
+      >
+        <div
+          class="flex flex-col gap-0.5"
+        >
+          <label
+            class="text-xs text-muted-foreground font-medium"
+          >
+            Category
+          </label>
+          <button
+            aria-autocomplete="none"
+            aria-expanded="false"
+            aria-label="Filter by category"
+            class="flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 w-36"
+            data-state="closed"
+            dir="ltr"
+            role="combobox"
+            type="button"
+          >
+            <span
+              style="pointer-events: none;"
+            >
+              All Categories
+            </span>
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-chevron-down h-4 w-4 opacity-50"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m6 9 6 6 6-6"
+              />
+            </svg>
+          </button>
+        </div>
+        <div
+          class="flex flex-col gap-0.5"
+        >
+          <label
+            class="text-xs text-muted-foreground font-medium"
+          >
+            Barangay
+          </label>
+          <button
+            aria-autocomplete="none"
+            aria-expanded="false"
+            aria-label="Filter by barangay"
+            class="flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 w-40"
+            data-state="closed"
+            dir="ltr"
+            role="combobox"
+            type="button"
+          >
+            <span
+              style="pointer-events: none;"
+            >
+              All Barangays
+            </span>
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-chevron-down h-4 w-4 opacity-50"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m6 9 6 6 6-6"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
       <div
         class="flex items-center gap-2 flex-wrap"
@@ -78,139 +166,12 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
           />
         </div>
         <button
-          class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md active:shadow-sm h-9 rounded-md px-3"
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md active:shadow-sm rounded-md px-3 h-10"
           type="button"
         >
           Search
         </button>
-        <div
-          class="flex flex-col gap-0.5"
-        >
-          <label
-            class="text-xs text-muted-foreground font-medium"
-          >
-            Category
-          </label>
-          <select
-            aria-label="Filter by category"
-            class="flex h-10 w-36 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <option
-              value=""
-            >
-              All Categories
-            </option>
-            <option
-              value="Children"
-            >
-              Children
-            </option>
-            <option
-              value="Youth"
-            >
-              Youth
-            </option>
-            <option
-              value="Women"
-            >
-              Women
-            </option>
-            <option
-              value="PWD"
-            >
-              PWD
-            </option>
-            <option
-              value="Senior"
-            >
-              Senior
-            </option>
-            <option
-              value="Indigent"
-            >
-              Indigent
-            </option>
-            <option
-              value="4Ps"
-            >
-              4Ps
-            </option>
-            <option
-              value="IP"
-            >
-              IP
-            </option>
-            <option
-              value="Family"
-            >
-              Family
-            </option>
-          </select>
-        </div>
-        <div
-          class="flex flex-col gap-0.5"
-        >
-          <label
-            class="text-xs text-muted-foreground font-medium"
-          >
-            Barangay
-          </label>
-          <select
-            aria-label="Filter by barangay"
-            class="flex h-10 w-40 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <option
-              value="all"
-            >
-              All Barangays
-            </option>
-            <option>
-              Bangkal
-            </option>
-            <option>
-              Baraka
-            </option>
-            <option>
-              Bigte
-            </option>
-            <option>
-              Bitungol
-            </option>
-            <option>
-              Friendship Village Resources (FVR)
-            </option>
-            <option>
-              Matictic
-            </option>
-            <option>
-              Minuyan
-            </option>
-            <option>
-              Partida
-            </option>
-            <option>
-              Pinagtulayan
-            </option>
-            <option>
-              Poblacion
-            </option>
-            <option>
-              San Lorenzo
-            </option>
-            <option>
-              San Mateo
-            </option>
-            <option>
-              Tigbe
-            </option>
-          </select>
-        </div>
       </div>
-    </div>
-    <div
-      class="text-sm text-muted-foreground flex items-center gap-1"
-    >
-      Showing 2 results
     </div>
     <div>
       <div
@@ -449,31 +410,39 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
             class="flex items-center gap-1.5 text-sm text-muted-foreground"
           >
             Per page
-            <select
+            <button
+              aria-autocomplete="none"
+              aria-expanded="false"
               aria-label="Per page"
-              class="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs"
+              class="flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-8 w-[4.5rem] text-xs"
+              data-state="closed"
+              dir="ltr"
+              role="combobox"
+              type="button"
             >
-              <option
-                value="10"
+              <span
+                style="pointer-events: none;"
               >
                 10
-              </option>
-              <option
-                value="20"
+              </span>
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-chevron-down h-4 w-4 opacity-50"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
               >
-                20
-              </option>
-              <option
-                value="50"
-              >
-                50
-              </option>
-              <option
-                value="100"
-              >
-                100
-              </option>
-            </select>
+                <path
+                  d="m6 9 6 6 6-6"
+                />
+              </svg>
+            </button>
           </label>
         </div>
         <div

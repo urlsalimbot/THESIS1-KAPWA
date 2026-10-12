@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { queryKeys } from '../../lib/query-keys';
 import { MethodologyNote } from './MethodologyNote';
+import { Input } from '@/components/ui/input';
 
 type Cell = { value: number } | { suppressed: true };
 interface Rule {
@@ -42,11 +43,11 @@ export function AssociationsTab({ filters }: { filters: Record<string, unknown> 
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground" htmlFor="assoc-support">{t('analytics.associations.minSupport', 'Min support')} (%)</label>
-          <input id="assoc-support" type="number" min={0} max={100} className="flex h-9 w-24 rounded-md border border-input bg-background px-2 text-sm" value={minSupport} onChange={e => setMinSupport(Math.max(0, Math.min(100, Number(e.target.value))))} />
+          <Input id="assoc-support" type="number" min={0} max={100} className="h-9 w-24" value={minSupport} onChange={e => setMinSupport(Math.max(0, Math.min(100, Number(e.target.value))))} />
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground" htmlFor="assoc-confidence">{t('analytics.associations.minConfidence', 'Min confidence')} (%)</label>
-          <input id="assoc-confidence" type="number" min={0} max={100} className="flex h-9 w-24 rounded-md border border-input bg-background px-2 text-sm" value={minConfidence} onChange={e => setMinConfidence(Math.max(0, Math.min(100, Number(e.target.value))))} />
+          <Input id="assoc-confidence" type="number" min={0} max={100} className="h-9 w-24" value={minConfidence} onChange={e => setMinConfidence(Math.max(0, Math.min(100, Number(e.target.value))))} />
         </div>
         <p className="text-xs text-muted-foreground">{t('analytics.associations.total', '{{count}} cases analyzed', { count: data.totalTransactions })}</p>
       </div>

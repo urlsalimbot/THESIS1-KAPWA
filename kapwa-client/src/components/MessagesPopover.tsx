@@ -66,14 +66,14 @@ export default function MessagesPopover() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button className="relative w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors" aria-label={t('messages.aria', 'Messages')}>
+        <Button variant="ghost" size="icon" className="relative w-9 h-9 rounded-full text-muted-foreground transition-colors" aria-label={t('messages.aria', 'Messages')}>
           <MessageSquare size={20} />
           {unreadCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
-        </button>
+        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end" sideOffset={8}>
         <div className="flex items-center justify-between px-4 py-3">
@@ -93,11 +93,11 @@ export default function MessagesPopover() {
             </div>
           ) : (
             recent.map((conv) => (
-              <button
+              <Button variant="ghost"
                 key={conv.userId}
                 className={cn(
                   'w-full text-left px-4 py-3 flex gap-3 hover:bg-muted/50 transition-colors border-b border-border last:border-b-0 cursor-pointer',
-                  conv.unread > 0 && 'bg-muted/30'
+                  conv.unread> 0 && 'bg-muted/30'
                 )}
                 onClick={() => { setOpen(false); navigate(`/messages/${conv.userId}`); }}
               >
@@ -111,7 +111,7 @@ export default function MessagesPopover() {
                   </div>
                   <p className="text-xs text-muted-foreground/70 truncate mt-0.5">{conv.lastMessage}</p>
                 </div>
-              </button>
+              </Button>
             ))
           )}
         </div>

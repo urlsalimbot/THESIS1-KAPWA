@@ -4,6 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig } from 'swr';
 import { CoordinatorAccessCardsPage } from './CoordinatorAccessCardsPage';
+import { categoryLabel } from '@/i18n/display';
+import i18n from '@/i18n';
+
+const t = i18n.t.bind(i18n);
 
 const { mockApiGet, mockApiPost, mockUseAuth } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
@@ -212,6 +216,7 @@ describe('CoordinatorAccessCardsPage', () => {
   // on purpose: if a category is added to the shared constant and to the form,
   // this test fails until the sanctioned set is consciously widened.
   const SANCTIONED = ['case_service', 'referral', 'community_service', 'seminar', 'payout', 'compliance'];
+  const SANCTIONED_LABELS = SANCTIONED.map(c => categoryLabel(t, c));
 
   async function verifyACard() {
     mockApiGet.mockImplementation((key: unknown) => {
@@ -230,9 +235,13 @@ describe('CoordinatorAccessCardsPage', () => {
     return user;
   }
 
-  function offeredCategories() {
-    const select = screen.getByLabelText(/^category/i);
-    return within(select).getAllByRole('option').map(o => (o as HTMLOptionElement).value);
+  async function offeredCategories(): Promise<string[]> {
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText(/^category/i));
+    // Radix items expose their label (1:1 with the sanctioned codes).
+    const texts = [...document.querySelectorAll('[role="option"]')].map(o => o.textContent ?? '');
+    await user.keyboard('{Escape}');
+    return texts;
   }
 
   // Regression: the dropdown offered 'distribution' and 'other', neither of which
@@ -240,7 +249,7 @@ describe('CoordinatorAccessCardsPage', () => {
   // that with "Failed to log activity" — no field named, no reason given.
   it('offers no category the logging endpoint rejects', async () => {
     await verifyACard();
-    expect(offeredCategories().filter(v => !SANCTIONED.includes(v))).toEqual([]);
+    expect((await offeredCategories()).filter(v => !SANCTIONED_LABELS.includes(v))).toEqual([]);
   });
 
   // Regression: 'payout' and 'compliance' were missing, so a barangay coordinator
@@ -248,14 +257,14 @@ describe('CoordinatorAccessCardsPage', () => {
   // a barangay is actually asked to attest to.
   it('offers payout and compliance so a coordinator can record a 4Ps event', async () => {
     await verifyACard();
-    const offered = offeredCategories();
-    expect(offered).toContain('payout');
-    expect(offered).toContain('compliance');
+    const offered = await offeredCategories();
+    expect(offered).toContain(categoryLabel(t, 'payout'));
+    expect(offered).toContain(categoryLabel(t, 'compliance'));
   });
 
   it('offers exactly the sanctioned categories, nothing missing', async () => {
     await verifyACard();
-    expect([...offeredCategories()].sort()).toEqual([...SANCTIONED].sort());
+    expect([...(await offeredCategories())].sort()).toEqual([...SANCTIONED_LABELS].sort());
   });
 
   it('confirms a logged activity and keeps the verified card on screen', async () => {    mockApiGet.mockImplementation((key: unknown) => {
@@ -274,7 +283,8 @@ describe('CoordinatorAccessCardsPage', () => {
     await user.click(screen.getByRole('button', { name: /^Verify$/i }));
     await waitFor(() => expect(screen.getByText('Reyes, Pedro')).toBeInTheDocument());
 
-    await user.selectOptions(screen.getByLabelText(/agency/i), 'ag-1');
+    await user.click(screen.getByLabelText(/agency/i));
+    await user.click(await screen.findByRole('option', { name: /MSWDO/i }));
     await user.type(screen.getByLabelText(/remarks/i), 'Pantry pack distributed');
     await user.click(screen.getByRole('button', { name: /log activity/i }));
 
@@ -300,7 +310,8 @@ describe('CoordinatorAccessCardsPage', () => {
     await user.click(screen.getByRole('button', { name: /^Verify$/i }));
     await waitFor(() => expect(screen.getByText('Reyes, Pedro')).toBeInTheDocument());
 
-    await user.selectOptions(screen.getByLabelText(/agency/i), 'ag-1');
+    await user.click(screen.getByLabelText(/agency/i));
+    await user.click(await screen.findByRole('option', { name: /MSWDO/i }));
     await user.type(screen.getByLabelText(/remarks/i), 'Pantry pack');
     await user.click(screen.getByRole('button', { name: /log activity/i }));
 
@@ -359,7 +370,8 @@ describe('CoordinatorAccessCardsPage', () => {
     await user.clear(box);
     await user.type(box, 'NORZ-AC-2026-9999');
 
-    await user.selectOptions(screen.getByLabelText(/agency/i), 'ag-1');
+    await user.click(screen.getByLabelText(/agency/i));
+    await user.click(await screen.findByRole('option', { name: /MSWDO/i }));
     await user.type(screen.getByLabelText(/remarks/i), 'Pantry pack');
 
     // The form is fully filled in, so this is the mismatch alone holding it back.
@@ -391,7 +403,8 @@ describe('CoordinatorAccessCardsPage', () => {
     const box = screen.getByLabelText(/enter card code/i);
     await user.clear(box);
     await user.type(box, 'NORZ-AC-2026-9999');
-    await user.selectOptions(screen.getByLabelText(/agency/i), 'ag-1');
+    await user.click(screen.getByLabelText(/agency/i));
+    await user.click(await screen.findByRole('option', { name: /MSWDO/i }));
     await user.type(screen.getByLabelText(/remarks/i), 'Pantry pack');
     expect(screen.getByRole('button', { name: /log activity/i })).toBeDisabled();
 

@@ -72,14 +72,14 @@ function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
         </CardContent>
         {(error != null) && (
           <CardFooter className="flex-col items-stretch border-t px-6 py-4">
-            <button
+            <Button variant="ghost"
               onClick={() => setShowDetails(v => !v)}
               className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               {showDetails ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
               <Bug size={14} />
               {t('error.boundaryDetails', 'Error Details')}
-            </button>
+            </Button>
             {showDetails && (() => {
               const err = error instanceof Error ? error : new Error(String(error));
               return (

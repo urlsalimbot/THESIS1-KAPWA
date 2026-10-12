@@ -9,6 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { DataTable } from '@/components/data-table';
 import { AccessCardCategorySelect } from '@/components/cards/AccessCardCategorySelect';
 import { CategoryBadge } from '@/components/cards/CategoryBadge';
@@ -295,6 +299,11 @@ function ActivityForm({
     // Belt and braces: the button is disabled, but a submit can still arrive
     // from a keyboard or an autofill without the click.
     if (!canSubmit) return;
+    if (!agencyId) {
+      // Radix Selects have no native `required`; the select carried it before.
+      setError(t('accessCard.selectAgency', 'Select agency...'));
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -346,30 +355,28 @@ function ActivityForm({
             <label htmlFor="ac-agency" className="text-xs font-medium text-muted-foreground">
               {t('accessCard.agency', 'Agency *')}
             </label>
-            <select
-              id="ac-agency"
-              value={agencyId}
-              onChange={e => setAgencyId(e.target.value)}
-              className=""
-              required
-            >
-              <option value="">{t('accessCard.selectAgency', 'Select agency...')}</option>
-              {(agencies || []).map(a => (
-                <option key={a.id} value={a.id}>{a.code} — {a.name}</option>
-              ))}
-            </select>
+            <Select value={agencyId} onValueChange={setAgencyId}>
+              <SelectTrigger id="ac-agency" aria-required="true">
+                <SelectValue placeholder={t('accessCard.selectAgency', 'Select agency...')} />
+              </SelectTrigger>
+              <SelectContent>
+                {(agencies || []).map(a => (
+                  <SelectItem key={a.id} value={a.id}>{a.code} — {a.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1">
             <label htmlFor="ac-remarks" className="text-xs font-medium text-muted-foreground">
               {t('accessCard.remarks', 'Remarks *')}
             </label>
-            <textarea
+            <Textarea
               id="ac-remarks"
               value={remarks}
               onChange={e => setRemarks(e.target.value)}
               rows={2}
               required
-              className="form-input min-h-[60px]"
+              className="min-h-[60px]"
               placeholder={t('accessCard.remarksPlaceholder', 'Describe the activity...')}
             />
           </div>

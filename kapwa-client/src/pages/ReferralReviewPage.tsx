@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
@@ -211,7 +212,7 @@ export function ReferralReviewPage() {
               {referralListName(declineModal)} — {declineModal?.barangay}
             </DialogDescription>
           </DialogHeader>
-          <textarea
+          <Textarea
             value={declineReason}
             onChange={e => setDeclineReason(e.target.value)}
             placeholder={t('referral.declineReasonPlaceholder', 'Reason for declining...')}

@@ -329,7 +329,7 @@ export default function UsersPanel() {
       cell: ({ row }) => (
         <div className="flex items-center gap-1">
           {row.original.emailVerified === false && (
-            <button
+            <Button variant="ghost"
               onClick={() => resendVerification(row.original)}
               disabled={resending === row.original.id}
               title={t('usersPanel.resendAria', 'Resend verification email to {{email}}', { email: row.original.email })}
@@ -337,46 +337,46 @@ export default function UsersPanel() {
               aria-label={t('usersPanel.resendAria', 'Resend verification email to {{email}}', { email: row.original.email })}
             >
               <Mail size={14} />
-            </button>
+            </Button>
           )}
           {row.original.role === CLAIMANT_ROLE && (
-            <button
+            <Button variant="ghost"
               onClick={() => { setCopied(false); setResetResult(null); setResetFor(row.original); }}
               title={t('usersPanel.resetPasswordAria', 'Issue password reset for {{email}}', { email: row.original.email })}
               className="w-7 h-7 rounded flex items-center justify-center text-primary hover:bg-primary/10 transition-colors"
               aria-label={t('usersPanel.resetPasswordAria', 'Issue password reset for {{email}}', { email: row.original.email })}
             >
               <KeyRound size={14} />
-            </button>
+            </Button>
           )}
           {!isSwPanel && (
-            <button
+            <Button variant="ghost"
               onClick={() => openEdit(row.original)}
               title={t('usersPanel.editAria', 'Edit {{email}}', { email: row.original.email })}
               className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
               aria-label={t('usersPanel.editAria', 'Edit {{email}}', { email: row.original.email })}
             >
               <Pencil size={14} />
-            </button>
+            </Button>
           )}
           {row.original.isActive ? (
-            <button
+            <Button variant="ghost"
               onClick={() => setConfirm({ id: row.original.id, email: row.original.email, action: 'disable' })}
               title={t('usersPanel.disableAria', 'Disable {{email}}', { email: row.original.email })}
               className="w-7 h-7 rounded flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors"
               aria-label={t('usersPanel.disableAria', 'Disable {{email}}', { email: row.original.email })}
             >
               <Ban size={14} />
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button variant="ghost"
               onClick={() => setConfirm({ id: row.original.id, email: row.original.email, action: 'enable' })}
               title={t('usersPanel.enableAria', 'Enable {{email}}', { email: row.original.email })}
               className="w-7 h-7 rounded flex items-center justify-center text-primary hover:bg-primary/10 transition-colors"
               aria-label={t('usersPanel.enableAria', 'Enable {{email}}', { email: row.original.email })}
             >
               <UserCheck size={14} />
-            </button>
+            </Button>
           )}
         </div>
       ),

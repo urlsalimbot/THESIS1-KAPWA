@@ -1,7 +1,11 @@
 import { useState, memo } from 'react';
 import { Input } from '@/components/ui/input';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import psgcRaw from '@/lib/psgc.json';
 import { POSTAL_CODES } from '@/lib/postal-codes';
+import { Button } from '@/components/ui/button';
 
 type PsgcBarangay = { code: string; name: string };
 type PsgcMuncity = { code: string; name: string; barangays: PsgcBarangay[] };
@@ -28,7 +32,7 @@ interface Props {
   fieldPrefix?: string;
 }
 
-const selectClass = 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50';
+//  the shadcn base and error borders come from ec()).
 
 function fieldError(field: string, errors?: Record<string, string>, fieldPrefix?: string): string | undefined {
   return fieldPrefix && errors?.[`${fieldPrefix}.${field}`];
@@ -131,9 +135,9 @@ export const IntakeAddressBlock = memo(function IntakeAddressBlock({ value, onCh
             <ErrorText field="postalCode" errors={errors} fieldPrefix={fieldPrefix} />
           </div>
         </div>
-        <button type="button" onClick={() => setShowManual(false)} className="text-xs text-primary hover:underline">
+        <Button variant="ghost" type="button" onClick={() => setShowManual(false)} className="text-xs text-primary hover:underline">
           Pick from list
-        </button>
+        </Button>
       </div>
     );
   }
@@ -145,36 +149,52 @@ export const IntakeAddressBlock = memo(function IntakeAddressBlock({ value, onCh
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="space-y-2">
           <label className="text-sm font-medium">Region</label>
-          <select className={ec('region', errors, fieldPrefix, selectClass)} value={value.region} onChange={e => handleRegionChange(e.target.value)} aria-label={`${label} Region`}>
-            <option value="">Select...</option>
-            {psgc.map(r => <option key={r.code} value={r.code}>{r.name}</option>)}
-          </select>
+          <Select key={`region:${value.region}`} value={value.region} onValueChange={handleRegionChange}>
+            <SelectTrigger aria-label={`${label} Region`}>
+              <SelectValue placeholder="Select..." />
+            </SelectTrigger>
+            <SelectContent>
+              {psgc.map(r => <SelectItem key={r.code} value={r.code}>{r.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
           <ErrorText field="region" errors={errors} fieldPrefix={fieldPrefix} />
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">{isNcr ? 'City' : 'Province'}</label>
-          <select className={ec('province', errors, fieldPrefix, selectClass)} value={value.province} onChange={e => handleProvinceChange(e.target.value)} disabled={!selectedRegion} aria-label={`${label} ${isNcr ? 'City' : 'Province'}`}>
-            <option value="">Select...</option>
-            {selectedRegion?.provinces.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
-          </select>
+          <Select key={`prov:${value.province}`} value={value.province} onValueChange={handleProvinceChange} disabled={!selectedRegion}>
+            <SelectTrigger aria-label={`${label} ${isNcr ? 'City' : 'Province'}`}>
+              <SelectValue placeholder="Select..." />
+            </SelectTrigger>
+            <SelectContent>
+              {selectedRegion?.provinces.map(p => <SelectItem key={p.code} value={p.code}>{p.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
           <ErrorText field="province" errors={errors} fieldPrefix={fieldPrefix} />
         </div>
         {!isNcr && (
           <div className="space-y-2">
             <label className="text-sm font-medium">City/Municipality</label>
-            <select className={ec('city', errors, fieldPrefix, selectClass)} value={value.city} onChange={e => handleMuncityChange(e.target.value)} disabled={!selectedProvince} aria-label={`${label} City`}>
-              <option value="">Select...</option>
-              {selectedProvince?.muncities.map(m => <option key={m.code} value={m.code}>{m.name}</option>)}
-            </select>
+            <Select key={`city:${value.city}`} value={value.city} onValueChange={handleMuncityChange} disabled={!selectedProvince}>
+              <SelectTrigger aria-label={`${label} City`}>
+                <SelectValue placeholder="Select..." />
+              </SelectTrigger>
+              <SelectContent>
+                {selectedProvince?.muncities.map(m => <SelectItem key={m.code} value={m.code}>{m.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
             <ErrorText field="city" errors={errors} fieldPrefix={fieldPrefix} />
           </div>
         )}
         <div className="space-y-2">
           <label className="text-sm font-medium">Barangay</label>
-          <select className={ec('barangay', errors, fieldPrefix, selectClass)} value={value.barangay ? (selectedMuncity?.barangays.find(b => b.name === value.barangay)?.code ?? '') : ''} onChange={e => handleBarangayChange(e.target.value)} disabled={!selectedMuncity} aria-label={`${label} Barangay`}>
-            <option value="">Select...</option>
-            {selectedMuncity?.barangays.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
-          </select>
+          <Select key={`bgy:${value.barangay}`} value={value.barangay ? (selectedMuncity?.barangays.find(b => b.name === value.barangay)?.code ?? '') : ''} onValueChange={handleBarangayChange} disabled={!selectedMuncity}>
+            <SelectTrigger aria-label={`${label} Barangay`}>
+              <SelectValue placeholder="Select..." />
+            </SelectTrigger>
+            <SelectContent>
+              {selectedMuncity?.barangays.map(b => <SelectItem key={b.code} value={b.code}>{b.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
           <ErrorText field="barangay" errors={errors} fieldPrefix={fieldPrefix} />
         </div>
         <div className="space-y-2">
@@ -189,9 +209,9 @@ export const IntakeAddressBlock = memo(function IntakeAddressBlock({ value, onCh
         </div>
       </div>
 
-      <button type="button" onClick={() => setShowManual(true)} className="text-xs text-primary hover:underline">
+      <Button variant="ghost" type="button" onClick={() => setShowManual(true)} className="text-xs text-primary hover:underline">
         Barangay not listed? Enter manually
-      </button>
+      </Button>
     </div>
   );
 });

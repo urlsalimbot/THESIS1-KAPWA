@@ -14,6 +14,9 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { formatDate } from '../lib/format';
 
 const DISPOSITION_STATES = ['Under Investigation', 'Referred to PNP', 'Referred to WCPD', 'Dismissed', 'Closed'];
@@ -37,13 +40,19 @@ function LegalBasisFields({ value, onChange, referenceNumber, onReferenceChange 
     <div className="flex flex-wrap items-center gap-2">
       <div className="space-y-1">
         <label className="text-xs font-medium text-muted-foreground">{t('irf.legalBasis', 'Legal Basis')}</label>
-        <select value={value} onChange={e => onChange(e.target.value)} aria-label={t('irf.legalBasis', 'Legal basis')}
-          className="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring min-w-[180px]">
-          <option value="">{t('irf.selectLegalBasis', 'Select legal basis...')}</option>
-          {LEGAL_BASIS_OPTIONS.map(o => (
-            <option key={o.value} value={o.value}>{t(o.labelKey, o.label)}</option>
-          ))}
-        </select>
+        <Select value={value} onValueChange={onChange}>
+          <SelectTrigger
+            aria-label={t('irf.legalBasis', 'Legal basis')}
+            className="h-9 min-w-[180px] text-sm shadow-sm"
+          >
+            <SelectValue placeholder={t('irf.selectLegalBasis', 'Select legal basis...')} />
+          </SelectTrigger>
+          <SelectContent>
+            {LEGAL_BASIS_OPTIONS.map(o => (
+              <SelectItem key={o.value} value={o.value}>{t(o.labelKey, o.label)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-1">
         <label className="text-xs font-medium text-muted-foreground">{t('irf.referenceNo', 'Reference No.')}</label>

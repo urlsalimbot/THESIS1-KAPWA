@@ -13,6 +13,7 @@ import {
   WEEKDAY_LABEL_KEYS,
 } from './team-utils';
 import type { TeamBlock, TeamEvent } from '../../lib/team-api';
+import { Button } from '@/components/ui/button';
 
 export interface MonthViewProps {
   events: TeamEvent[];
@@ -138,7 +139,7 @@ export function MonthView({
               } ${placeable ? 'group relative cursor-pointer' : ''}`}
             >
               {placeable && (
-                <button
+                <Button variant="ghost"
                   type="button"
                   aria-label={placeAria}
                   onClick={e => {
@@ -148,7 +149,7 @@ export function MonthView({
                   className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-sm bg-muted text-xs font-bold leading-none text-muted-foreground opacity-0 transition-opacity hover:bg-muted-foreground/20 focus-visible:opacity-100 group-hover:opacity-100"
                 >
                   +
-                </button>
+                </Button>
               )}
               <p className={`text-xs font-semibold ${inMonth ? 'text-foreground' : 'text-muted-foreground'}`}>
                 {date.getDate()}
@@ -179,7 +180,7 @@ export function MonthView({
                         // The 8px dot alone is far below the 24px minimum
                         // target, so the button is a 32px grid box (-m-2 keeps
                         // the flow position identical) wrapping the real dot.
-                        <button
+                        <Button variant="ghost"
                           key={block.id}
                           type="button"
                           aria-label={t('team.month.editBlockAria', { type: typeLabel, date: dayStr })}
@@ -191,7 +192,7 @@ export function MonthView({
                           className="relative grid h-8 w-8 -m-3 cursor-pointer place-items-center"
                         >
                           <span className={dotClass} />
-                        </button>
+                        </Button>
                       ) : (
                         <span
                           key={block.id}

@@ -47,8 +47,9 @@ export function PublicFooter() {
             </p>
           </div>
 
-          {/* Column 2: Quick Links */}
-          <div>
+          {/* Column 2: Quick Links. A <nav> landmark so screen readers can
+              jump here; the header nav is labelled the same way. */}
+          <nav aria-label={t('public.footerNavigation', 'Footer navigation')}>
             <h2 className="mb-4 font-heading text-sm font-semibold tracking-wide text-foreground">
               {t('public.quickLinks', 'Quick Links')}
             </h2>
@@ -64,7 +65,7 @@ export function PublicFooter() {
                 </li>
               ))}
             </ul>
-          </div>
+          </nav>
 
           {/* Column 3: Contact */}
           <div>

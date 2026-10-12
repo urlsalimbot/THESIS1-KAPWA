@@ -51,8 +51,11 @@ describe('PublicAnnouncementsPage', () => {
         pinned: false, publishedAt: '2026-08-02T00:00:00Z', photoCount: 1, coverPhotoId: 'photo-9',
       },
     ]);
-    renderPage();
-    const img = await screen.findByAltText('Cover photo');
-    expect(img.getAttribute('src')).toBe(`${API}/announcements/public/photo/photo-9`);
+    const { container } = renderPage();
+    await screen.findByRole('link', { name: /Covered Announcement/ });
+    const img = container.querySelector(`img[src="${API}/announcements/public/photo/photo-9"]`);
+    expect(img).toBeTruthy();
+    // Decorative: the card link is named by its title, so the alt must be empty.
+    expect(img?.getAttribute('alt')).toBe('');
   });
 });

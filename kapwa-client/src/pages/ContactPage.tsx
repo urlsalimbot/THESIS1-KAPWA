@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ContactInfo } from '@/components/ContactInfo';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,16 @@ export function ContactPage() {
   const [message, setMessage] = useState('');
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
+  const errorSummaryRef = useRef<HTMLDivElement>(null);
+  const errorEntries = Object.entries(errors) as [string, string][];
+
+  // Move focus to the summary after a failed submit. tabIndex={-1} + focus is
+  // used instead of another role="alert" so the three inline field alerts are
+  // not announced a second time. The effect only fires while errors exist, so
+  // a successful submit (errors reset to {}) never steals focus.
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) errorSummaryRef.current?.focus();
+  }, [errors]);
 
   function validate(): boolean {
     const newErrors: FormErrors = {};
@@ -96,6 +106,28 @@ export function ContactPage() {
           <div className="lg:col-span-7">
             <Card className="border-border/60 p-6 shadow-sm">
               <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+                {/* Listed above the fields and focused on failed submit; each
+                    item jumps to its field (ids are name/email/message). */}
+                {errorEntries.length > 0 && (
+                  <div
+                    ref={errorSummaryRef}
+                    tabIndex={-1}
+                    className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <p className="font-semibold text-destructive">
+                      {t('contact.errorSummaryTitle', 'Please correct the following:')}
+                    </p>
+                    <ul className="mt-1 list-inside list-disc text-destructive">
+                      {errorEntries.map(([field, message]) => (
+                        <li key={field}>
+                          <a href={`#${field}`} className="underline">
+                            {message}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="name">{t('contact.name', 'Name')}</Label>
                   <Input

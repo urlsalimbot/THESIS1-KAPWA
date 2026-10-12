@@ -30,6 +30,27 @@ export function isFinancialIntervention(code: string | null | undefined): boolea
 }
 
 /**
+ * The intervention-type picker's groups, rendered as optgroup-style headers
+ * (shadcn's SelectLabel — Radix Select has no native optgroup element).
+ * Disjoint by construction: every INTERVENTION_TYPES code appears in exactly
+ * one group, so a code added without a group fails the picker visibly.
+ * The financial group reuses FINANCIAL_INTERVENTION_TYPES so the
+ * "carries money" boundary the intervention forms depend on stays single-source.
+ */
+export const INTERVENTION_TYPE_GROUPS: ReadonlyArray<{
+  key: string;
+  fallback: string;
+  codes: readonly string[];
+}> = [
+  { key: 'interventionGroups.financial', fallback: 'Financial & Material Assistance', codes: FINANCIAL_INTERVENTION_TYPES },
+  { key: 'interventionGroups.psychosocial', fallback: 'Counseling & Psychosocial', codes: ['crisis_counseling', 'psychosocial_support'] },
+  { key: 'interventionGroups.capacity', fallback: 'Capacity Building & Community', codes: ['training_seminar', 'parent_effectiveness', 'youth_engagement', 'community_service'] },
+  { key: 'interventionGroups.legal', fallback: 'Legal & Protection', codes: ['legal_assistance', 'medico_legal_assistance', 'referral_pao', 'protection_order_issued', 'protective_custody'] },
+  { key: 'interventionGroups.health', fallback: 'Health & Home Visits', codes: ['home_visit', 'health_checkup'] },
+  { key: 'interventionGroups.documents', fallback: 'Case Management & Documents', codes: ['scsr_generated'] },
+];
+
+/**
  * The form-format vocabulary for per-intervention obligations: an
  * intervention configured with one of these keys must be accomplished using
  * that specific form. Unknown keys render as the raw key (`t` fallback).

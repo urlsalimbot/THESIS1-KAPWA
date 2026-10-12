@@ -89,10 +89,10 @@ export function ResetPasswordPage() {
                   className="h-11 pe-10"
                   aria-label={t('auth.newPasswordPlaceholder', 'New password')}
                 />
-                <button
+                <Button variant="ghost" size="icon"
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground transition-colors hover:text-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
                   aria-label={
                     showPassword
                       ? t('auth.hidePassword', 'Hide password')
@@ -104,7 +104,7 @@ export function ResetPasswordPage() {
                   ) : (
                     <Eye size={18} aria-hidden="true" />
                   )}
-                </button>
+                </Button>
               </div>
               <Input
                 type="password"

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
 
 interface SyncStatusBannerProps {
   pendingCount: number;
@@ -20,7 +21,7 @@ export function SyncStatusBanner({ pendingCount, isOnline, onOpenQueue }: SyncSt
     : 'bg-warning text-white';
 
   return (
-    <button
+    <Button variant="ghost"
       type="button"
       onClick={onOpenQueue}
       // In-flow (not fixed): the strip pushes the topbar down instead of
@@ -28,9 +29,8 @@ export function SyncStatusBanner({ pendingCount, isOnline, onOpenQueue }: SyncSt
       // tappable while offline or syncing. `min-h-0` keeps it a thin strip —
       // the global 44px button min-height would otherwise cover the header.
       className={`no-print w-full shrink-0 min-h-0 px-4 py-1.5 text-center text-xs font-medium cursor-pointer ${bgClass}`}
-      aria-label={t('sync.openQueue', 'Open sync queue')}
-    >
+      aria-label={t('sync.openQueue', 'Open sync queue')}>
       {bannerText}
-    </button>
+    </Button>
   );
 }

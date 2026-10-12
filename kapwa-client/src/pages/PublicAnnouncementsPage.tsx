@@ -81,7 +81,9 @@ export function PublicAnnouncementsPage() {
                     {a.coverPhotoId && (
                       <img
                         src={publicAnnouncementPhotoUrl(a.coverPhotoId)}
-                        alt={t('announcements.photoCover', 'Cover photo')}
+                        /* Decorative: the enclosing card link is already named
+                           "Read: {{title}}" and the title sits beside it. */
+                        alt=""
                         className="h-20 w-28 shrink-0 rounded-lg object-cover sm:h-24 sm:w-36"
                         loading="lazy"
                       />

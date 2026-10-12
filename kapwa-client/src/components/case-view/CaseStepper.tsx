@@ -2,6 +2,7 @@ import { Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { statusLabel } from '@/i18n/display';
+import { Button } from '@/components/ui/button';
 
 // Extra data the case view has (programs docs, referral decision) but the
 // approval-pipeline cards do not — steps fall back to their simple checks
@@ -466,7 +467,7 @@ export function CaseStepper({ currentStep, onStepClick, caseData, interventionCo
                   const reachedFloor = statusAtLeast(caseData, STEP_FLOORS[step.key] ?? 0);
                   const isClickable = reachedFloor && (done || (step.key === 'referrals' && doneFor('assessment')) || (idxOf(step.key) <= highestReachable + 1 && (!['evaluate', 'closure'].includes(step.key) || implementationDone)));
                   return (
-                    <button
+                    <Button variant="ghost"
                       key={step.key}
                       type="button"
                       onClick={() => handleClick(step.key)}
@@ -494,7 +495,7 @@ export function CaseStepper({ currentStep, onStepClick, caseData, interventionCo
                         {done ? <Check size={12} aria-hidden="true" /> : idxOf(step.key) + 1}
                       </span>
                       <span className="hidden sm:inline">{step.label}</span>
-                    </button>
+                    </Button>
                   );
                 })}
               </div>

@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Gavel, Lock, Plus, Trash2, Ban, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { StepLockBar, type StepLock } from './StepLockBar';
 import { toast } from 'sonner';
 
@@ -253,10 +254,9 @@ export function StepCourtHearings({ caseId, caseData, userRole, readOnly, lockRe
                     <Input value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
                   </label>
                   <label className="flex items-center gap-2 pb-2 text-xs font-medium text-muted-foreground">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={form.attended}
-                      onChange={(e) => setForm((f) => ({ ...f, attended: e.target.checked }))}
+                      onCheckedChange={(v) => setForm((f) => ({ ...f, attended: v === true }))}
                     />
                     {t('caseView.hearings.attending', 'Office will attend')}
                   </label>

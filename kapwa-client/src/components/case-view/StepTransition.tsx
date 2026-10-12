@@ -15,6 +15,11 @@ import { isSelfSufficient } from '@/lib/self-reliance';
 import { formatDate } from '../../lib/format';
 import { StepLockBar, type StepLock } from './StepLockBar';
 import { stepsInPhase, STEP_LABEL_KEYS } from './CaseStepper';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface FollowUpVisit {
   date: string;
@@ -199,21 +204,22 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
         <div className="px-4 py-3 space-y-3">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">{t('caseView.transition.selfRelianceLevel', 'Self-Reliance Level *')}</label>
-            <div className="space-y-2">
+            <RadioGroup
+              value={plan.selfRelianceLevel == null ? '' : String(plan.selfRelianceLevel)}
+              onValueChange={(v) => setPlan(p => ({ ...p, selfRelianceLevel: Number(v) }))}
+              className="space-y-2"
+              disabled={assessmentReadOnly}
+            >
               {[
                 { value: 1, label: t('caseView.transition.level1', 'Level 1 - Dependent'), description: t('caseView.transition.level1Desc', 'Needs full support and assistance') },
                 { value: 2, label: t('caseView.transition.level2', 'Level 2 - Partially Self-Reliant'), description: t('caseView.transition.level2Desc', 'Some support needed, making progress') },
                 { value: 3, label: t('caseView.transition.level3', 'Level 3 - Self-Sufficient'), description: t('caseView.transition.level3Desc', 'Ready for graduation, can sustain independently') },
               ].map(option => (
                 <label key={option.value} className="flex items-start gap-3 p-2 rounded-md hover:bg-muted cursor-pointer">
-                  <input
-                    type="radio"
-                    name="selfRelianceLevel"
-                    value={option.value}
-                    checked={plan.selfRelianceLevel === option.value}
-                    onChange={() => setPlan(p => ({ ...p, selfRelianceLevel: option.value }))}
+                  <RadioGroupItem
+                    value={String(option.value)}
                     className="mt-0.5"
-                    disabled={assessmentReadOnly}
+                    aria-label={option.label}
                   />
                   <div>
                     <p className="text-sm font-medium">{option.label}</p>
@@ -221,7 +227,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
                   </div>
                 </label>
               ))}
-            </div>
+            </RadioGroup>
           </div>
         </div>
       </div>
@@ -238,8 +244,8 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
         <div className="px-4 py-3 space-y-3">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">{t('caseView.transition.maintainProgress', 'How will the client maintain progress after case closure?')}</label>
-            <textarea
-              className="form-input min-h-[100px]"
+            <Textarea
+              className="min-h-[100px]"
               value={plan.sustainabilityPlan}
               onChange={e => setPlan(p => ({ ...p, sustainabilityPlan: e.target.value }))}
               disabled={assessmentReadOnly}
@@ -249,8 +255,8 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-sm font-medium">{t('caseView.transition.selfRelianceSteps', 'Self-Reliance Steps')}</label>
-              <textarea
-                className="form-input min-h-[80px]"
+              <Textarea
+                className="min-h-[80px]"
                 value={plan.selfReliancePlan}
                 onChange={e => setPlan(p => ({ ...p, selfReliancePlan: e.target.value }))}
                 disabled={assessmentReadOnly}
@@ -295,26 +301,29 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium">{t('caseView.transition.type', 'Type *')}</label>
-                <select
-                  className=""
+                <Select
                   value={newFollowUp.type}
-                  onChange={e => setNewFollowUp(f => ({ ...f, type: e.target.value }))}
+                  onValueChange={v => setNewFollowUp(f => ({ ...f, type: v }))}
                 >
-                  <option value="">—</option>
-                  {[
+                  <SelectTrigger>
+                    <SelectValue placeholder="—" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[
                     { value: 'Home Visit', label: t('caseView.transition.visitType.home', 'Home Visit') },
                     { value: 'Phone Call', label: t('caseView.transition.visitType.phone', 'Phone Call') },
                     { value: 'Office Visit', label: t('caseView.transition.visitType.office', 'Office Visit') },
                     { value: 'Community Visit', label: t('caseView.transition.visitType.community', 'Community Visit') },
                   ].map(o => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                   ))}
-                </select>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1 col-span-2">
                 <label className="text-xs font-medium">{t('caseView.transition.notes', 'Notes')}</label>
-                <textarea
-                  className="form-input min-h-[60px]"
+                <Textarea
+                  className="min-h-[60px]"
                   value={newFollowUp.notes}
                   onChange={e => setNewFollowUp(f => ({ ...f, notes: e.target.value }))}
                   placeholder={t('caseView.transition.notesPlaceholder', 'Visit notes...')}

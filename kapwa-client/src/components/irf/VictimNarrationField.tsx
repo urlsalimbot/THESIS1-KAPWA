@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { Textarea } from '@/components/ui/textarea';
 
 interface VictimNarrationFieldProps {
   value: string;
@@ -16,7 +17,7 @@ export default function VictimNarrationField({ value, onChange, readOnly, isEncr
         {t('irf.victimNarration', 'Victim Narration')}
         {isEncrypted && <span className="ml-2 text-xs text-success">🔒 {t('irf.aesEncrypted', 'AES-256 Encrypted')}</span>}
       </label>
-      <textarea
+      <Textarea
         className="w-full rounded border border-border p-2 text-sm"
         value={value}
         onChange={e => onChange?.(e.target.value)}

@@ -48,7 +48,7 @@ describe('AnnouncementPage', () => {
   it('renders the public photo gallery with the first photo img', async () => {
     renderPage('/announcements/my-post');
 
-    const img = await screen.findByAltText('first.jpg');
+    const img = await screen.findByAltText('Photo 1 of My Post');
     expect(img).toBeTruthy();
     expect(img.getAttribute('src')).toBe(`http://localhost:3000/api/v1/announcements/public/photo/photo-1`);
     expect(mockApiGet).toHaveBeenCalledWith(['announcements', 'public', 'my-post', 'photos']);
@@ -57,7 +57,7 @@ describe('AnnouncementPage', () => {
   it('renders every gallery photo as a link to the public photo URL', async () => {
     renderPage('/announcements/my-post');
 
-    const link = await screen.findByRole('link', { name: 'second.jpg' });
+    const link = await screen.findByRole('link', { name: 'Photo 2 of My Post' });
     expect(link.getAttribute('href')).toBe(`http://localhost:3000/api/v1/announcements/public/photo/photo-2`);
   });
 

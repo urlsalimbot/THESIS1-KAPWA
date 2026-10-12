@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { axe } from 'vitest-axe';
 import { IntakePage } from './IntakePage';
@@ -120,12 +121,14 @@ describe('IntakePage — offline path', () => {
 });
 
 async function fillBeneficiary() {
+    const user = userEvent.setup();
     fireEvent.change(screen.getByLabelText('ben-surname'), { target: { value: 'Dela Cruz' } });
     fireEvent.change(screen.getByLabelText('ben-firstName'), { target: { value: 'Juan' } });
     fireEvent.click(screen.getByRole('radio', { name: 'Male' }));
     fireEvent.change(screen.getByLabelText('ben-dob'), { target: { value: '1990-01-15' } });
     fireEvent.change(screen.getByLabelText('ben-placeOfBirth'), { target: { value: 'Manila' } });
-    fireEvent.change(screen.getByLabelText('ben-civilStatus'), { target: { value: 'Single' } });
+    await user.click(screen.getByLabelText('ben-civilStatus'));
+    await user.click(await screen.findByRole('option', { name: 'Single' }));
     fireEvent.change(screen.getByLabelText('ben-cellularNumber'), { target: { value: '09171234567' } });
     fireEvent.change(screen.getByLabelText('ben-email'), { target: { value: 'juan@example.com' } });
     fireEvent.click(screen.getByText('Barangay not listed? Enter manually'));
@@ -248,7 +251,9 @@ describe('IntakePage — family member sex and dob', () => {
     fireEvent.click(screen.getByRole('radio', { name: 'Male' }));
     fireEvent.change(screen.getByLabelText('ben-dob'), { target: { value: '1990-01-15' } });
     fireEvent.change(screen.getByLabelText('ben-placeOfBirth'), { target: { value: 'Manila' } });
-    fireEvent.change(screen.getByLabelText('ben-civilStatus'), { target: { value: 'Single' } });
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText('ben-civilStatus'));
+    await user.click(await screen.findByRole('option', { name: 'Single' }));
     fireEvent.change(screen.getByLabelText('ben-cellularNumber'), { target: { value: '09171234567' } });
     fireEvent.change(screen.getByLabelText('ben-email'), { target: { value: 'juan@example.com' } });
     fireEvent.click(screen.getByText('Barangay not listed? Enter manually'));
@@ -314,7 +319,9 @@ describe('IntakePage — family members ride on the single submit', () => {
     fireEvent.click(screen.getByRole('radio', { name: 'Male' }));
     fireEvent.change(screen.getByLabelText('ben-dob'), { target: { value: '1990-01-15' } });
     fireEvent.change(screen.getByLabelText('ben-placeOfBirth'), { target: { value: 'Manila' } });
-    fireEvent.change(screen.getByLabelText('ben-civilStatus'), { target: { value: 'Single' } });
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText('ben-civilStatus'));
+    await user.click(await screen.findByRole('option', { name: 'Single' }));
     fireEvent.change(screen.getByLabelText('ben-cellularNumber'), { target: { value: '09171234567' } });
     fireEvent.change(screen.getByLabelText('ben-email'), { target: { value: 'juan@example.com' } });
     fireEvent.click(screen.getByText('Barangay not listed? Enter manually'));
@@ -604,13 +611,14 @@ describe('IntakePage — prefill from a referral handoff', () => {
 
     await screen.findByRole('heading', { name: /General Intake Form/i });
 
-    expect(screen.getByLabelText('ben-extension')).toHaveValue('Jr.');
+    await waitFor(() => expect(screen.getAllByLabelText('Address Street')[0]).toHaveValue('123 Mabini St'));
+    expect(screen.getByLabelText('ben-extension')).toHaveTextContent('Jr.');
     // Both the beneficiary and claimant sections render an address block with
     // the same label, so index into the beneficiary's.
     expect(screen.getAllByLabelText('Address Street')[0]).toHaveValue('123 Mabini St');
     // The barangay select is keyed by PSGC code but displays the name, so the
     // name coming from the referral resolves to the right option.
-    expect(screen.getAllByLabelText('Address Barangay')[0]).toHaveDisplayValue('Poblacion');
+    expect(screen.getAllByLabelText('Address Barangay')[0]).toHaveTextContent('Poblacion');
   });
 
   it('keeps the Norzagaray address defaults when the prefill has no address', async () => {
@@ -619,7 +627,7 @@ describe('IntakePage — prefill from a referral handoff', () => {
     await screen.findByRole('heading', { name: /General Intake Form/i });
 
     expect(screen.getAllByLabelText('Address Street')[0]).toHaveValue('');
-    expect(screen.getAllByLabelText('Address City')[0]).toHaveDisplayValue('Norzagaray');
+    expect(screen.getAllByLabelText('Address City')[0]).toHaveTextContent('Norzagaray');
   });
 
   it('sends sourceReferral and carries the reason into serviceRequested', async () => {
@@ -903,7 +911,7 @@ describe('IntakePage — match pop-up', () => {
     expect(screen.getAllByLabelText('FM surname').length).toBe(2);
     const fmNames = screen.getAllByLabelText('FM first name').map(el => (el as HTMLInputElement).value);
     expect(fmNames).toEqual(['Juan', 'Lorna']);
-    const relationships = screen.getAllByLabelText('FM relationship').map(el => (el as HTMLSelectElement).value);
+    const relationships = screen.getAllByLabelText('FM relationship').map(el => el.textContent ?? '');
     expect(relationships).toEqual(['Parent', 'Parent']);
 
     fireEvent.click(screen.getByRole('checkbox', { name: /consent/i }));

@@ -115,11 +115,16 @@ export function AnnouncementPage() {
           <div className="mt-10">
             <h2 className="mb-4 text-lg font-semibold">{t('announcements.photos', 'Photos')}</h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {photos.map((p) => (
+              {photos.map((p, i) => (
                 <a key={p.id} href={publicAnnouncementPhotoUrl(p.id)} target="_blank" rel="noreferrer">
+                  {/* The <a> wraps only this image, so the link's accessible
+                      name comes from here — it must describe, not be empty. */}
                   <img
                     src={publicAnnouncementPhotoUrl(p.id)}
-                    alt={p.originalName}
+                    alt={t('announcements.photoAlt', 'Photo {{index}} of {{title}}', {
+                      index: i + 1,
+                      title: data.title,
+                    })}
                     className="aspect-video w-full rounded-lg border object-cover"
                     loading="lazy"
                   />

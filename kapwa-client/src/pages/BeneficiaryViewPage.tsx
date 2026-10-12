@@ -23,6 +23,9 @@ import {
   CreditCard,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { setBreadcrumbLabel } from '@/lib/breadcrumbs';
 import { api } from "../lib/api";
 import { queryKeys } from "../lib/query-keys";
@@ -446,7 +449,7 @@ export function BeneficiaryViewPage() {
                     <MapPin size={13} /> {beneficiary.addressLine || `${beneficiary.barangay}${beneficiary.purok ? `, ${beneficiary.purok}` : ""}`}
                   </span>
                   <span className="flex items-center gap-1">
-                    <Calendar size={13} /> {beneficiary.birthDate}
+                    <Calendar size={13} /> {formatDate(beneficiary.birthDate)}
                   </span>
                   {beneficiary.contact && (
                     <span className="flex items-center gap-1">
@@ -546,14 +549,14 @@ export function BeneficiaryViewPage() {
               <div className="space-y-3">
                 <div className="space-y-1">
                   <label htmlFor="deactivate-reason" className="text-xs font-medium text-muted-foreground">{t("beneficiaries.reason", "Reason")}</label>
-                  <select
-                    id="deactivate-reason"
-                    className="" form-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-                    value={deactivateReason}
-                    onChange={(e) => setDeactivateReason(e.target.value)}
-                  >
-                    {INACTIVE_REASONS.map((r) => <option key={r.value} value={r.value}>{t(r.key, r.fallback)}</option>)}
-                  </select>
+                  <Select value={deactivateReason} onValueChange={setDeactivateReason}>
+                    <SelectTrigger id="deactivate-reason">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INACTIVE_REASONS.map((r) => <SelectItem key={r.value} value={r.value}>{t(r.key, r.fallback)}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="deactivate-note" className="text-xs font-medium text-muted-foreground">{t("beneficiaries.reasonDetails", "Additional details (optional)")}</label>

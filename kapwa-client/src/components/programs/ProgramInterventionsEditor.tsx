@@ -1,7 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { INTERVENTION_TYPES, INTERVENTION_FORM_FORMATS } from '@/lib/constants';
+import {
+  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { INTERVENTION_TYPE_GROUPS, INTERVENTION_FORM_FORMATS } from '@/lib/constants';
 
 export interface InterventionRowInput {
   interventionType: string;
@@ -32,37 +35,54 @@ export function ProgramInterventionsEditor({
       <div className="space-y-2">
         {value.map((row, i) => (
           <div key={i} className="flex flex-wrap items-center gap-2">
-            <select
-              aria-label={t('programs.interventionAria', 'Intervention {{n}}', { n: i + 1 })}
+            <Select
               value={row.interventionType}
-              onChange={(e) => setRow(i, { interventionType: e.target.value })}
-              className="h-8 min-w-[220px] flex-1 rounded-md border border-input bg-background px-2 text-sm"
+              onValueChange={(v) => setRow(i, { interventionType: v })}
             >
-              <option value="">{t('programs.selectIntervention', 'Select intervention...')}</option>
-              {INTERVENTION_TYPES.map((code) => (
-                <option key={code} value={code}>{t(`interventionType.${code}`, code)}</option>
-              ))}
-            </select>
-            <select
-              aria-label={t('programs.formFormatAria', 'Required form for {{n}}', { n: i + 1 })}
+              <SelectTrigger
+                aria-label={t('programs.interventionAria', 'Intervention {{n}}', { n: i + 1 })}
+                className="h-9 min-w-[220px] flex-1 text-sm"
+              >
+                <SelectValue placeholder={t('programs.selectIntervention', 'Select intervention...')} />
+              </SelectTrigger>
+              <SelectContent className="max-h-72 overflow-y-auto">
+                {/* Grouped like the dedup picker: SelectLabel stands in for the
+                    optgroup element Radix does not have. */}
+                {INTERVENTION_TYPE_GROUPS.map((group) => (
+                  <SelectGroup key={group.key}>
+                    <SelectLabel>{t(group.key, group.fallback)}</SelectLabel>
+                    {group.codes.map((code) => (
+                      <SelectItem key={code} value={code}>{t(`interventionType.${code}`, code)}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
               value={row.requiredForm ?? ''}
-              onChange={(e) => setRow(i, { requiredForm: e.target.value || null })}
-              className="h-8 min-w-[200px] flex-1 rounded-md border border-input bg-background px-2 text-sm"
+              onValueChange={(v) => setRow(i, { requiredForm: v || null })}
             >
-              <option value="">{t('programs.noFormFormat', 'No form requirement')}</option>
-              {INTERVENTION_FORM_FORMATS.map((f) => (
-                <option key={f.key} value={f.key}>{t(`interventionForms.${f.key}`, f.fallback)}</option>
-              ))}
-            </select>
+              <SelectTrigger
+                aria-label={t('programs.formFormatAria', 'Required form for {{n}}', { n: i + 1 })}
+                className="h-9 min-w-[200px] flex-1 text-sm"
+              >
+                <SelectValue placeholder={t('programs.noFormFormat', 'No form requirement')} />
+              </SelectTrigger>
+              <SelectContent>
+                {INTERVENTION_FORM_FORMATS.map((f) => (
+                  <SelectItem key={f.key} value={f.key}>{t(`interventionForms.${f.key}`, f.fallback)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {value.length > 1 && (
-              <button
+              <Button variant="ghost"
                 type="button"
                 onClick={() => onChange(value.filter((_, idx) => idx !== i))}
                 aria-label={t('programs.removeIntervention', 'Remove intervention {{n}}', { n: i + 1 })}
                 className="shrink-0 text-muted-foreground hover:text-destructive"
               >
                 <X size={16} />
-              </button>
+              </Button>
             )}
           </div>
         ))}

@@ -138,7 +138,7 @@ export function LoginPage() {
                   six OTP boxes exceed a 320px screen on one line. */}
               <div className="flex flex-wrap justify-center gap-2">
                 {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <input
+                  <Input
                     key={i}
                     type="text"
                     inputMode="numeric"
@@ -177,7 +177,7 @@ export function LoginPage() {
                     }}
                     onFocus={(e) => e.target.select()}
                     autoFocus={i === 0}
-                    className="w-11 h-14 text-center text-xl font-semibold tracking-widest rounded-lg border border-input bg-background shadow-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 tabular-nums transition-all duration-150"
+                    className="w-11 h-14 text-center text-xl font-semibold tracking-widest tabular-nums transition-all duration-150"
                     aria-label={t('auth.digitLabel', 'Digit {{n}}', { n: i + 1 })}
                   />
                 ))}
@@ -194,14 +194,15 @@ export function LoginPage() {
             {isEmailOtp && (
               <div className="text-center text-sm text-muted-foreground mt-4 space-y-1">
                 {mfaResendNotice && <p className="text-success">{mfaResendNotice}</p>}
-                <button
+                <Button
                   type="button"
+                  variant="link"
                   onClick={handleMfaResend}
                   disabled={mfaResendIn > 0}
-                  className="text-accent hover:underline disabled:opacity-50 disabled:no-underline"
+                  className="h-auto p-0 text-accent"
                 >
                   {mfaResendIn > 0 ? t('auth.resendIn', 'Resend code in {{s}}s', { s: mfaResendIn }) : t('auth.resendCode', 'Resend code')}
-                </button>
+                </Button>
               </div>
             )}
           </CardContent>
@@ -231,9 +232,10 @@ export function LoginPage() {
             <div className="error-msg" role="alert">
               <p className="font-medium mb-1">{t('auth.emailNotVerified', 'Email not verified')}</p>
               <p className="mb-2">{t('auth.checkInboxForVerification', 'Please check your inbox for the verification link.')}</p>
-              <button
+              <Button
                 type="button"
-                className="text-xs underline underline-offset-2 hover:no-underline"
+                variant="link"
+                className="h-auto p-0 text-xs"
                 onClick={async () => {
                   try {
                     await api.post('/auth/resend-verification', { email: emailNotVerified });
@@ -245,7 +247,7 @@ export function LoginPage() {
                 }}
               >
                 {t('auth.resendVerificationEmail', 'Resend verification email')}
-              </button>
+              </Button>
             </div>
           )}
           {sessionNotice && (
@@ -289,14 +291,16 @@ export function LoginPage() {
                       <FormControl>
                         <Input type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder={t('auth.passwordPlaceholder', 'Enter your password')} className="h-11 pe-10" {...field} />
                       </FormControl>
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="icon"
                         onClick={() => setShowPassword(v => !v)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
                         aria-label={showPassword ? t('auth.hidePassword', 'Hide password') : t('auth.showPassword', 'Show password')}
                       >
                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                      </button>
+                      </Button>
                     </div>
                     <FormMessage />
                   </FormItem>

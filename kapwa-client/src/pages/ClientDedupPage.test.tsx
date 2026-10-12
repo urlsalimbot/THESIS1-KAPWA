@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import ClientDedupPage from './ClientDedupPage';
+import ClientDedupNewPage from './ClientDedupNewPage';
 
 const { mockApiGet, mockApiPost, mockApiUpload, mockDownload } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
@@ -24,14 +25,16 @@ vi.mock('../lib/api', () => ({
   downloadClientDedupOutput: (...args: unknown[]) => mockDownload(...args),
 }));
 
-// The review of an operation lives at /client-dedup/:operationId — the page
-// reads the param, so tests render it inside BOTH routes the app defines.
+// The review of an operation lives at /client-dedup/:operationId and the define
+// wizard at /client-dedup/new — the page reads the URL param, so tests mount
+// the same three routes the app registers.
 function renderPage(initialPath = '/client-dedup') {
   return render(
     <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0 }}>
       <MemoryRouter initialEntries={[initialPath]}>
         <Routes>
           <Route path="/client-dedup" element={<ClientDedupPage />} />
+          <Route path="/client-dedup/new" element={<ClientDedupNewPage />} />
           <Route path="/client-dedup/:id" element={<ClientDedupPage />} />
         </Routes>
       </MemoryRouter>
@@ -129,6 +132,21 @@ describe('ClientDedupPage', () => {
     expect(screen.getByText(/2 rows/i)).toBeTruthy();
     expect(screen.getByText('Batch 0.xlsx')).toBeTruthy();
     expect(screen.getByText(/finalized/i)).toBeTruthy();
+  });
+
+  it('guides a first-time operator from the empty state into the create route', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = String(key);
+      if (k.includes('/client-dedup/operations')) {
+        return Promise.resolve({ data: [], total: 0, page: 1, limit: 10 });
+      }
+      return Promise.resolve(null);
+    });
+    renderPage();
+    expect(await screen.findByText(/no import runs yet/i)).toBeTruthy();
+    // The header action and the panel CTA both go to the create route.
+    await userEvent.click(screen.getAllByRole('button', { name: /new deduplication/i })[0]);
+    expect(await screen.findByLabelText(/list name/i)).toBeTruthy();
   });
 
   it('opens the row-definition wizard with the six baseline columns pre-filled', async () => {

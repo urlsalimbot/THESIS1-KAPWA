@@ -131,14 +131,14 @@ export default function NotificationsDropdown() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button className="relative w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors" aria-label={t('notifications.aria', 'Notifications')}>
+        <Button variant="ghost" size="icon" className="relative w-9 h-9 rounded-full text-muted-foreground transition-colors" aria-label={t('notifications.aria', 'Notifications')}>
           {unreadCount > 0 ? <BellRing size={20} /> : <Bell size={20} />}
           {unreadCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
-        </button>
+        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end" sideOffset={8}>
         <div className="flex items-center justify-between px-4 py-3 min-h-[48px]">
@@ -170,7 +170,7 @@ export default function NotificationsDropdown() {
                 !n.isRead && 'bg-muted/30'
               )}
             >
-              <button
+              <Button variant="ghost"
                 onClick={() => { markOneRead(n.id, navTarget(n, authUser?.role), navigate); setOpen(false); }}
                 className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
               >
@@ -181,15 +181,15 @@ export default function NotificationsDropdown() {
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground truncate mt-0.5">{n.message}</p>
-              </button>
+              </Button>
               {!n.isRead && (
-                <button
+                <Button variant="ghost"
                   onClick={(e) => { e.stopPropagation(); markOneRead(n.id); }}
                   className="mt-1.5 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
                   aria-label={t('notifications.markAsRead', 'Mark as read')}
                 >
                   <CheckCheck size={14} />
-                </button>
+                </Button>
               )}
             </div>
           ))}

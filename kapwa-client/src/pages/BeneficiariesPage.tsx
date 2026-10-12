@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { categoryLabel } from '@/i18n/display';
-import { Eye, Search, Loader2 } from 'lucide-react';
+import { Eye, Search } from 'lucide-react';
 import useSWR from 'swr';
 import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
@@ -17,6 +17,9 @@ import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
 
 interface Beneficiary { id: string; name: string; age: number; barangay: string; householdSize: number; category: string; clientCategory?: string; status: string; }
@@ -80,12 +83,44 @@ function FilterBar({ searchInput, onSearchChange, onSearch, categoryFilter, onCa
   barangayFilter: string;
   onBarangayChange: (v: string) => void;
 }) {
-  const nav = useNavigate();
   const { t } = useTranslation();
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex items-center gap-2">
-        <Button variant="default" size="sm" onClick={() => nav('/intake')} aria-label={t('beneficiaries.newBeneficiaryAria', '+ New Beneficiary')}>{t('beneficiaries.newBeneficiary', '+ New Beneficiary')}</Button>
+    /* Filters left, search right — the /cases toolbar's arrangement. items-end
+       because the filter columns carry a label above their control and the
+       search group does not: bottom-aligning keeps every control on one line. */
+    <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-col gap-0.5">
+          <label className="text-xs text-muted-foreground font-medium">{t('beneficiaries.category', 'Category')}</label>
+          <Select
+            value={categoryFilter === '' ? '__all__' : categoryFilter}
+            onValueChange={(v) => onCategoryChange(v === '__all__' ? '' : v)}
+          >
+            <SelectTrigger aria-label={t('beneficiaries.filterByCategory', 'Filter by category')} className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {/* Radix refuses an empty-string item value: '__all__' is the
+                  reset option, mapped back to '' on the way out. */}
+              <SelectItem value="__all__">{t('beneficiaries.allCategories', 'All Categories')}</SelectItem>
+              {CLIENT_CATEGORIES.map(c => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <label className="text-xs text-muted-foreground font-medium">{t('beneficiaries.barangay', 'Barangay')}</label>
+          <Select value={barangayFilter} onValueChange={onBarangayChange}>
+            <SelectTrigger aria-label={t('beneficiaries.filterByBarangay', 'Filter by barangay')} className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('beneficiaries.allBarangays', 'All Barangays')}</SelectItem>
+              {BARANGAYS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
         <div className="relative">
@@ -100,33 +135,7 @@ function FilterBar({ searchInput, onSearchChange, onSearch, categoryFilter, onCa
             onKeyDown={e => { if (e.key === 'Enter') onSearch(); }}
           />
         </div>
-        <Button size="sm" onClick={onSearch}>{t('beneficiaries.search', 'Search')}</Button>
-        <div className="flex flex-col gap-0.5">
-          <label className="text-xs text-muted-foreground font-medium">{t('beneficiaries.category', 'Category')}</label>
-          <select
-            aria-label={t('beneficiaries.filterByCategory', 'Filter by category')}
-            className="flex h-10 w-36 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            value={categoryFilter}
-            onChange={e => onCategoryChange(e.target.value)}
-          >
-            <option value="">{t('beneficiaries.allCategories', 'All Categories')}</option>
-            {CLIENT_CATEGORIES.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col gap-0.5">
-          <label className="text-xs text-muted-foreground font-medium">{t('beneficiaries.barangay', 'Barangay')}</label>
-          <select
-            aria-label={t('beneficiaries.filterByBarangay', 'Filter by barangay')}
-            className="flex h-10 w-40 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            value={barangayFilter}
-            onChange={e => onBarangayChange(e.target.value)}
-          >
-            <option value="all">{t('beneficiaries.allBarangays', 'All Barangays')}</option>
-            {BARANGAYS.map(b => <option key={b}>{b}</option>)}
-          </select>
-        </div>
+        <Button size="sm" className="h-10" onClick={onSearch}>{t('beneficiaries.search', 'Search')}</Button>
       </div>
     </div>
   );
@@ -195,7 +204,7 @@ export function BeneficiariesPage() {
     limit: urlLimit,
   };
   const swrKey = queryKeys.beneficiaries.list(params);
-  const { data, isLoading, isValidating, error, mutate } = useSWR<{ data: Record<string, unknown>[]; total: number }>(swrKey, {
+  const { data, isLoading, error, mutate } = useSWR<{ data: Record<string, unknown>[]; total: number }>(swrKey, {
     keepPreviousData: true,
   });
 
@@ -205,8 +214,6 @@ export function BeneficiariesPage() {
   const lastSync = data ? Date.now() : null;
 
   const loading = isLoading;
-  const fetching = isValidating;
-  const canShowResults = !loading && !fetching && beneficiaries.length > 0;
 
   if (loading) {
     return (
@@ -229,6 +236,11 @@ export function BeneficiariesPage() {
       title={t('beneficiaries.title', 'Beneficiaries')}
       description={t('beneficiaries.description', 'Manage beneficiary records and household data')}
       cachedAt={lastSync ?? undefined}
+      actions={
+        <Button size="sm" onClick={() => navigate('/intake')} aria-label={t('beneficiaries.newBeneficiaryAria', '+ New Beneficiary')}>
+          {t('beneficiaries.newBeneficiary', '+ New Beneficiary')}
+        </Button>
+      }
     >
       <FilterBar
         searchInput={searchInput}
@@ -239,14 +251,6 @@ export function BeneficiariesPage() {
         barangayFilter={barangayFilter}
         onBarangayChange={(v) => { setBarangayFilter(v); updateURL({ barangay: v === 'all' ? undefined : v, page: '1' }); }}
       />
-
-      {canShowResults && (
-        <div className="text-sm text-muted-foreground flex items-center gap-1">
-          {fetching && <Loader2 size={14} className="animate-spin" />}
-          {!fetching && t('beneficiaries.showingResults', 'Showing {{count}} results', { count: beneficiaries.length })}
-          {!fetching && urlSearch && t('beneficiaries.forSearch', ' for "{{search}}"', { search: urlSearch })}
-        </div>
-      )}
 
       <DataTable
         columns={beneficiaryColumns}

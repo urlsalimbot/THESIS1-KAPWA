@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 import { HeartHandshake, IdCard, Lock, Scale, ShieldCheck } from 'lucide-react';
 import { StepLockBar, type StepLock } from './StepLockBar';
 
@@ -301,8 +302,8 @@ export function StepAdoption({ caseId, caseData, readOnly, lockReadOnly, stepLoc
         </label>
       </div>
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={!!form.adoptionCdclaaReceived} disabled={readOnly}
-          onChange={(e) => setForm((f) => ({ ...f, adoptionCdclaaReceived: e.target.checked }))} />
+        <Checkbox checked={!!form.adoptionCdclaaReceived} disabled={readOnly}
+          onCheckedChange={(v) => setForm((f) => ({ ...f, adoptionCdclaaReceived: v === true }))} />
         {t('caseView.adoption.cdclaaReceived', 'CDCLAA received (petition filed)')}
       </label>
       <label className="space-y-1.5">

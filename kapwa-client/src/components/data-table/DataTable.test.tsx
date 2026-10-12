@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { type ColumnDef } from '@tanstack/react-table';
 import { DataTable } from './DataTable';
 
@@ -104,7 +105,7 @@ describe('DataTable', () => {
     expect(pageNumbers.length).toBeLessThanOrEqual(7);
   });
 
-  it('changes the page size from the per-page select next to the total', () => {
+  it('changes the page size from the per-page select next to the total', async () => {
     const paginationAsMutable = { pageIndex: 0, pageSize: 10 };
     const onPaginationChange = (updater: unknown) => {
       const next = typeof updater === 'function'
@@ -113,7 +114,7 @@ describe('DataTable', () => {
       paginationAsMutable.pageIndex = next.pageIndex;
       paginationAsMutable.pageSize = next.pageSize;
     };
-    const { container } = render(
+    render(
       <DataTable
         columns={columns as ColumnDef<unknown, unknown>[]}
         data={mockData}
@@ -123,9 +124,9 @@ describe('DataTable', () => {
         onPaginationChange={onPaginationChange}
       />
     );
-    const select = container.querySelector('select[aria-label="Per page"]') as HTMLSelectElement;
-    expect(select).toBeTruthy();
-    fireEvent.change(select, { target: { value: '50' } });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('combobox', { name: /per page/i }));
+    await user.click(await screen.findByRole('option', { name: '50' }));
     expect(paginationAsMutable.pageSize).toBe(50);
     expect(paginationAsMutable.pageIndex).toBe(0);
   });

@@ -801,13 +801,13 @@ export function CaseViewPage() {
                 <Separator />
                 <p className="px-4 py-2 text-xs text-muted-foreground">
                   {t('cases.renewalOf', 'Renewal of case')}{' '}
-                  <button
+                  <Button variant="ghost" size="icon"
                     type="button"
                     className="rounded text-primary underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                     onClick={() => navigate(`/cases/${caseData.renewalOfCaseId}`)}
                   >
                     {renewalCase?.controlNo || String(caseData.renewalOfCaseId).slice(0, 8)}
-                  </button>
+                  </Button>
                 </p>
               </>
             )}
@@ -1047,22 +1047,22 @@ export function CaseViewPage() {
                 </p>
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
                   {caseData.certificateUrl && (
-                    <button
+                    <Button variant="ghost"
                       type="button"
                       onClick={() => viewGeneratedDoc(caseData.certificateUrl, 'certificate-of-eligibility.pdf')}
                       className="inline-flex items-center gap-1.5 rounded text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                     >
                       <FileText size={14} /> {t('caseView.viewCertificate', 'View Certificate of Eligibility')}
-                    </button>
+                    </Button>
                   )}
                   {caseData.pettyCashVoucherUrl && (
-                    <button
+                    <Button variant="ghost"
                       type="button"
                       onClick={() => viewGeneratedDoc(caseData.pettyCashVoucherUrl, 'petty-cash-voucher.pdf')}
                       className="inline-flex items-center gap-1.5 rounded text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                     >
                       <FileText size={14} /> {t('caseView.viewVoucher', 'View Petty Cash Voucher')}
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
@@ -1292,7 +1292,7 @@ function IrfCaseList({ caseId }: { caseId: string }) {
   return (
     <div className="divide-y">
       {irfs.map((irf: any) => (
-        <button
+        <Button variant="ghost"
           key={irf.id}
           type="button"
           onClick={() => navigate(`/irf/${irf.id}`)}
@@ -1305,7 +1305,7 @@ function IrfCaseList({ caseId }: { caseId: string }) {
           <Badge variant={irf.caseDisposition === 'Closed' ? 'default' : 'secondary'} className="shrink-0 text-xs">
             {irf.caseDisposition}
           </Badge>
-        </button>
+        </Button>
       ))}
     </div>
   );

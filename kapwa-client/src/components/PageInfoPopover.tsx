@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { usePageInfo } from '@/lib/page-info-context';
+import { Button } from '@/components/ui/button';
 
 interface HelpEntry {
   q: string;
@@ -218,9 +219,9 @@ export default function PageInfoPopover() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors" aria-label={t('shell.help', 'Help')}>
+        <Button variant="ghost" className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors" aria-label={t('shell.help', 'Help')}>
           <HelpCircle size={20} />
-        </button>
+        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end" sideOffset={8}>
         <div className="px-4 py-3 border-b border-border">

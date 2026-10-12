@@ -435,6 +435,14 @@ const en = {
     "exitCrisisMode": "Exit Crisis Mode",
     "crisisModeBanner": "Crisis mode — ad-hoc services use intervention-anchored documents.",
   },
+  "interventionGroups": {
+    "capacity": "Capacity Building & Community",
+    "documents": "Case Management & Documents",
+    "financial": "Financial & Material Assistance",
+    "health": "Health & Home Visits",
+    "legal": "Legal & Protection",
+    "psychosocial": "Counseling & Psychosocial",
+  },
   "interventionType": {
     "FA": "Financial Assistance",
     "C": "Counseling",

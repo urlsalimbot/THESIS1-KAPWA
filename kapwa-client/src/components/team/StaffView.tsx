@@ -19,6 +19,7 @@ import { queryKeys } from '../../lib/query-keys';
 import { getAchievements } from '../../lib/team-api';
 import type { TeamStatus, TeamStaffAchievement, AchievementsRollup } from '../../lib/team-api';
 import { YouBadge } from './YouBadge';
+import { Button } from '@/components/ui/button';
 
 export interface StaffViewProps {
   /** Roster — achievements.perStaff (the only team-scoped staff list), joined
@@ -132,7 +133,7 @@ export function StaffView({ staff, statuses, myUserId }: StaffViewProps) {
           const status = statusByUser.get(member.userId);
           const isSelected = member.userId === selectedId;
           return (
-            <button
+            <Button variant="ghost"
               key={member.userId}
               type="button"
               onClick={() => setSelectedUserId(member.userId)}
@@ -176,7 +177,7 @@ export function StaffView({ staff, statuses, myUserId }: StaffViewProps) {
                   </p>
                 )}
               </div>
-            </button>
+            </Button>
           );
         })}
       </div>

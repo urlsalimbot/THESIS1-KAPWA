@@ -2,6 +2,9 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { ComposedChart, Line, Area, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { queryKeys } from '../../lib/query-keys';
 import { MethodologyNote } from './MethodologyNote';
@@ -41,16 +44,26 @@ export function ForecastTab({ filters }: { filters: Record<string, unknown> }) {
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground" htmlFor="forecast-metric">{t('analytics.forecast.metric', 'Metric')}</label>
-          <select id="forecast-metric" className="flex h-9 rounded-md border border-input bg-background px-2 text-sm" value={metric} onChange={e => setMetric(e.target.value as 'cases' | 'disbursement')}>
-            <option value="cases">{t('analytics.forecast.cases', 'Cases')}</option>
-            <option value="disbursement">{t('analytics.forecast.disbursement', 'Disbursement')}</option>
-          </select>
+          <Select value={metric} onValueChange={(v) => setMetric(v as 'cases' | 'disbursement')}>
+            <SelectTrigger id="forecast-metric" className="h-9 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="cases">{t('analytics.forecast.cases', 'Cases')}</SelectItem>
+              <SelectItem value="disbursement">{t('analytics.forecast.disbursement', 'Disbursement')}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground" htmlFor="forecast-horizon">{t('analytics.forecast.horizon', 'Horizon (months)')}</label>
-          <select id="forecast-horizon" className="flex h-9 rounded-md border border-input bg-background px-2 text-sm" value={horizon} onChange={e => setHorizon(Number(e.target.value))}>
-            {Array.from({ length: 12 }, (_, i) => i + 1).map(h => <option key={h} value={h}>{h}</option>)}
-          </select>
+          <Select value={String(horizon)} onValueChange={(v) => setHorizon(Number(v))}>
+            <SelectTrigger id="forecast-horizon" className="h-9 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map(h => <SelectItem key={h} value={String(h)}>{h}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

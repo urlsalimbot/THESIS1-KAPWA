@@ -1,10 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { axe } from 'vitest-axe';
 import { CasesPage } from './CasesPage';
 import { BARANGAYS, CLIENT_CATEGORIES_V2 } from '../lib/constants';
+import { statusLabel, categoryLabel } from '@/i18n/display';
+import i18n from '@/i18n';
+
+const t = i18n.t.bind(i18n);
 
 const { mockCases, mockApiGet, mockApiPost, mockApiPut, mockApiPatch, mockApiDel, mockQueueFsm, mockIsOnline } = vi.hoisted(() => ({
   mockCases: [
@@ -107,19 +112,26 @@ describe('CasesPage', () => {
   });
 
   it('offers every possible value in the remaining filters, plus data extras', async () => {
+    const user = userEvent.setup();
     renderWithSWR(<CasesPage />);
     await screen.findByText('Dela Cruz');
-    const optionValues = (label: string) =>
-      Array.from((screen.getByLabelText(label) as HTMLSelectElement).options).map(o => o.value);
 
-    for (const b of BARANGAYS) expect(optionValues('Barangay')).toContain(b);
-    for (const c of CLIENT_CATEGORIES_V2) expect(optionValues('Category')).toContain(c);
-    expect(optionValues('Gender')).toEqual(expect.arrayContaining(['Male', 'Female']));
-    expect(optionValues('Status')).toEqual(
-      expect.arrayContaining(['enrolled', 'assessed', 'in_review', 'active', 'transitioning', 'closed']),
+    // Radix options live in a portal: open the combobox, read them, close.
+    const optionTexts = async (name: string): Promise<string[]> => {
+      await user.click(screen.getByRole('combobox', { name }));
+      const texts = (await screen.findAllByRole('option')).map(o => o.textContent ?? '');
+      await user.keyboard('{Escape}');
+      return texts;
+    };
+
+    for (const b of BARANGAYS) expect(await optionTexts('Barangay')).toContain(b);
+    for (const c of CLIENT_CATEGORIES_V2) expect(await optionTexts('Category')).toContain(categoryLabel(t, c));
+    expect(await optionTexts('Gender')).toEqual(expect.arrayContaining(['Male', 'Female']));
+    expect(await optionTexts('Status')).toEqual(
+      expect.arrayContaining(['enrolled', 'assessed', 'in_review', 'active', 'transitioning', 'closed'].map(k => statusLabel(t, k))),
     );
     // Values present in the loaded rows stay filterable even when outside the canonical list.
-    expect(optionValues('Barangay')).toContain('Barangay 1');
+    expect(await optionTexts('Barangay')).toContain('Barangay 1');
   });
 
   it('snapshot: CasesPage rendered DOM with table layout + status badges + filter controls', async () => {

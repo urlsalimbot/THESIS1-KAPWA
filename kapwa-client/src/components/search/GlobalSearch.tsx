@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useDebouncedSearch } from '@/hooks/useDebouncedSearch';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 function useOs() {
   return useMemo(() => {
@@ -83,14 +85,14 @@ export function GlobalSearch() {
     <div className="relative">
       <form onSubmit={e => { e.preventDefault(); navigateToSearch(); }}>
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none z-10" />
-        <input
+        <Input
           ref={inputRef}
           type="text"
           role="combobox"
           aria-expanded={showDropdown}
           aria-label={t('search.ariaLabel', 'Search beneficiaries')}
           placeholder={t('search.placeholder', 'Search records...')}
-          className={`h-9 w-56 lg:w-72 rounded-full border pl-9 pr-10 text-sm bg-muted/50 text-foreground placeholder:text-muted-foreground outline-none transition-colors ${focused ? 'border-ring bg-background' : 'border-transparent hover:bg-muted'}`}
+          className={`h-9 w-56 lg:w-72 rounded-full pl-9 pr-10 bg-muted/50 outline-none transition-colors ${focused ? 'border-ring bg-background' : 'border-transparent hover:bg-muted'}`}
           value={query}
           onChange={e => setQuery(e.target.value)}
           onFocus={() => setFocused(true)}
@@ -111,7 +113,7 @@ export function GlobalSearch() {
             <div className="px-3 py-4 text-xs text-center text-muted-foreground">{t('search.noResults', 'No results found.')}</div>
           )}
           {results.map((item, i) => (
-            <button
+            <Button variant="ghost"
               key={item.id}
               type="button"
               className={`w-full text-left px-3 py-2.5 flex flex-col gap-0.5 hover:bg-muted transition-colors text-sm ${i === selectedIdx ? 'bg-muted' : ''}`}
@@ -121,16 +123,16 @@ export function GlobalSearch() {
               <span className="text-xs text-muted-foreground truncate">
                 {item.controlNo && <>{item.controlNo} &middot; </>}{item.barangay}
               </span>
-            </button>
+            </Button>
           ))}
           {results.length > 0 && (
-            <button
+            <Button variant="ghost"
               type="button"
               className="w-full text-center px-3 py-2 text-xs font-medium text-accent border-t hover:bg-muted transition-colors"
               onMouseDown={() => navigateToSearch()}
             >
               {t('search.viewAll', 'View all results')}
-            </button>
+            </Button>
           )}
         </div>
       )}

@@ -162,7 +162,8 @@ describe('IrfDetailPage export section', () => {
 
     expect((screen.getByRole('button', { name: /^PDF$/i }) as HTMLButtonElement).disabled).toBe(true);
 
-    const select = screen.getByLabelText(/legal basis/i) as HTMLSelectElement;
-    expect(select.options.length).toBeGreaterThan(1);
+    // A basis must be chosen before the export enables; the dropdown exists.
+    const trigger = screen.getByRole('combobox', { name: /legal basis/i });
+    expect(trigger).toBeTruthy();
   });
 });

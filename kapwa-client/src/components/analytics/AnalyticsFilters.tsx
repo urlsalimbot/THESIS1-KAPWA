@@ -1,6 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { BARANGAYS } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 
 export interface AnalyticsFilterValue {
   range: '30d' | '90d' | '6m' | '1y' | 'all';
@@ -54,28 +57,27 @@ export function AnalyticsFilters({
         <label className="text-xs font-medium text-muted-foreground" htmlFor="analytics-range">
           {t('analytics.filters.range', 'Date range')}
         </label>
-        <select
-          id="analytics-range"
-          className="flex h-9 rounded-md border border-input bg-background px-2 text-sm"
-          value={value.range}
-          onChange={e => onChange({ ...value, range: e.target.value as AnalyticsFilterValue['range'] })}
-        >
-          {ranges.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
-        </select>
+        <Select value={value.range} onValueChange={(v) => onChange({ ...value, range: v as AnalyticsFilterValue['range'] })}>
+          <SelectTrigger id="analytics-range" className="h-9 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {ranges.map(r => <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-1">
         <label className="text-xs font-medium text-muted-foreground" htmlFor="analytics-barangay">
           {t('analytics.filters.barangay', 'Barangay')}
         </label>
-        <select
-          id="analytics-barangay"
-          className="flex h-9 rounded-md border border-input bg-background px-2 text-sm"
-          value={value.barangay}
-          onChange={e => onChange({ ...value, barangay: e.target.value })}
-        >
-          <option value="">{t('analytics.filters.allBarangays', 'All barangays')}</option>
-          {BARANGAYS.map(b => <option key={b} value={b}>{b}</option>)}
-        </select>
+        <Select value={value.barangay} onValueChange={(v) => onChange({ ...value, barangay: v })}>
+          <SelectTrigger id="analytics-barangay" className="h-9 text-sm">
+            <SelectValue placeholder={t('analytics.filters.allBarangays', 'All barangays')} />
+          </SelectTrigger>
+          <SelectContent>
+            {BARANGAYS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
       <Button size="sm" variant="outline" onClick={() => onChange({ ...value })}>
         {t('analytics.filters.apply', 'Apply')}

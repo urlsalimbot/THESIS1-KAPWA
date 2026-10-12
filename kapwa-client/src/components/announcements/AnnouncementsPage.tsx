@@ -89,7 +89,7 @@ export function AnnouncementsPage() {
               key={a.id}
               className={`${a.status === 'draft' ? 'opacity-75' : ''} hover:shadow-md transition-shadow`}
             >
-              <button
+              <Button variant="ghost"
                 type="button"
                 onClick={() => navigate(`/announcements/manage/${a.id}`)}
                 className="w-full text-left"
@@ -131,7 +131,7 @@ export function AnnouncementsPage() {
                     <ArrowRight size={14} />
                   </span>
                 </div>
-              </button>
+              </Button>
             </Card>
           ))}
         </div>

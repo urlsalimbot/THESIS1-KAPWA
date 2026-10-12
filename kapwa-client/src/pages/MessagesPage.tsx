@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
 import { ContactMessagesPanel } from '@/components/ContactMessagesPanel';
@@ -287,26 +288,12 @@ export function MessagesPage() {
   return (
     <PageShell title={t('messages.title', 'Messages')} description={t('messages.description', 'Chat with your team')}>
       {isStaff && (
-        <div className="mb-3 flex gap-1 rounded-lg border bg-card p-1 w-fit">
-          <button
-            onClick={() => setTab('chat')}
-            className={cn(
-              'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-              tab === 'chat' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
-            )}
-          >
-            {t('messages.tabChat', 'Chat')}
-          </button>
-          <button
-            onClick={() => setTab('contact')}
-            className={cn(
-              'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-              tab === 'contact' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
-            )}
-          >
-            {t('messages.tabContact', 'Contact Messages')}
-          </button>
-        </div>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as 'chat' | 'contact')} className="mb-3 w-fit">
+          <TabsList>
+            <TabsTrigger value="chat">{t('messages.tabChat', 'Chat')}</TabsTrigger>
+            <TabsTrigger value="contact">{t('messages.tabContact', 'Contact Messages')}</TabsTrigger>
+          </TabsList>
+        </Tabs>
       )}
       {tab === 'contact' && isStaff ? (
         <ContactMessagesPanel />
@@ -342,11 +329,11 @@ export function MessagesPage() {
                       className="h-9 pl-9 pr-8 text-sm" autoFocus
                     />
                     {contactSearch && (
-                      <button onClick={() => setContactSearch('')}
+                      <Button variant="ghost" onClick={() => setContactSearch('')}
                         className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       >
                         <X size={14} />
-                      </button>
+                      </Button>
                     )}
                   </div>
                   <div className="max-h-72 overflow-y-auto space-y-1 -mx-2">
@@ -354,7 +341,7 @@ export function MessagesPage() {
                       <p className="text-xs text-muted-foreground py-8 text-center">{t('messages.noContacts', 'No contacts found')}</p>
                     ) : (
                       filteredUsers.map(u => (
-                        <button key={u.id} onClick={() => selectConversation(u.id)}
+                        <Button variant="ghost" key={u.id} onClick={() => selectConversation(u.id)}
                           className="w-full text-left rounded-lg px-3 py-2.5 text-sm hover:bg-accent flex items-center gap-3 transition-colors group"
                         >
                           <Avatar className="h-8 w-8">
@@ -369,7 +356,7 @@ export function MessagesPage() {
                           {existingConvIds.has(u.id) && (
                             <span className="text-xs text-muted-foreground/60 italic shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">{t('messages.existing', 'Existing')}</span>
                           )}
-                        </button>
+                        </Button>
                       ))
                     )}
                   </div>
@@ -415,7 +402,7 @@ export function MessagesPage() {
             ) : (
               <div className="py-1">
                 {conversations.map(conv => (
-                  <button key={conv.userId} onClick={() => selectConversation(conv.userId)}
+                  <Button variant="ghost" key={conv.userId} onClick={() => selectConversation(conv.userId)}
                     className={cn(
                       'w-full text-left px-4 py-3 hover:bg-accent/60 transition-colors border-b border-border/40 last:border-b-0',
                       activeConv === conv.userId && 'bg-accent',
@@ -442,7 +429,7 @@ export function MessagesPage() {
                         </div>
                       </div>
                     </div>
-                  </button>
+                  </Button>
                 ))}
               </div>
             )}
@@ -470,12 +457,12 @@ export function MessagesPage() {
             <>
               {/* Chat Header */}
               <div className="flex items-center gap-3 border-b px-4 py-3.5 bg-card">
-                <button onClick={() => setShowMobileConv(false)}
+                <Button variant="ghost" onClick={() => setShowMobileConv(false)}
                   className="lg:hidden p-1 -ml-1 text-muted-foreground hover:text-foreground"
                   aria-label={t('messages.backToConversations', 'Back to conversations')}
                 >
                   <ChevronLeft size={20} />
-                </button>
+                </Button>
                 <Avatar className="h-9 w-9 shrink-0">
                   <AvatarFallback className={cn('text-sm text-white font-medium', roleColor(getOtherRole(activeConv)))}>
                     {getOtherName(activeConv).charAt(0).toUpperCase()}

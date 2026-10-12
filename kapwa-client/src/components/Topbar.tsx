@@ -108,13 +108,13 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
     <TooltipProvider>
       <header className="z-40 h-[4.5rem] border-b bg-card flex items-center px-4 lg:px-6 overflow-visible short:h-14">
         <div className="flex items-center gap-3 min-w-0 shrink-0">
-          <button
-            className="touch-sm lg:hidden w-9 h-9 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 hover:scale-105"
+          <Button variant="ghost" size="icon"
+            className="touch-sm lg:hidden w-9 h-9 rounded-md text-muted-foreground transition-all duration-200 hover:scale-105"
             onClick={onMenuToggle}
             aria-label={t('topbar.toggleNavigation', 'Toggle navigation menu')}
           >
             <Menu size={20} />
-          </button>
+          </Button>
 
           <Link to="/" className="touch-sm flex items-center gap-3 no-underline group shrink-0">
             <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center shrink-0 transition-all duration-200 group-hover:shadow-md">
@@ -153,13 +153,13 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
           {canIntake && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <button
-                  className="touch-sm w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 hover:scale-105"
+                <Button variant="ghost" size="icon"
+                  className="touch-sm w-9 h-9 rounded-full text-muted-foreground transition-all duration-200 hover:scale-105"
                   onClick={() => navigate('/intake')}
                   aria-label={t('topbar.newIntake', 'New Intake')}
                 >
                   <Plus size={20} />
-                </button>
+                </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom">{t('topbar.newIntake', 'New Intake')}</TooltipContent>
             </Tooltip>
@@ -168,13 +168,13 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
           {canApprove && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <button
-                  className="hidden md:flex touch-sm relative w-9 h-9 rounded-full items-center justify-center text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 hover:scale-105"
+                <Button variant="ghost" size="icon"
+                  className="hidden md:flex touch-sm relative w-9 h-9 rounded-full text-muted-foreground transition-all duration-200 hover:scale-105"
                   onClick={() => navigate('/approvals')}
                   aria-label={t('topbar.approvalsQueue', 'Approvals Queue')}
                 >
                   <CheckSquare size={20} />
-                </button>
+                </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom">{t('topbar.approvalsQueue', 'Approvals Queue')}</TooltipContent>
             </Tooltip>
@@ -205,16 +205,15 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button
+              <Button variant="ghost" size="icon"
                 aria-label={t('topbar.openUserMenu', 'Open user menu')}
-                className="rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 hover:shadow-md"
-              >
+                className="rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 hover:shadow-md">
                 <Avatar className="cursor-pointer">
                   <AvatarFallback className="text-xs font-medium bg-muted text-foreground">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
-              </button>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" sideOffset={8} className="w-56">
               <DropdownMenuLabel className="font-normal">

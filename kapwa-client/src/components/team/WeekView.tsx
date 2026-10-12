@@ -18,6 +18,7 @@ import { useMediaQuery } from '@/hooks/use-media-query';
 import { formatDate } from '../../lib/format';
 import { YouBadge } from './YouBadge';
 import type { TeamBlock, TeamEvent, TeamStaffAchievement } from '../../lib/team-api';
+import { Button } from '@/components/ui/button';
 
 export interface WeekViewProps {
   blocks: TeamBlock[];
@@ -168,25 +169,25 @@ function MobileDayAgenda({
     <div className="rounded-lg border bg-background">
       {/* Day stepper */}
       <div className="flex items-center gap-2 border-b px-3 py-2">
-        <button
+        <Button variant="ghost"
           type="button"
           aria-label={t('team.week.previousDay')}
           onClick={() => setDay(d => addDays(d, -1))}
           className="rounded border p-1 hover:bg-muted"
         >
           <ChevronLeft size={16} />
-        </button>
+        </Button>
         <span className="flex-1 text-center text-sm font-semibold" data-testid="mobile-day-label">
           {formatDate(dayStr)}
         </span>
-        <button
+        <Button variant="ghost"
           type="button"
           aria-label={t('team.week.nextDay')}
           onClick={() => setDay(d => addDays(d, 1))}
           className="rounded border p-1 hover:bg-muted"
         >
           <ChevronRight size={16} />
-        </button>
+        </Button>
       </div>
 
       {/* Office events of the day */}
@@ -198,7 +199,7 @@ function MobileDayAgenda({
           <p className="py-1 text-xs text-muted-foreground">{t('team.week.noEvents')}</p>
         )}
         {dayEvents.map(item => (
-          <button
+          <Button variant="ghost"
             key={item.event.id}
             type="button"
             disabled={readOnly}
@@ -217,7 +218,7 @@ function MobileDayAgenda({
             }`}
           >
             {item.continuation ? `↳ ${item.event.title}` : item.event.title}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -244,7 +245,7 @@ function MobileDayAgenda({
               const label = t(typeKey, typeKey);
               return (
                 <li key={block.id}>
-                  <button
+                  <Button variant="ghost"
                     type="button"
                     disabled={readOnly}
                     onClick={() => onBlockClick(block)}
@@ -272,7 +273,7 @@ function MobileDayAgenda({
                         ? `${block.startTime}–${block.endTime}`
                         : t('team.week.allDay')}
                     </span>
-                  </button>
+                  </Button>
                 </li>
               );
             })}
@@ -403,7 +404,7 @@ export function WeekView({
               className={`space-y-1 border-l px-1 py-1 ${i === 0 ? 'border-l-0' : ''}`}
             >
               {(eventsByDay.get(day) ?? []).map(item => (
-                <button
+                <Button variant="ghost"
                   key={item.event.id}
                   type="button"
                   disabled={readOnly}
@@ -422,7 +423,7 @@ export function WeekView({
                   }`}
                 >
                   {item.continuation ? `↳ ${item.event.title}` : item.event.title}
-                </button>
+                </Button>
               ))}
             </div>
           ))}
@@ -452,7 +453,7 @@ export function WeekView({
                   {dayBlocks.map(slice => {
                     const block = slice.block;
                     return (
-                      <button
+                      <Button variant="ghost"
                         key={block.id}
                         type="button"
                         disabled={readOnly}
@@ -480,7 +481,7 @@ export function WeekView({
                           BLOCK_TYPE_LABEL_KEYS[block.blockType] ?? block.blockType,
                           BLOCK_TYPE_LABEL_KEYS[block.blockType] ?? block.blockType,
                         )}
-                      </button>
+                      </Button>
                     );
                   })}
                   <button

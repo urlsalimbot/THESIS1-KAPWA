@@ -1,0 +1,40 @@
+	case lifecycle
+
+step 1
+assess and interview
+end of step 1
+
+step 2
+select appropriate intervention
+
+notify client with documentary needs
+
+documentary needs must be uploaded by the client remotely and pass on-site
+or pass on-site directly
+
+after accomplishing these documents
+PCV and COE release 
+end of step 2
+
+step 3 
+determine the need for inter-agency referrals
+yes or no
+end of step 3
+
+step 4
+evaluate help given
+if not self-sufficient -> subject to case renewal
+if self-sufficient -> subject to Closure
+end of step 4
+
+step 5
+evaluate case study
+end of step 5
+
+PCV, COE, IRF(optional) and GIS is altogether is a Case Study Report
+
+SEX        | Financial                        |    | Legal          | Technical                                                                                                                               |
+           |----------------------------------|    |----------------|--------------------|-------------------|-------------------|-----------|----------|---------------|------------|-----------------|------|-----|
+           | Financial Assistance             |PWD | Referral       | Birth \nDiscrepancy|Travel \nAssessment|Case Study \nReport|Counselling|PhilHealth|Child \nCustody|Home \nVisit|Balik \nProbinsya|Others|TOTAL|
+----|------|----------------------------------|    |----------------|                    |                   |                   |           |          |               |            |                 |      |     |
+Male|Female|Burial|Medical|Assistive \nDevices|    |LEGAL/PAO|OTHERS|                    |                   |                   |           |          |               |            |                 |      |     | 

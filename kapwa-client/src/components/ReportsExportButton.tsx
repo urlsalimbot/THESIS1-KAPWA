@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
 
 interface ReportsExportButtonProps {
   endpoint: string;
@@ -60,13 +61,12 @@ export default function ReportsExportButton({
 
   return (
     <div>
-      <button
+      <Button variant="ghost"
         onClick={handleClick}
         disabled={loading || disabled}
-        className={`rounded bg-primary px-3 py-1.5 text-xs text-white hover:bg-primary-dark disabled:opacity-50 ${className}`}
-      >
+        className={`rounded bg-primary px-3 py-1.5 text-xs text-white hover:bg-primary-dark disabled:opacity-50 ${className}`}>
         {loading ? t('reports.generating', 'Generating...') : label}
-      </button>
+      </Button>
       {error && (
         <p className="mt-1 text-xs text-destructive">{error}</p>
       )}

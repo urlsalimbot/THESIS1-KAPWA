@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { CoordinatorReferralFormPage } from './CoordinatorReferralFormPage';
 
@@ -215,27 +216,33 @@ describe('CoordinatorReferralFormPage barangay options', () => {
     mockUseAuth.mockReturnValue({ user: null });
   });
 
-  it('offers exactly the barangays the intake address block lists for Norzagaray', () => {
+  it('offers exactly the barangays the intake address block lists for Norzagaray', async () => {
+    const user = userEvent.setup();
     renderPage();
 
-    const options = [...(screen.getByLabelText('Barangay') as HTMLSelectElement).options]
-      .map(o => o.value)
+    // Radix items expose their label; barangay labels ARE the values.
+    await user.click(screen.getByLabelText('Barangay'));
+    const options = [...document.querySelectorAll('[role="option"]')]
+      .map(o => o.textContent ?? '')
       .filter(Boolean);
+    await user.keyboard('{Escape}');
     expect(options).toEqual(NORZAGARAY_BARANGAYS);
   });
 
-  it('starts on the coordinator’s own barangay but still allows any of the 13', () => {
+  it('starts on the coordinator’s own barangay but still allows any of the 13', async () => {
     // referrals.barangay is derived server-side from assignedBarangay, so this
     // field records the resident's address, not the routing key. A coordinator
     // does get walk-ins from a neighbouring barangay.
     mockUseAuth.mockReturnValue({ user: { id: '1', role: 'coordinator', assignedBarangay: 'Bigte' } });
     renderPage();
 
-    const select = screen.getByLabelText('Barangay') as HTMLSelectElement;
-    expect(select.value).toBe('Bigte');
+    const trigger = screen.getByLabelText('Barangay');
+    expect(trigger).toHaveTextContent('Bigte');
 
-    fireEvent.change(select, { target: { value: 'Tigbe' } });
-    expect((screen.getByLabelText('Barangay') as HTMLSelectElement).value).toBe('Tigbe');
+    const user = userEvent.setup();
+    await user.click(trigger);
+    await user.click(await screen.findByRole('option', { name: 'Tigbe' }));
+    expect(screen.getByLabelText('Barangay')).toHaveTextContent('Tigbe');
   });
 
   it('falls back to an unselected state when the assignment is not a Norzagaray barangay', () => {
@@ -244,10 +251,11 @@ describe('CoordinatorReferralFormPage barangay options', () => {
     mockUseAuth.mockReturnValue({ user: { id: '1', role: 'coordinator', assignedBarangay: 'San Jose' } });
     renderPage();
 
-    expect((screen.getByLabelText('Barangay') as HTMLSelectElement).value).toBe('');
+    expect(screen.getByLabelText('Barangay')).toHaveTextContent('Select...');
   });
 
   it('submits the chosen barangay as a name, matching what the address records store', async () => {
+    const user = userEvent.setup();
     mockUseAuth.mockReturnValue({ user: { id: '1', role: 'coordinator', assignedBarangay: 'Bigte' } });
     renderPage();
 
@@ -255,7 +263,8 @@ describe('CoordinatorReferralFormPage barangay options', () => {
     fireEvent.change(screen.getByLabelText('First Name *'), { target: { value: 'Ana' } });
     fireEvent.click(screen.getByLabelText('Female'));
     fireEvent.change(screen.getByLabelText('Date of Birth *'), { target: { value: '2015-03-30' } });
-    fireEvent.change(screen.getByLabelText('Barangay'), { target: { value: 'Minuyan' } });
+    await user.click(screen.getByLabelText('Barangay'));
+    await user.click(await screen.findByRole('option', { name: 'Minuyan' }));
     fireEvent.change(screen.getByLabelText('Reason for Referral *'), { target: { value: 'Medical' } });
 
     fireEvent.submit(screen.getByRole('button', { name: /Submit Referral/i }).closest('form') as HTMLFormElement);

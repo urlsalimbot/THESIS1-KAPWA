@@ -155,7 +155,8 @@ describe('StepIntegratedDelivery — referral or an explicit no-referral decisio
 
     await user.click(await screen.findByRole('button', { name: /Add Referral/i }));
 
-    await user.selectOptions(await screen.findByLabelText(/Target Agency/i), 'ag-rhu');
+    await user.click(await screen.findByLabelText(/Target Agency/i));
+    await user.click(await screen.findByRole('option', { name: /RHU/i }));
     await user.type(screen.getByLabelText(/Reason/i), 'Medical coordination');
     await user.click(screen.getByRole('button', { name: /^Issue$/i }));
 
@@ -174,7 +175,8 @@ describe('StepIntegratedDelivery — referral or an explicit no-referral decisio
     renderStep();
 
     await user.click(await screen.findByRole('button', { name: /Add Referral/i }));
-    await user.selectOptions(await screen.findByLabelText(/Target Agency/i), 'ag-rhu');
+    await user.click(await screen.findByLabelText(/Target Agency/i));
+    await user.click(await screen.findByRole('option', { name: /RHU/i }));
     await user.type(screen.getByLabelText(/Reason/i), 'Medical coordination');
     await user.click(screen.getByRole('button', { name: /^Issue$/i }));
 

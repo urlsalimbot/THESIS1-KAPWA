@@ -1,6 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { categoryLabel } from '@/i18n/display';
 import { ACCESS_CARD_CATEGORIES, type AccessCardCategory } from '@/lib/constants';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 
 interface Props {
   id: string;
@@ -26,17 +29,19 @@ interface Props {
 export function AccessCardCategorySelect({ id, value, onChange, className }: Props) {
   const { t } = useTranslation();
   return (
-    <select
-      id={id}
-      value={value}
-      onChange={e => onChange(e.target.value as AccessCardCategory)}
-      className={className}
-    >
-      {ACCESS_CARD_CATEGORIES.map(category => (
-        <option key={category} value={category}>
-          {categoryLabel(t, category)}
-        </option>
-      ))}
-    </select>
+    <Select value={value} onValueChange={(v) => onChange(v as AccessCardCategory)}>
+      {/* id + htmlFor keep the surrounding label association; no aria-label,
+          which would take precedence over it. */}
+      <SelectTrigger id={id} className={className}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {ACCESS_CARD_CATEGORIES.map(category => (
+          <SelectItem key={category} value={category}>
+            {categoryLabel(t, category)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

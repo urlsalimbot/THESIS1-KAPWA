@@ -142,7 +142,7 @@ body {
     min-width: 44px;
   }
   /* undo the 44px rule for small-form-factor inputs */
-  input[type="checkbox"], input[type="radio"], [role="switch"], [role="checkbox"] {
+  input[type="checkbox"], input[type="radio"], [role="switch"], [role="checkbox"], [role="radio"] {
     min-height: unset !important;
     min-width: unset !important;
   }
@@ -157,13 +157,13 @@ body {
      Colours come from the brand tokens so both layers follow light/dark mode. */
   .brand-aura {
     background-image:
-      radial-gradient(58rem 32rem at 50% -6rem, rgba(200, 85, 61, 0.1), transparent 68%),
-      radial-gradient(40rem 24rem at 86% 4rem, rgba(27, 58, 92, 0.08), transparent 70%);
+      radial-gradient(58rem 32rem at 50% -6rem, color-mix(in srgb, var(--accent) 10%, transparent), transparent 68%),
+      radial-gradient(40rem 24rem at 86% 4rem, color-mix(in srgb, var(--primary) 8%, transparent), transparent 70%);
   }
   .dark .brand-aura {
     background-image:
-      radial-gradient(58rem 32rem at 50% -6rem, rgba(224, 122, 95, 0.12), transparent 68%),
-      radial-gradient(40rem 24rem at 86% 4rem, rgba(232, 230, 225, 0.05), transparent 70%);
+      radial-gradient(58rem 32rem at 50% -6rem, color-mix(in srgb, var(--accent) 12%, transparent), transparent 68%),
+      radial-gradient(40rem 24rem at 86% 4rem, color-mix(in srgb, var(--primary) 5%, transparent), transparent 70%);
   }
   .brand-grid {
     background-image: radial-gradient(circle at 1px 1px, var(--border) 1px, transparent 0);
@@ -188,13 +188,18 @@ body {
   --secondary-foreground: #FFFFFF;
   --muted: #E5E2DD;
   --muted-foreground: #5C5A56;
-  --accent: #C8553D;
+  /* #B94A34, not the old #C8553D: white-on-accent must clear WCAG AA 4.5:1
+     (4.35:1 before), and accent-as-small-text needs 4.5:1 on both --background
+     and --card (4.06:1 / 4.35:1 before). Dark mode already passes. */
+  --accent: #B94A34;
   --accent-foreground: #FFFFFF;
   --destructive: #DC2626;
   --destructive-foreground: #FFFFFF;
   --border: #D8D4CE;
   --input: #D8D4CE;
   --ring: #1B3A5C;
+  /* Native date/time pickers render against this scheme, not the OS's. */
+  color-scheme: light;
 
   --badge-pending-bg: #FFF3CD;
   --badge-pending-fg: #856404;
@@ -278,6 +283,8 @@ body {
   --border: #2A3A4A;
   --input: #3D5A80;
   --ring: #E07A5F;
+  /* Native date/time pickers render against this scheme, not the OS's. */
+  color-scheme: dark;
 
   --badge-pending-bg: #5C4A0A;
   --badge-pending-fg: #FFD666;
@@ -304,6 +311,20 @@ body {
   --warning-foreground: #FDE68A;
   --success: #34D399;
   --success-foreground: #A7F3D0;
+}
+
+/* ---- Native date/time pickers --------------------------------------------
+   The app ships native <input type="date"> everywhere (no calendar library),
+   so the picker's look is the browser's. Two system-wide fixes:
+   1. color-scheme (above): without it, Chromium keeps the calendar poppup —
+      and its trigger icon — light-colored even in dark mode.
+   2. Shadcn Inputs are display:flex, which makes the calendar indicator a flex
+      child: give it the pinned-right, slightly dimmed look the intake form
+      used to hand-roll per instance. */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  margin-left: auto;
+  opacity: 0.6;
+  cursor: pointer;
 }
 
 /* Theme reference for utility class generation — @theme inline per shadcn v4 */
@@ -515,19 +536,79 @@ ol[data-sonner-toaster][data-sonner-theme='system'] {
 /* Status rides in the icon chip, not in a stripe down the card's edge: the chip
    is the same size in every state, so a stack of toasts does not change shape
    with the mix of outcomes, and the plate is the muted surface in both themes
-   rather than a third colour to keep in sync. */
+   rather than a third colour to keep in sync.
+
+   The geometry has to be asserted here, not in the component's classNames:
+   sonner ships its CSS unlayered, and unlayered beats `@layer utilities` no
+   matter how specific the utility is. Sonner pins this plate to 16px with
+   `justify-content: flex-start` and asymmetric -3px/4px margins, so the
+   component's `w-6 h-6` / `justify-center` never applied and the 14px glyph
+   sat flush-left in a plate barely bigger than itself. */
 [data-sonner-toast][data-styled][data-type] [data-icon] {
   background: var(--muted);
+  width: 1.5rem;
+  height: 1.5rem;
+  justify-content: center;
+  margin-inline: 0;
 }
 [data-sonner-toast][data-styled][data-type] [data-icon] svg {
   width: 14px;
   height: 14px;
+  margin-inline: 0;
 }
 [data-sonner-toast][data-styled][data-type='success'] [data-icon] { color: var(--success); }
 [data-sonner-toast][data-styled][data-type='error'] [data-icon] { color: var(--destructive); }
 [data-sonner-toast][data-styled][data-type='warning'] [data-icon] { color: var(--warning); }
 [data-sonner-toast][data-styled][data-type='info'] [data-icon] { color: var(--primary); }
 [data-sonner-toast][data-styled][data-type='loading'] [data-icon] { color: var(--muted-foreground); }
+
+/* Dismiss control. Sonner's is a 20px circle translated -35%/-35%, so it hangs
+   off the card's corner with its own border and painted background, and the
+   component's own classNames hid it until hover on desktop — neither is how a
+   system notification offers a dismiss affordance. This pins it inside the
+   card as an always-visible 44px target: the app's global
+   `button { min-width/min-height: 44px }` baseline already sizes it, so the
+   measured size is asserted here to match rather than relying on that clamp.
+   The doubled attribute selector outranks sonner's richest close-button rule
+   (0,4,0), so this does not depend on stylesheet order. `left` must be reset
+   explicitly: it is a physical property that wins over `right` on a sized
+   absolute box, so leaving sonner's `left: 0` would strand the button. */
+[data-sonner-toast][data-sonner-toast][data-styled][data-type] [data-close-button] {
+  top: 0.25rem;
+  right: 0.25rem;
+  left: auto;
+  transform: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--muted-foreground);
+  opacity: 1;
+}
+[data-sonner-toast][data-sonner-toast][data-styled][data-type] [data-close-button] svg {
+  width: 16px;
+  height: 16px;
+}
+[data-sonner-toast][data-sonner-toast][data-styled][data-type] [data-close-button]:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+[data-sonner-toast][data-sonner-toast][data-styled][data-type] [data-close-button]:focus-visible {
+  /* Sonner's own ring is a hardcoded black, which is invisible on the dark
+     theme — use the app's ring token instead. */
+  box-shadow: none;
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Reserve the corner so a wrapped title or description never runs under the
+   dismiss control: 4px offset + 44px button + 8px gap = 56px. The toast is a
+   fixed 24rem wide, so this only makes text wrap sooner. */
+[data-sonner-toast][data-sonner-toast][data-styled][data-type] {
+  padding-right: 3.5rem;
+}
 
 /* Never clip toast copy: long error messages wrap instead of truncating. */
 [data-sonner-toast] [data-title],
@@ -555,6 +636,21 @@ ol[data-sonner-toaster][data-sonner-theme='system'] {
 }
 [data-radix-select-viewport][data-radix-select-viewport]::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* Honour the OS "reduce motion" setting app-wide. Only motion is clamped —
+   colours, spacing and layout are untouched, so this cannot regress contrast.
+   scroll-behavior:auto also cancels CSS smooth scrolling; the one JS smooth
+   scroll (LandingPage's "Access Services") guards itself via matchMedia. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 

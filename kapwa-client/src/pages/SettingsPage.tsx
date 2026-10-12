@@ -10,6 +10,8 @@ import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { humanizeError } from '@/lib/errors';
 import { Shield, Smartphone, CheckCircle, Mail, Lock, Bell, User, Copy, Eye, EyeOff, KeyRound, Languages, Phone, Save, AlarmClock } from 'lucide-react';
@@ -141,7 +143,7 @@ function ReminderSettingsCard() {
         {OFFSET_PRESETS.map((preset) => {
           const active = list.includes(preset.minutes);
           return (
-            <button
+            <Button variant="ghost"
               key={preset.minutes}
               type="button"
               onClick={() => onToggle(preset.minutes)}
@@ -151,7 +153,7 @@ function ReminderSettingsCard() {
               }`}
             >
               {t(preset.key, preset.label)}
-            </button>
+            </Button>
           );
         })}
         {list.length === 0 && (
@@ -318,32 +320,16 @@ function ProfileTab() {
         <p className="text-xs text-muted-foreground">
           {t('settings.languageHint', 'Choose the language used across the app.')}
         </p>
-        <div className="flex gap-6">
+        <RadioGroup value={lang} onValueChange={setLang} className="flex gap-6">
           <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="language"
-              value="en"
-              checked={lang === 'en'}
-              onChange={() => setLang('en')}
-              className="accent-primary"
-              aria-label={t('settings.english', 'English')}
-            />
+            <RadioGroupItem value="en" aria-label={t('settings.english', 'English')} />
             {t('settings.english', 'English')}
           </label>
           <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="language"
-              value="fil"
-              checked={lang === 'fil'}
-              onChange={() => setLang('fil')}
-              className="accent-primary"
-              aria-label={t('settings.filipino', 'Filipino')}
-            />
+            <RadioGroupItem value="fil" aria-label={t('settings.filipino', 'Filipino')} />
             {t('settings.filipino', 'Filipino')}
           </label>
-        </div>
+        </RadioGroup>
       </div>
 
       <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
@@ -393,7 +379,7 @@ function ProfileTab() {
                 {t('settings.phoneHint', 'Used for SMS notifications and login OTP verification')}
               </p>
             </div>
-            <Button onClick={handleSavePhone} disabled={phoneSaving || !phone || phone === displayPhone} className="gap-1.5 shrink-0">
+            <Button onClick={handleSavePhone} disabled={phoneSaving || !phone || phone === displayPhone} className="gap-1.5 shrink-0 h-9">
               <Save size={14} />
               {phoneSaving ? t('settings.saving', 'Saving...') : t('settings.save', 'Save')}
             </Button>
@@ -463,15 +449,15 @@ function ProfileTab() {
                 onChange={e => setCurrentPw(e.target.value)}
                 className="pr-10 h-9"
               />
-              <button
+              <Button variant="ghost" size="icon"
                 type="button"
                 onClick={() => setShowCurrentPw(v => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+                className="absolute right-3 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
                 aria-label={showCurrentPw ? t('settings.hidePassword', 'Hide password') : t('settings.showPassword', 'Show password')}
                 aria-pressed={showCurrentPw}
               >
                 {showCurrentPw ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
+              </Button>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -487,15 +473,15 @@ function ProfileTab() {
                   onChange={e => setNewPw(e.target.value)}
                   className="pr-10 h-9"
                 />
-                <button
+                <Button variant="ghost" size="icon"
                   type="button"
                   onClick={() => setShowPw(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
                   aria-label={showPw ? t('settings.hidePassword', 'Hide password') : t('settings.showPassword', 'Show password')}
                   aria-pressed={showPw}
                 >
                   {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
+                </Button>
               </div>
             </div>
             <div className="space-y-1.5">
@@ -510,15 +496,15 @@ function ProfileTab() {
                   onChange={e => setConfirmPw(e.target.value)}
                   className="pr-10 h-9"
                 />
-                <button
+                <Button variant="ghost" size="icon"
                   type="button"
                   onClick={() => setShowConfirmPw(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
                   aria-label={showConfirmPw ? t('settings.hidePassword', 'Hide password') : t('settings.showPassword', 'Show password')}
                   aria-pressed={showConfirmPw}
                 >
                   {showConfirmPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -859,22 +845,12 @@ function NotificationsTab() {
                   </td>
                   {visibleChannels.map(channel => (
                     <td key={channel} className="px-4 py-3 text-center">
-                      <button
-                        onClick={() => handleToggle(channel, cat)}
+                      <Switch
+                        checked={isOptedIn(channel, cat)}
+                        onCheckedChange={() => handleToggle(channel, cat)}
                         disabled={saving}
-                        className={`inline-flex h-6 w-10 items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                          isOptedIn(channel, cat) ? 'bg-primary' : 'bg-input'
-                        }`}
-                        role="switch"
-                        aria-checked={isOptedIn(channel, cat)}
                         aria-label={t('settings.toggleAria', '{{category}} {{channel}}', { category: categoryLabels[cat] ? t(categoryLabels[cat].key, categoryLabels[cat].label) : cat, channel: channelLabels[channel] ? t(channelLabels[channel].key, channelLabels[channel].label) : channel })}
-                      >
-                        <span
-                          className={`inline-block h-5 w-5 rounded-full bg-card shadow-sm ring-0 transition-transform ${
-                            isOptedIn(channel, cat) ? 'translate-x-[1.125rem]' : 'translate-x-[0.125rem]'
-                          }`}
-                        />
-                      </button>
+                      />
                     </td>
                   ))}
                 </tr>
@@ -903,7 +879,7 @@ export function SettingsPage() {
   return (
     <PageShell title={t('settings.title', 'Settings')} description={t('settings.description', 'Manage your account settings and preferences.')}>
       <div role="tablist" aria-label={t('settings.tabsAria', 'Settings sections')} className="flex gap-1 rounded-lg bg-muted p-1 w-fit mb-4">
-        <button
+        <Button variant="ghost"
           role="tab"
           aria-selected={activeTab === 'profile'}
           aria-controls="settings-profile"
@@ -915,8 +891,8 @@ export function SettingsPage() {
         >
           <User size={16} className="inline mr-1.5" />
           {t('settings.profile', 'Profile')}
-        </button>
-        <button
+        </Button>
+        <Button variant="ghost"
           role="tab"
           aria-selected={activeTab === 'security'}
           aria-controls="settings-security"
@@ -928,8 +904,8 @@ export function SettingsPage() {
         >
           <Shield size={16} className="inline mr-1.5" />
           {t('settings.security', 'Security')}
-        </button>
-        <button
+        </Button>
+        <Button variant="ghost"
           role="tab"
           aria-selected={activeTab === 'notifications'}
           aria-controls="settings-notifications"
@@ -941,7 +917,7 @@ export function SettingsPage() {
         >
           <Bell size={16} className="inline mr-1.5" />
           {t('settings.notifications', 'Notifications')}
-        </button>
+        </Button>
       </div>
 
       <div

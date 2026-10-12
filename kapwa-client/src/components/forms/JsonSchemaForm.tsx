@@ -1,5 +1,12 @@
 import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 interface JsonSchema {
   title?: string;
@@ -126,19 +133,18 @@ export default function JsonSchemaForm({
           <label className="mb-1 block text-sm font-medium text-muted-foreground">
             {label}{required && <span className="text-destructive ml-1">*</span>}
           </label>
-          <select
-            className={baseClass}
-            value={value || ''}
-            onChange={e => handleChange(key, e.target.value)}
-            disabled={readOnly}
-          >
-            <option value="">{t('forms.select', 'Select...')}</option>
-            {field.enum.map((opt, i) => (
-              <option key={opt} value={opt}>
-                {field.enumNames?.[i] || opt}
-              </option>
-            ))}
-          </select>
+          <Select value={value || ''} onValueChange={v => handleChange(key, v)} disabled={readOnly}>
+            <SelectTrigger className={baseClass}>
+              <SelectValue placeholder={t('forms.select', 'Select...')} />
+            </SelectTrigger>
+            <SelectContent>
+              {field.enum.map((opt, i) => (
+                <SelectItem key={opt} value={opt}>
+                  {field.enumNames?.[i] || opt}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {field.description && <p className="mt-1 text-xs text-muted-foreground">{field.description}</p>}
           {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
         </div>
@@ -148,11 +154,9 @@ export default function JsonSchemaForm({
     if (field.type === 'boolean') {
       return (
         <div key={key} className="mb-4 flex items-center gap-2">
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded border-border text-primary"
+          <Checkbox
             checked={!!value}
-            onChange={e => handleChange(key, e.target.checked)}
+            onCheckedChange={v => handleChange(key, v === true)}
             disabled={readOnly}
             id={`field-${key}`}
           />
@@ -170,7 +174,7 @@ export default function JsonSchemaForm({
           <label className="mb-1 block text-sm font-medium text-muted-foreground">
             {label}{required && <span className="text-destructive ml-1">*</span>}
           </label>
-          <input
+          <Input
             type="number"
             className={baseClass}
             value={value ?? ''}
@@ -191,7 +195,7 @@ export default function JsonSchemaForm({
           <label className="mb-1 block text-sm font-medium text-muted-foreground">
             {label}{required && <span className="text-destructive ml-1">*</span>}
           </label>
-          <input
+          <Input
             type="date"
             className={baseClass}
             value={value || ''}
@@ -209,7 +213,7 @@ export default function JsonSchemaForm({
           <label className="mb-1 block text-sm font-medium text-muted-foreground">
             {label}{required && <span className="text-destructive ml-1">*</span>}
           </label>
-          <textarea
+          <Textarea
             className={baseClass}
             value={value || ''}
             onChange={e => handleChange(key, e.target.value)}
@@ -237,7 +241,7 @@ export default function JsonSchemaForm({
         <label className="mb-1 block text-sm font-medium text-muted-foreground">
           {label}{required && <span className="text-destructive ml-1">*</span>}
         </label>
-        <input
+        <Input
           type={field.format === 'email' ? 'email' : field.format === 'tel' ? 'tel' : 'text'}
           className={baseClass}
           value={value || ''}
@@ -273,21 +277,19 @@ export default function JsonSchemaForm({
       {!readOnly && (
         <div className="flex gap-3 pt-4">
           {onSubmit && (
-            <button
+            <Button variant="ghost"
               type="submit"
-              className="rounded bg-primary px-6 py-2 text-sm font-medium text-white hover:bg-primary-dark transition-colors"
-            >
+              className="rounded bg-primary px-6 py-2 text-sm font-medium text-white hover:bg-primary-dark transition-colors">
               {submitLabel || t('forms.submit', 'Submit')}
-            </button>
+            </Button>
           )}
           {onCancel && (
-            <button
+            <Button variant="ghost"
               type="button"
               onClick={onCancel}
-              className="rounded border border-border bg-card px-6 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
-            >
+              className="rounded border border-border bg-card px-6 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
               {t('forms.cancel', 'Cancel')}
-            </button>
+            </Button>
           )}
         </div>
       )}

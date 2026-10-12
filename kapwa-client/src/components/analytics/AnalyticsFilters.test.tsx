@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { AnalyticsFilters, rangeToDates } from './AnalyticsFilters';
 
 // rangeToDates formats local calendar dates, so pin the runner to PHT
@@ -8,13 +9,15 @@ import { AnalyticsFilters, rangeToDates } from './AnalyticsFilters';
 process.env.TZ = 'Asia/Manila';
 
 describe('AnalyticsFilters', () => {
-  it('renders range and barangay selects and reports changes', () => {
+  it('renders range and barangay selects and reports changes', async () => {
+    const user = userEvent.setup();
     const onChange = vi.fn();
     render(<AnalyticsFilters value={{ range: '1y', barangay: '' }} onChange={onChange} />);
     const range = screen.getByLabelText('Date range');
-    expect(range).toHaveValue('1y');
-    expect(screen.getAllByRole('option').length).toBeGreaterThanOrEqual(6);
-    fireEvent.change(range, { target: { value: '30d' } });
+    expect(range).toHaveTextContent('Last year');
+    expect(screen.getAllByRole('combobox').length).toBeGreaterThanOrEqual(2);
+    await user.click(range);
+    await user.click(await screen.findByRole('option', { name: /last 30 days/i }));
     expect(onChange).toHaveBeenCalledWith({ range: '30d', barangay: '' });
   });
 });

@@ -169,18 +169,18 @@ export function NotificationsPage() {
           </div>
           <div className="flex items-center gap-2">
             <div className="flex rounded-md border text-xs">
-              <button
+              <Button variant="ghost"
                 onClick={() => setFilter('all')}
                 className={cn('px-3 py-1 rounded-l-md transition-colors', filter === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted')}
               >
                 {t('notifications.all', 'All')}
-              </button>
-              <button
+              </Button>
+              <Button variant="ghost"
                 onClick={() => setFilter('unread')}
                 className={cn('px-3 py-1 rounded-r-md transition-colors', filter === 'unread' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted')}
               >
                 {t('notifications.unread', 'Unread')}
-              </button>
+              </Button>
             </div>
             {unreadCount > 0 && (
               <Button
@@ -212,7 +212,7 @@ export function NotificationsPage() {
           <ul className="divide-y">
             {displayed.map(n => (
               <li key={n.id}>
-                <button
+                <Button variant="ghost"
                   onClick={() => {
                     if (!n.isRead) markRead.trigger({ id: n.id });
                     navigate(navTarget(n));
@@ -248,7 +248,7 @@ export function NotificationsPage() {
                       {!n.isRead && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
                     </div>
                   </div>
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
