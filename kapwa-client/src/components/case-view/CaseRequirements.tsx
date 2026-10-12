@@ -83,25 +83,28 @@ export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, 
     ...(extraProgramIds ?? []),
   ].filter((id): id is string => Boolean(id));
   const relevantPrograms = programs.filter((p) => programIds.includes(p.id));
-  // In crisis mode, ad-hoc services (no program) carry their own documentary
-  // minimum — the intervention-anchored documents.
-  const crisisMode = Boolean((caseData as { crisisMode?: boolean })?.crisisMode);
-  const adHocInterventionTypes = (Array.isArray(interventions) ? interventions : [])
-    .filter((i: any) => !i?.programId && i?.interventionType)
-    .map((i: any) => i.interventionType);
-  const crisisDocKeys = crisisMode
+  // Interventions carry their own documentary minimums: every saved
+  // intervention contributes its intervention-anchored documents, program or
+  // not (the crisis-mode distinction is gone — the docs weigh the same way).
+  const interventionTypes = (Array.isArray(interventions) ? interventions : [])
+    .map((i: any) => i?.interventionType)
+    .filter(Boolean);
+  const interventionDocKeys = interventionTypes.length > 0
     ? [...new Set(
         (interventionRequiredDocuments ?? [])
-          .filter((d: any) => adHocInterventionTypes.includes(d.interventionType))
+          .filter((d: any) => interventionTypes.includes(d.interventionType))
           .map((d: any) => d.documentKey),
       )]
     : [];
   const allRequirements = [
-    ...new Set([...relevantPrograms.flatMap((p) => requiredDocumentKeys(p)), ...crisisDocKeys]),
+    ...new Set([
+      ...relevantPrograms.flatMap((p) => requiredDocumentKeys(p)),
+      ...interventionDocKeys,
+    ]),
   ];
 
   const docsByRequirement: Record<string, any[]> = {};
-  for (const d of docs) {
+  for (const d of docs ?? []) {
     const k = d.requirementKey;
     if (!k) continue;
     if (!docsByRequirement[k]) docsByRequirement[k] = [];

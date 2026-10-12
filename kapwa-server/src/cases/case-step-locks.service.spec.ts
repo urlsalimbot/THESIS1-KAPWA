@@ -56,7 +56,13 @@ interface DoneFixtureCase {
    */
   requirements?: {
     interventionProgramIds: Array<string | null>;
+    /** Programs behind the ENROLLMENTS (the enrollments step's documentary gate). */
+    enrollmentProgramIds?: string[];
+    /** Recorded intervention types (the intervention-anchored documents). */
+    interventionTypes?: string[];
     programs: Array<{ id: string; documentKeys: Array<{ key: string; mandatory: boolean }> }>;
+    /** intervention_required_documents rows (intervention-type → document key). */
+    interventionDocuments?: Array<{ interventionType: string; documentKey: string }>;
     checklist: Record<string, boolean>;
   };
   expected: boolean;
@@ -182,10 +188,20 @@ describe('CaseStepLocksService', () => {
    */
   const stubRequirementInputs = (fx: DoneFixtureCase) => {
     const req = fx.requirements;
-    interventionQuery.mockResolvedValue(
-      (req?.interventionProgramIds ?? []).map((program_id) => ({ program_id })),
-    );
+    // Three queries share one repo mock; route by the SQL so the fixture's
+    // program ids land on the right gate (enrollments vs interventions) and
+    // the intervention types on the intervention-docs collection.
+    interventionQuery.mockImplementation((sql: string) => {
+      if (sql.includes('intervention_type')) {
+        return (req?.interventionTypes ?? []).map((intervention_type) => ({ intervention_type }));
+      }
+      if (sql.includes('program_enrollments')) {
+        return (req?.enrollmentProgramIds ?? []).map((program_id) => ({ program_id }));
+      }
+      return (req?.interventionProgramIds ?? []).map((program_id) => ({ program_id }));
+    });
     programFind.mockResolvedValue((req?.programs ?? []).map((p) => programRow(p.id, p.documentKeys)));
+    interventionDocsFind.mockResolvedValue(req?.interventionDocuments ?? []);
   };
 
   /**
@@ -845,9 +861,10 @@ describe('CaseStepLocksService', () => {
         // to. The "imposes nothing" entries legitimately name no document at
         // all — the empty-set branch is what they are for.
         if (!fx.expected) {
-          const requiredKeys = new Set(
-            (fx.requirements?.programs ?? []).flatMap((p) => p.documentKeys.map((d) => d.key)),
-          );
+          const requiredKeys = new Set([
+            ...(fx.requirements?.programs ?? []).flatMap((p) => p.documentKeys.map((d) => d.key)),
+            ...(fx.requirements?.interventionDocuments ?? []).map((d) => d.documentKey),
+          ]);
           expect([...requiredKeys].some((k) => fx.requirements?.checklist[k] !== true)).toBe(true);
         }
       },
@@ -870,6 +887,9 @@ describe('CaseStepLocksService', () => {
       interventionCount.mockResolvedValue(1);
       interventionQuery.mockResolvedValue([{ program_id: 'p1' }]);
       programFind.mockResolvedValue([programRow('p1', [{ key: 'Valid ID', mandatory: true }])]);
+      // No intervention anchors anything here — an earlier fixture entry must
+      // not leak its documents into this case.
+      interventionDocsFind.mockResolvedValue([]);
 
       // The decision does not buy the step its way past an unmet document.
       await expect(service.lock('c1', 'interventions', swUser)).rejects.toThrow(/not complete/i);
@@ -880,7 +900,8 @@ describe('CaseStepLocksService', () => {
         id: 'c1', status: 'enrolled', interventionNotNeeded: true,
         requirementsChecklist: { 'Valid ID': true },
       } as unknown as Case);
-      await expect(service.lock('c1', 'interventions', swUser)).resolves.toBeDefined();
+      const locked = await service.lock('c1', 'interventions', swUser);
+      expect(locked).toBeDefined();
     });
 
     // The `default:` arm of the predicate is unreachable through the common
@@ -906,13 +927,15 @@ describe('CaseStepLocksService', () => {
       await expect(service.lock('c1', 'interventions', swUser)).rejects.toThrow(/not complete/i);
     });
 
-    it('does not require intervention documents when crisis mode is off', async () => {
-      findById.mockResolvedValue({ id: 'c1', status: 'enrolled', crisisMode: false });
+    it('requires the intervention-anchored documents regardless of crisis mode', async () => {
+      // Intervention documents weigh for every recorded intervention — crisis
+      // mode or not, program-anchored or ad-hoc.
+      findById.mockResolvedValue({ id: 'c1', status: 'enrolled' });
       interventionCount.mockResolvedValue(1);
       interventionQuery.mockResolvedValue([{ intervention_type: 'medical_assistance' }]);
       interventionDocsFind.mockResolvedValue([{ interventionType: 'medical_assistance', documentKey: 'medical_certificate' }]);
-      // No program documents, no intervention documents (crisis off) → seal allowed.
-      await expect(service.lock('c1', 'interventions', swUser)).resolves.toBeDefined();
+      // The checklist does not have it → requirementsMet = false → seal refused.
+      await expect(service.lock('c1', 'interventions', swUser)).rejects.toThrow(/not complete/i);
     });
 
     it('allows the seal when intervention documents are met in crisis mode', async () => {

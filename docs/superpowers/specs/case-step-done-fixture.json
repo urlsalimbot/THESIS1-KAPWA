@@ -744,5 +744,205 @@
     "opts": {},
     "expected": true,
     "step": "court_hearings"
+  },
+  {
+    "name": "enrollments not done: enrolled but the enrollment program documents are unmet",
+    "step": "enrollments",
+    "caseData": {
+      "status": "enrolled"
+    },
+    "interventionCount": 0,
+    "enrollmentCount": 1,
+    "requirements": {
+      "enrollmentProgramIds": [
+        "p1"
+      ],
+      "interventionProgramIds": [],
+      "programs": [
+        {
+          "id": "p1",
+          "documentKeys": [
+            {
+              "key": "Valid ID",
+              "mandatory": true
+            }
+          ]
+        }
+      ],
+      "checklist": {
+        "Valid ID": false
+      }
+    },
+    "opts": {
+      "enrollmentRequirementsMet": false
+    },
+    "expected": false
+  },
+  {
+    "name": "enrollments done: enrolled and the enrollment program documents are met",
+    "step": "enrollments",
+    "caseData": {
+      "status": "enrolled"
+    },
+    "interventionCount": 0,
+    "enrollmentCount": 1,
+    "requirements": {
+      "enrollmentProgramIds": [
+        "p1"
+      ],
+      "interventionProgramIds": [],
+      "programs": [
+        {
+          "id": "p1",
+          "documentKeys": [
+            {
+              "key": "Valid ID",
+              "mandatory": true
+            }
+          ]
+        }
+      ],
+      "checklist": {
+        "Valid ID": true
+      }
+    },
+    "opts": {
+      "enrollmentRequirementsMet": true
+    },
+    "expected": true
+  },
+  {
+    "name": "enrollments done via the recorded no-program decision without documents",
+    "step": "enrollments",
+    "caseData": {
+      "status": "enrolled"
+    },
+    "interventionCount": 0,
+    "enrollmentCount": 0,
+    "opts": {
+      "enrollmentsNotNeeded": true
+    },
+    "expected": true
+  },
+  {
+    "name": "interventions not done: program documents met but an intervention-anchored document is unmet",
+    "step": "interventions",
+    "caseData": {
+      "status": "enrolled"
+    },
+    "interventionCount": 1,
+    "requirements": {
+      "interventionProgramIds": [
+        "p1"
+      ],
+      "interventionTypes": [
+        "medical_assistance"
+      ],
+      "programs": [
+        {
+          "id": "p1",
+          "documentKeys": [
+            {
+              "key": "Valid ID",
+              "mandatory": true
+            }
+          ]
+        }
+      ],
+      "interventionDocuments": [
+        {
+          "interventionType": "medical_assistance",
+          "documentKey": "medical_certificate"
+        }
+      ],
+      "checklist": {
+        "Valid ID": true
+      }
+    },
+    "opts": {
+      "requirementsMet": false
+    },
+    "expected": false
+  },
+  {
+    "name": "interventions done: program and intervention documents all met",
+    "step": "interventions",
+    "caseData": {
+      "status": "enrolled"
+    },
+    "interventionCount": 1,
+    "requirements": {
+      "interventionProgramIds": [
+        "p1"
+      ],
+      "interventionTypes": [
+        "medical_assistance"
+      ],
+      "programs": [
+        {
+          "id": "p1",
+          "documentKeys": [
+            {
+              "key": "Valid ID",
+              "mandatory": true
+            }
+          ]
+        }
+      ],
+      "interventionDocuments": [
+        {
+          "interventionType": "medical_assistance",
+          "documentKey": "medical_certificate"
+        }
+      ],
+      "checklist": {
+        "Valid ID": true,
+        "medical_certificate": true
+      }
+    },
+    "opts": {
+      "requirementsMet": true
+    },
+    "expected": true
+  },
+  {
+    "name": "interventions done: the same document key demanded by program and intervention is met once",
+    "step": "interventions",
+    "caseData": {
+      "status": "enrolled"
+    },
+    "interventionCount": 1,
+    "requirements": {
+      "interventionProgramIds": [
+        "p1"
+      ],
+      "interventionTypes": [
+        "medical_assistance"
+      ],
+      "programs": [
+        {
+          "id": "p1",
+          "documentKeys": [
+            {
+              "key": "medical_certificate",
+              "mandatory": true
+            }
+          ]
+        }
+      ],
+      "interventionDocuments": [
+        {
+          "interventionType": "medical_assistance",
+          "documentKey": "medical_certificate"
+        }
+      ],
+      "checklist": {
+        "medical_certificate": true
+      }
+    },
+    "opts": {
+      "requirementsMet": true
+    },
+    "expected": true
   }
 ]

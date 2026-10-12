@@ -345,12 +345,12 @@ describe('CaseRequirements — crisis-mode intervention documents', () => {
     expect(await screen.findByText('medical_certificate')).toBeTruthy();
   });
 
-  it('does not show intervention documents when crisis mode is off', async () => {
+  it('shows intervention documents for every recorded intervention, crisis mode or not', async () => {
     renderRequirements(DOCS, {}, {
       interventions: [{ id: 'i1', interventionType: 'medical_assistance' }],
       caseData: { crisisMode: false },
     });
-    await waitFor(() => expect(screen.queryByText('medical_certificate')).toBeNull());
+    await waitFor(() => expect(screen.getByText('medical_certificate')).toBeTruthy());
   });
 
   it('still shows program documents for enrolled services in crisis mode', async () => {

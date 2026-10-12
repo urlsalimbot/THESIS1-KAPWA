@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { stepperStepDone } from './CaseStepper';
-import { interventionRequirementsMet } from '@/lib/case-progress';
+import { interventionRequirementsMet, enrollmentProgramRequirementsMet } from '@/lib/case-progress';
 
 /**
  * Read, not imported.
@@ -76,11 +76,58 @@ describe('interventionRequirementsMet against the shared fixture', () => {
   for (const fx of withRequirements as any[]) {
     it(fx.name, () => {
       const interventions = fx.requirements.interventionProgramIds.map((programId: string | null) => ({ programId }));
+      // Intervention-anchored documents: the recorded intervention types each
+      // contribute their document keys from `interventionDocuments`.
+      const types = fx.requirements.interventionTypes ?? [];
+      const interventionsWithTypes = types.map((t: string) => ({ programId: null, interventionType: t }));
+      const interventionDocs = (fx.requirements.interventionDocuments ?? []).filter((d: any) =>
+        types.includes(d.interventionType),
+      );
       const programs = fx.requirements.programs.map((p: any) => ({
         id: p.id,
         requiredDocumentDetails: p.documentKeys,
       }));
-      expect(interventionRequirementsMet(interventions, programs, fx.requirements.checklist)).toBe(fx.expected);
+      expect(
+        interventionRequirementsMet(
+          [...interventions, ...interventionsWithTypes],
+          programs,
+          fx.requirements.checklist,
+          false,
+          interventionDocs,
+        ),
+      ).toBe(fx.expected);
+    });
+  }
+});
+
+/**
+ * The enrollments step's documentary gate, driven from the same fixture: the
+ * enrolled programs' documents must be met once an enrollment exists. The
+ * fixture entries carry `enrollmentProgramIds`; the derivation converts those
+ * to the flag `stepperStepDone` consumes (`opts.enrollmentRequirementsMet`).
+ */
+describe('enrollmentProgramRequirementsMet against the shared fixture', () => {
+  const withEnrollmentRequirements = fixture.filter(
+    (fx: any) => fx.requirements && fx.enrollmentCount > 0,
+  );
+
+  it('has entries to drive', () => {
+    expect(withEnrollmentRequirements.length).toBeGreaterThan(0);
+  });
+
+  for (const fx of withEnrollmentRequirements as any[]) {
+    it(fx.name, () => {
+      const programs = fx.requirements.programs.map((p: any) => ({
+        id: p.id,
+        requiredDocumentDetails: p.documentKeys,
+      }));
+      expect(
+        enrollmentProgramRequirementsMet(
+          fx.requirements.enrollmentProgramIds ?? [],
+          programs,
+          fx.requirements.checklist,
+        ),
+      ).toBe(fx.expected);
     });
   }
 });

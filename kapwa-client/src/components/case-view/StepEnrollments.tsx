@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { CalendarClock, Lock, Plus, Trash2 } from 'lucide-react';
 import { StepLockBar, type StepLock } from './StepLockBar';
+import { CaseRequirements } from './CaseRequirements';
 import { toast } from 'sonner';
 
 interface ProgramEnrollmentView {
@@ -243,6 +244,16 @@ export function StepEnrollments({ caseId, caseData, userRole, readOnly, lockRead
             </>
           )}
         </div>
+
+        {/* The enrolled programs' documentary requirements — meeting them is
+            part of the enrollment itself (the step seal weighs them). */}
+        <CaseRequirements
+          caseId={caseId}
+          caseData={caseData}
+          userRole={userRole}
+          programIds={[...new Set((enrollments ?? []).map((e) => e?.programId).filter(Boolean))]}
+          readOnly={readOnly}
+        />
 
         <StepLockBar
           caseId={caseId}

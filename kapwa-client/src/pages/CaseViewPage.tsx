@@ -16,7 +16,7 @@ import { api, downloadCsrPdf, downloadFilingDoc, filingDocIdFromUrl, getFilingOb
 import { queryKeys } from '../lib/query-keys';
 import { addressNames } from '@/lib/psgc';
 import { formatDate, formatDateTime, personFullName, formatPeso } from '../lib/format';
-import { interventionRequirementsMet } from '../lib/case-progress';
+import { interventionRequirementsMet, enrollmentProgramRequirementsMet } from '../lib/case-progress';
 import { setCaseLabel } from '../lib/breadcrumbs';
 import { humanizeError } from '../lib/errors';
 import { useAuth } from '../lib/auth-context';
@@ -290,6 +290,17 @@ export function CaseViewPage() {
     ),
     [interventions, programs, caseData, interventionDocs],
   );
+  // The enrollments step's documentary gate: the enrolled programs' documents.
+  // Enrollments carry programId (the program-as-assigned snapshot), the same
+  // field the interventions weigh program-documents on.
+  const enrollmentProgramIds = useMemo(
+    () => [...new Set((enrollments as any[]).map((e: any) => e?.programId).filter(Boolean))],
+    [enrollments],
+  );
+  const enrollmentRequirementsMet = useMemo(
+    () => enrollmentProgramRequirementsMet(enrollmentProgramIds, programs || [], caseData?.requirementsChecklist),
+    [enrollmentProgramIds, programs, caseData],
+  );
   // The case-level referral count, stamped by the detail endpoint. Deliberately
   // NOT `(iarReferrals ?? []).length`: that list is caller-scoped by agency, so a
   // worker whose agency is not on a referral saw 0 and could not seal step 2,
@@ -312,8 +323,8 @@ export function CaseViewPage() {
     // `stepperStepDone` falls back to it, so restating them here would be a
     // second copy of one rule — and an explicit `false` would outvote the row,
     // which the server (coercing to `Boolean(c.x)`) could never honour.
-    () => ({ requirementsMet, interAgencyReferralCount, courtHearingCount }),
-    [requirementsMet, interAgencyReferralCount, courtHearingCount],
+    () => ({ requirementsMet, enrollmentRequirementsMet, interAgencyReferralCount, courtHearingCount }),
+    [requirementsMet, enrollmentRequirementsMet, interAgencyReferralCount, courtHearingCount],
   );
 
   useEffect(() => {
@@ -812,7 +823,7 @@ export function CaseViewPage() {
             {/* `requirementsMet` only: the stepper applies the case-row fallback
                 for the two "not needed" decisions itself, so naming them here
                 would restate a rule that lives in one place. */}
-            <CaseStepper currentStep={currentStep} onStepClick={(key) => setCurrentStep(key)} caseData={caseData} interventionCount={interventions.length} enrollmentCount={enrollments.length} requirementsMet={requirementsMet} interAgencyReferralCount={interAgencyReferralCount} courtHearingCount={courtHearingCount} />
+            <CaseStepper currentStep={currentStep} onStepClick={(key) => setCurrentStep(key)} caseData={caseData} interventionCount={interventions.length} enrollmentCount={enrollments.length} requirementsMet={requirementsMet} enrollmentRequirementsMet={enrollmentRequirementsMet} interAgencyReferralCount={interAgencyReferralCount} courtHearingCount={courtHearingCount} />
           </div>
 
           {/* Active Step Content */}

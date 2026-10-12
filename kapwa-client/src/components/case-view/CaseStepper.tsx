@@ -8,6 +8,8 @@ import { statusLabel } from '@/i18n/display';
 // when these are absent so the pipeline cards keep working.
 export interface StepperProgressOpts {
   requirementsMet?: boolean;
+  /** The enrollments step's documentary gate (enrolled programs' docs met). */
+  enrollmentRequirementsMet?: boolean;
   referralNotNeeded?: boolean;
   interventionNotNeeded?: boolean;
   /** The case row's "no program needed" decision (enrollments step). */
@@ -262,9 +264,11 @@ export function stepperStepDone(
       return !!caseData?.problemsPresented && !!caseData?.socialWorkerAssessment
         && !!caseData?.clientCategory && !!caseData?.caseCategory;
     // Program Enrollments: at least one enrollment, or the recorded
-    // "no program needed" decision.
+    // "no program needed" decision; when enrolled, the enrolled programs'
+    // documentary requirements must already be met.
     case 'enrollments':
-      return enrollmentCount > 0 || Boolean(opts.enrollmentsNotNeeded ?? caseData?.enrollmentsNotNeeded);
+      return (enrollmentCount > 0 || Boolean(opts.enrollmentsNotNeeded ?? caseData?.enrollmentsNotNeeded))
+        && (enrollmentCount === 0 || (opts.enrollmentRequirementsMet ?? true));
     // Implement HIP: an intervention (or the recorded "no intervention"
     // decision) is required; when interventions exist, every required document
     // of the linked program must be uploaded to the case filing.
@@ -327,6 +331,8 @@ interface CaseStepperProps {
   interventionCount: number;
   enrollmentCount: number;
   requirementsMet?: boolean;
+  /** The enrollments step's documentary gate (enrolled programs' docs met). */
+  enrollmentRequirementsMet?: boolean;
   referralNotNeeded?: boolean;
   interventionNotNeeded?: boolean;
   /** `opts.interAgencyReferralCount` — see `StepperProgressOpts`. */
@@ -335,12 +341,12 @@ interface CaseStepperProps {
   courtHearingCount?: number;
 }
 
-export function CaseStepper({ currentStep, onStepClick, caseData, interventionCount, enrollmentCount, requirementsMet, referralNotNeeded, interventionNotNeeded, interAgencyReferralCount, courtHearingCount }: CaseStepperProps) {
+export function CaseStepper({ currentStep, onStepClick, caseData, interventionCount, enrollmentCount, requirementsMet, enrollmentRequirementsMet, referralNotNeeded, interventionNotNeeded, interAgencyReferralCount, courtHearingCount }: CaseStepperProps) {
   const { t } = useTranslation();
   // Handed straight through: `stepperStepDone` applies the case-row fallback for
   // the decisions itself, so doing it here as well would be a second place
   // holding the same rule.
-  const progress: StepperProgressOpts = { requirementsMet, referralNotNeeded, interventionNotNeeded, interAgencyReferralCount, courtHearingCount };
+  const progress: StepperProgressOpts = { requirementsMet, enrollmentRequirementsMet, referralNotNeeded, interventionNotNeeded, interAgencyReferralCount, courtHearingCount };
   const template = stepsForCategory(caseData?.caseCategory);
   // Labels and descriptions come from the keyed vocabulary so this stepper and
   // `CaseActionBar` cannot drift on a step's name.

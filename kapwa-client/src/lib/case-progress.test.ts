@@ -104,13 +104,14 @@ describe('interventionRequirementsMet', () => {
       expect(interventionRequirementsMet(ADHOC, [], {}, true, DOCS)).toBe(false);
     });
 
-    it('does not require intervention documents when crisis mode is off', () => {
-      expect(interventionRequirementsMet(ADHOC, [], {}, false, DOCS)).toBe(true);
-      expect(interventionRequirementsMet(ADHOC, [], {}, undefined, DOCS)).toBe(true);
+    it('requires intervention documents for every recorded intervention, crisis mode or not', () => {
+      expect(interventionRequirementsMet(ADHOC, [], {}, false, DOCS)).toBe(false);
+      expect(interventionRequirementsMet(ADHOC, [], {}, undefined, DOCS)).toBe(false);
     });
 
     it('returns true once the intervention documents are met', () => {
       expect(interventionRequirementsMet(ADHOC, [], { medical_certificate: true }, true, DOCS)).toBe(true);
+      expect(interventionRequirementsMet(ADHOC, [], { medical_certificate: true }, false, DOCS)).toBe(true);
     });
 
     it('keeps program documents required alongside crisis docs', () => {

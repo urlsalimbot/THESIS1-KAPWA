@@ -38,6 +38,12 @@ export interface CaseStepLockSummary {
 
 interface StepDoneOpts {
   requirementsMet?: boolean;
+  /**
+   * Enrollment-side documentary gate: the documentary requirements of the
+   * programs the case is ENROLLED in, all met. Consulted by the enrollments
+   * step the same way `requirementsMet` is by the interventions step.
+   */
+  enrollmentRequirementsMet?: boolean;
   referralNotNeeded?: boolean;
   interventionNotNeeded?: boolean;
   enrollmentsNotNeeded?: boolean;
@@ -258,9 +264,11 @@ export class CaseStepLocksService {
         return !!caseData.problemsPresented && !!caseData.socialWorkerAssessment
           && !!caseData.clientCategory && !!caseData.caseCategory;
       // Program Enrollments: at least one enrollment, or the explicit recorded
-      // "no program needed" decision (spec §3.3).
+      // "no program needed" decision (spec §3.3); when enrolled, the enrolled
+      // programs' documentary requirements must already be met.
       case 'enrollments':
-        return enrollmentCount > 0 || Boolean(opts.enrollmentsNotNeeded);
+        return (enrollmentCount > 0 || Boolean(opts.enrollmentsNotNeeded))
+          && (enrollmentCount === 0 || (opts.enrollmentRequirementsMet ?? true));
       // Implement HIP: an intervention (or the recorded "no intervention"
       // decision) is required; when interventions exist, every required
       // requirement must already be met.
@@ -319,15 +327,17 @@ export class CaseStepLocksService {
     // read on every seal would be a query the other steps cannot use.
     const enrollmentCount =
       stepKey === 'enrollments' ? await this.enrollments.count({ where: { caseId } }) : 0;
-    // The interventions step is the only branch that weighs requirements, and
-    // the client only weighs programs once an intervention exists, so the
-    // program query stays off the path for every other step and for a case with
-    // nothing to weigh. Answering `true` here is the client's own empty-set
-    // answer, not a shortcut around the branch: the step still requires an
-    // intervention (or the recorded decision) before this value is consulted.
+    // The enrollments step weighs the enrolled programs' documents, the
+    // interventions step the programs behind the interventions PLUS the
+    // intervention-anchored documents of every recorded intervention — two
+    // independent, by-key reusable requirement sets.
     const requirementsMet =
       stepKey === 'interventions' && interventionCount > 0
-        ? await this.requirementsMet(caseId, c.requirementsChecklist, Boolean((c as any).crisisMode))
+        ? await this.requirementsMet(caseId, c.requirementsChecklist)
+        : true;
+    const enrollmentRequirementsMet =
+      stepKey === 'enrollments' && enrollmentCount > 0
+        ? await this.enrollmentRequirementsMet(caseId, c.requirementsChecklist)
         : true;
     // The one extra query the referrals step needs, and only it needs it — the
     // same shape as the program query above, for the same reason.
@@ -359,6 +369,7 @@ export class CaseStepLocksService {
       enrollmentCount,
       {
         requirementsMet,
+        enrollmentRequirementsMet,
         interAgencyReferralCount,
         referralNotNeeded: Boolean(c.referralNotNeeded),
         interventionNotNeeded: Boolean(c.interventionNotNeeded),
@@ -502,12 +513,44 @@ export class CaseStepLocksService {
    * strict than the client, which is the only property that matters: the server
    * must never be the surface that permits a seal the UI calls not ready.
    */
-  private async requirementsMet(
+  /**
+ * The interventions step's requirement set: the documentary requirements of
+ * the programs behind the case's interventions, PLUS the intervention-anchored
+ * documents of every recorded intervention (independent lists, but the same
+ * document KEY — e.g. 'medical_certificate' — is required once and satisfied
+ * once wherever it appears). Each key must be met in the case's checklist.
+ */
+private async requirementsMet(
     caseId: string,
     checklist: Record<string, boolean> | undefined,
-    crisisMode: boolean,
   ): Promise<boolean> {
-    const programIds = await this.linkedProgramIds(caseId);
+    return this.requirementsMetForPrograms(
+      caseId,
+      checklist,
+      await this.requiredProgramIds(caseId, 'interventions'),
+      true, // include every recorded intervention's own documents
+    );
+  }
+
+  /** The enrollments step's requirement set: the enrolled programs' documents only. */
+  private async enrollmentRequirementsMet(
+    caseId: string,
+    checklist: Record<string, boolean> | undefined,
+  ): Promise<boolean> {
+    return this.requirementsMetForPrograms(
+      caseId,
+      checklist,
+      await this.requiredProgramIds(caseId, 'enrollments'),
+      false,
+    );
+  }
+
+  private async requirementsMetForPrograms(
+    caseId: string,
+    checklist: Record<string, boolean> | undefined,
+    programIds: string[],
+    includeInterventionDocs: boolean,
+  ): Promise<boolean> {
     const requiredKeys = new Set<string>();
     if (programIds.length > 0) {
       const programs = await this.programs.find({ where: { id: In(programIds) } });
@@ -515,12 +558,13 @@ export class CaseStepLocksService {
         for (const k of this.requiredDocumentKeys(p)) requiredKeys.add(k);
       }
     }
-    // In crisis mode, ad-hoc services (no program) carry their own documentary
-    // minimum — the intervention-anchored documents.
-    if (crisisMode) {
-      const adHocTypes = await this.adHocInterventionTypes(caseId);
-      if (adHocTypes.length > 0) {
-        const docs = await this.interventionDocs.find({ where: { interventionType: In(adHocTypes) } });
+    // Interventions carry their own documentary minimums — every recorded
+    // intervention's type contributes its documents (independent from the
+    // programs', reusable by key with them).
+    if (includeInterventionDocs) {
+      const types = await this.interventionTypesOnCase(caseId);
+      if (types.length > 0) {
+        const docs = await this.interventionDocs.find({ where: { interventionType: In(types) } });
         for (const d of docs) requiredKeys.add(d.documentKey);
       }
     }
@@ -530,32 +574,31 @@ export class CaseStepLocksService {
   }
 
   /**
-   * The distinct programs named by the case's interventions. The same table and
-   * the same parameterized-query conventions as `getInterventionCount`, so the
-   * count this predicate is paired with and the programs it weighs are two views
-   * of one set of rows. `program_id IS NOT NULL` drops the interventions
-   * recorded without a program — the client's `.filter(Boolean)` over
-   * `programId` drops the same ones.
+   * The distinct programs named by the case's interventions (or its
+   * enrollments, for the enrollment-side gate) — one parameterized query for
+   * the two views, so each gate weighs exactly its own set of programs.
    */
-  private async linkedProgramIds(caseId: string): Promise<string[]> {
+  private async requiredProgramIds(caseId: string, source: 'interventions' | 'enrollments'): Promise<string[]> {
+    const table = source === 'enrollments' ? 'program_enrollments' : 'case_interventions';
     const rows = await this.interventions.query(
-      'SELECT DISTINCT program_id FROM case_interventions WHERE case_id = $1 AND program_id IS NOT NULL',
+      `SELECT DISTINCT program_id FROM ${table} WHERE case_id = $1 AND program_id IS NOT NULL`,
       [caseId],
     );
     return (rows as Array<{ program_id?: string | null }>).map((r) => r.program_id).filter(Boolean) as string[];
   }
 
   /**
-   * The distinct intervention types recorded without a program — the ad-hoc
-   * crisis services. Only these carry intervention-anchored documents, and
-   * only in crisis mode.
+   * The distinct intervention types recorded on the case — every intervention
+   * contributes its own documentary minimum, program-anchored or not.
    */
-  private async adHocInterventionTypes(caseId: string): Promise<string[]> {
+  private async interventionTypesOnCase(caseId: string): Promise<string[]> {
     const rows = await this.interventions.query(
-      'SELECT DISTINCT intervention_type FROM case_interventions WHERE case_id = $1 AND program_id IS NULL AND intervention_type IS NOT NULL',
+      'SELECT DISTINCT intervention_type FROM case_interventions WHERE case_id = $1 AND intervention_type IS NOT NULL',
       [caseId],
     );
-    return (rows as Array<{ intervention_type: string }>).map((r) => r.intervention_type);
+    return (rows as Array<{ intervention_type?: string | null }>)
+      .map((r) => r.intervention_type)
+      .filter((t): t is string => Boolean(t));
   }
 
   /**
