@@ -5,7 +5,7 @@ import { referralStatusLabel } from '@/i18n/display';
 import { api, downloadReferralGis } from '../lib/api';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -213,10 +213,17 @@ export function ReferralReviewPage() {
   return (
     <PageShell title={t('referral.reviewTitle', 'Referral Review')} description={t('referral.reviewDescription', 'Review and process barangay referrals.')}>
       {referrals.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-          <Inbox size={40} className="mb-3 opacity-30" />
-          <p className="text-sm">{t('referral.noPending', 'No pending referrals.')}</p>
-        </div>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+              <Inbox size={20} className="text-muted-foreground" />
+            </div>
+            <h3 className="font-semibold font-heading">{t('referral.noPending', 'No pending referrals')}</h3>
+            <p className="text-sm text-muted-foreground mt-1 mb-4 max-w-sm mx-auto">
+              {t('referral.noPendingHint', 'Barangay coordinators refer residents here with a control number and case category. Accepted referrals hand off to the intake with their GIS-style sheet.')}
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-3">
           <div className="flex items-center gap-2">

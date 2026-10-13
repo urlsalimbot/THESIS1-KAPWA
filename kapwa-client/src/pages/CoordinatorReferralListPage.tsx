@@ -5,7 +5,7 @@ import { referralStatusLabel } from '@/i18n/display';
 import { api, downloadReferralGis } from '../lib/api';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { DataTable } from '@/components/data-table';
@@ -157,10 +157,20 @@ export function CoordinatorReferralListPage() {
       </div>
 
       {referrals.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-          <Send size={40} className="mb-3 opacity-30" />
-          <p className="text-sm">{t('coordinator.noReferrals', 'No referrals yet.')}</p>
-        </div>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+              <Send size={20} className="text-muted-foreground" />
+            </div>
+            <h3 className="font-semibold font-heading">{t('coordinator.noReferrals', 'No referrals yet')}</h3>
+            <p className="text-sm text-muted-foreground mt-1 mb-4 max-w-sm mx-auto">
+              {t('coordinator.noReferralsHint', 'Refer a barangay resident to the MSWDO for assessment — each referral gets its own control number and shows up here with its status.')}
+            </p>
+            <Button onClick={() => navigate('/coordinator/referrals/new')}>
+              <Plus size={16} className="mr-1" /> {t('coordinator.newReferral', 'New Referral')}
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-3">
           <div className="flex items-center gap-2">

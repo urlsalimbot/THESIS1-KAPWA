@@ -173,22 +173,25 @@ function OperationsList({ onDefine, onOpen }: { onDefine: () => void; onOpen: (i
     >
       {!isLoading && operations.length === 0 ? (
         /* First run: a bare "No results." table row tells nobody what this
-           page is for. Guide the operator to the create route instead. */
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/20 px-6 py-16 text-center">
-          <FileSpreadsheet className="mb-4 h-10 w-10 text-muted-foreground" aria-hidden="true" />
-          <h2 className="font-heading text-lg font-semibold text-foreground">
-            {t('dedup.emptyTitle', 'No import runs yet')}
-          </h2>
-          <p className="mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
-            {t(
-              'dedup.emptyDesc',
-              'A run imports a client list, matches it against previous servings, and ends with a priority list. Start one when the next batch arrives.',
-            )}
-          </p>
-          <Button className="mt-6" onClick={onDefine}>
-            <Plus className="mr-2 h-4 w-4" />{t('dedup.newOperation', 'New deduplication')}
-          </Button>
-        </div>
+           page is for. Guide the operator to the create route instead (same
+           empty-state pattern as the announcements page). */
+        <Card>
+          <CardContent className="py-12 text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+              <FileSpreadsheet size={20} className="text-muted-foreground" />
+            </div>
+            <h3 className="font-semibold font-heading">{t('dedup.emptyTitle', 'No import runs yet')}</h3>
+            <p className="text-sm text-muted-foreground mt-1 mb-4 max-w-sm mx-auto">
+              {t(
+                'dedup.emptyDesc',
+                'A run imports a client list, matches it against previous servings, and ends with a priority list. Start one when the next batch arrives.',
+              )}
+            </p>
+            <Button onClick={onDefine}>
+              <Plus size={16} className="mr-1" />{t('dedup.newOperation', 'New deduplication')}
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <DataTable
           columns={columns}
