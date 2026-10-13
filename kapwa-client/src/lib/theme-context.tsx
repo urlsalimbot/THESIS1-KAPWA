@@ -25,8 +25,10 @@ const STORAGE_KEY = 'kapwa-theme';
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
-    try { return (localStorage.getItem(STORAGE_KEY) as Theme) || 'system'; }
-    catch { return 'system'; }
+    // Default is light, not the OS preference: the office runs these screens in
+    // daylight and a dark default surprised staff whose laptops were on dark.
+    try { return (localStorage.getItem(STORAGE_KEY) as Theme) || 'light'; }
+    catch { return 'light'; }
   });
 
   const [resolvedTheme, setResolved] = useState<'light' | 'dark'>(() => {
@@ -62,6 +64,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
 export function useTheme(): ThemeContextValue {
   const ctx = useContext(ThemeContext);
-  if (!ctx) return { theme: 'system', resolvedTheme: getSystemTheme(), setTheme: () => {} };
+  if (!ctx) return { theme: 'light', resolvedTheme: 'light', setTheme: () => {} };
   return ctx;
 }

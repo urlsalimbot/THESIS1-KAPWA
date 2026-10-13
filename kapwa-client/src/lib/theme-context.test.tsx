@@ -84,24 +84,7 @@ afterEach(() => {
 });
 
 describe('ThemeProvider default', () => {
-  it('defaults to system and resolves dark when OS prefers dark', () => {
-    installMatchMedia(true);
-    renderProbe();
-    expect(theme()).toBe('system');
-    expect(resolved()).toBe('dark');
-    expect(htmlHasDark()).toBe(true);
-  });
-
-  it('resolves light when OS prefers light', () => {
-    installMatchMedia(false);
-    renderProbe();
-    expect(theme()).toBe('system');
-    expect(resolved()).toBe('light');
-    expect(htmlHasDark()).toBe(false);
-  });
-
-  it('honors a persisted explicit theme over the system default', () => {
-    localStorage.setItem('kapwa-theme', 'light');
+  it('defaults to light even when the OS prefers dark', () => {
     installMatchMedia(true);
     renderProbe();
     expect(theme()).toBe('light');
@@ -109,12 +92,33 @@ describe('ThemeProvider default', () => {
     expect(htmlHasDark()).toBe(false);
   });
 
-  it('follows OS preference changes while in system mode', () => {
-    const mql = installMatchMedia(false);
+  it('stays light when OS prefers light', () => {
+    installMatchMedia(false);
     renderProbe();
+    expect(theme()).toBe('light');
+    expect(resolved()).toBe('light');
+    expect(htmlHasDark()).toBe(false);
+  });
+
+  it('honors a persisted explicit theme over the default', () => {
+    localStorage.setItem('kapwa-theme', 'dark');
+    installMatchMedia(false);
+    renderProbe();
+    expect(theme()).toBe('dark');
+    expect(resolved()).toBe('dark');
+    expect(htmlHasDark()).toBe(true);
+  });
+
+  it('follows OS preference changes only while system mode is chosen', () => {
+    const mql = installMatchMedia(false);
+    const { getByText } = renderProbe();
     expect(resolved()).toBe('light');
 
+    // The default no longer tracks the OS; explicit system mode still does.
     act(() => mql.fire(true));
+    expect(resolved()).toBe('light');
+
+    act(() => getByText('set system').click());
     expect(resolved()).toBe('dark');
     expect(htmlHasDark()).toBe(true);
 
@@ -126,7 +130,8 @@ describe('ThemeProvider default', () => {
 
 describe('ThemeProvider no-FOUC', () => {
   it('applies the resolved theme to <html> during the render phase, before any effect runs', () => {
-    installMatchMedia(true);
+    localStorage.setItem('kapwa-theme', 'dark');
+    installMatchMedia(false);
     let darkDuringRender: boolean | null = null;
     const SniffDuringRender = () => {
       darkDuringRender = document.documentElement.classList.contains('dark');
@@ -202,8 +207,8 @@ describe('useTheme fallback outside provider', () => {
   it('returns a default context without crashing when no provider wraps it', () => {
     installMatchMedia(true);
     const { getByTestId } = render(<Probe />);
-    expect(getByTestId('theme').textContent).toBe('system');
-    expect(getByTestId('resolved').textContent).toBe('dark');
+    expect(getByTestId('theme').textContent).toBe('light');
+    expect(getByTestId('resolved').textContent).toBe('light');
     expect(htmlHasDark()).toBe(false);
   });
 
@@ -211,7 +216,7 @@ describe('useTheme fallback outside provider', () => {
     installMatchMedia(false);
     const { getByTestId, getByText } = render(<Probe />);
     expect(() => act(() => getByText('set dark').click())).not.toThrow();
-    expect(getByTestId('theme').textContent).toBe('system');
+    expect(getByTestId('theme').textContent).toBe('light');
     expect(getByTestId('resolved').textContent).toBe('light');
     expect(htmlHasDark()).toBe(false);
   });
