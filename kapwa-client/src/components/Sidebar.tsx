@@ -3,6 +3,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/auth-context';
 import { NAV_GROUPS } from '@/lib/nav-config';
+import { prefetchRoute } from '@/routes';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
@@ -50,6 +51,10 @@ export function SidebarNavContent({ onNavClick, collapsed = false }: SidebarNavC
                     key={item.path}
                     to={item.path}
                     onClick={onNavClick}
+                    // Warm the route's module before the click: hovering a nav
+                    // item is the strongest signal of what comes next.
+                    onMouseEnter={() => prefetchRoute(item.path)}
+                    onFocus={() => prefetchRoute(item.path)}
                     aria-label={collapsed ? item.label : undefined}
                     title={collapsed ? item.label : undefined}
                     className={cn(

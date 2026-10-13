@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { lazy } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -84,5 +85,30 @@ describe('Layout', () => {
     const { container } = renderLayout();
     const results = await axe(container);
     expect(results).toHaveNoViolations();
+  });
+});
+
+describe('Layout — code-split route loads stay inside the content area', () => {
+  // A never-resolving lazy module: the component suspends forever, which is the
+  // worst case of a slow route chunk.
+  const NeverPage = lazy(() => new Promise<{ default: () => null }>(() => {}));
+
+  it('keeps the shell mounted and shows the fallback inside main', async () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <Layout>
+          <NeverPage />
+        </Layout>
+      </MemoryRouter>,
+    );
+
+    // The fallback is where the page will be…
+    const main = container.querySelector('main#main-content') as HTMLElement;
+    expect(main).toBeTruthy();
+    expect(await screen.findByText(/Loading…/)).toBeTruthy();
+    expect(main.textContent).toContain('Loading…');
+    // …and the chrome is untouched: the navigation landmarks are still there.
+    expect(screen.getAllByRole('navigation').length).toBeGreaterThan(0);
+    expect(container.querySelector('header')).toBeTruthy();
   });
 });

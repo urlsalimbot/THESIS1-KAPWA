@@ -17,6 +17,42 @@ import { lazy, Suspense } from 'react';
 // so the initial bundle stays small (the RouterProvider below is wrapped in a
 // Suspense fallback). Layout/ProtectedRoute/PublicLayout/Toaster stay static —
 // they are small and needed on the first paint.
+/**
+ * Module prefetchers for the sidebar's destinations, keyed by nav path.
+ *
+ * React.lazy exposes no "warm this up" API, so the import functions live here
+ * beside the lazy declarations. `SidebarNavContent` calls `prefetchRoute` on
+ * hover and focus, so the module is usually already in flight when the click
+ * lands and the content-area fallback has nothing to show. The map mirrors the
+ * nav config; an unlisted path is simply not prefetched.
+ */
+export const ROUTE_PREFETCH: Record<string, () => Promise<unknown>> = {
+  '/dashboard': () => import('./pages/DashboardPage'),
+  '/coordinator/dashboard': () => import('./pages/CoordinatorDashboardPage'),
+  '/intake': () => import('./pages/IntakePage'),
+  '/referrals': () => import('./pages/ReferralsPage'),
+  '/cases': () => import('./pages/CasesPage'),
+  '/team': () => import('./pages/TeamWorkspacePage'),
+  '/beneficiaries': () => import('./pages/BeneficiariesPage'),
+  '/coordinator/access-cards': () => import('./pages/CoordinatorAccessCardsPage'),
+  '/tracker': () => import('./pages/CaseTrackerPage'),
+  '/approvals': () => import('./pages/ApprovalPipelinePage'),
+  '/announcements/manage': () => import('./components/announcements/AnnouncementsPage'),
+  '/client-dedup': () => import('./pages/ClientDedupPage'),
+  '/admin': () => import('./pages/AdminPage'),
+  '/admin/programs': () => import('./pages/ProgramsPage'),
+  '/admin/users': () => import('./pages/UsersPanelPage'),
+  '/analytics': () => import('./pages/AnalyticsPage'),
+  '/settings': () => import('./pages/SettingsPage'),
+  '/my-dashboard': () => import('./pages/ClaimantDashboardPage'),
+  '/my-access-card': () => import('./pages/ClaimantAccessCardPage'),
+};
+
+/** Best-effort warm-up: a failed prefetch is a no-op (the click still loads it). */
+export function prefetchRoute(path: string): void {
+  void ROUTE_PREFETCH[path]?.().catch(() => undefined);
+}
+
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const IntakePage = lazy(() => import('./pages/IntakePage').then(m => ({ default: m.IntakePage })));

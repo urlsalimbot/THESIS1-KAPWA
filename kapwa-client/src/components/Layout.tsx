@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/auth-context';
@@ -9,6 +9,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { SidebarNavContent } from './Sidebar';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 import { BottomNav } from '@/components/BottomNav';
 import { SyncStatusBanner } from '@/components/SyncStatusBanner';
 import { AccessDeniedBanner } from '@/components/AccessDeniedBanner';
@@ -20,6 +21,26 @@ import { AriaLiveRegion } from '@/components/a11y/AriaLiveRegion';
 function computePendingCount(): number {
   try { const queue = loadQueue(); return queue.filter(c => c.status === 'pending').length; }
   catch { return 0; }
+}
+
+/**
+ * The content-area fallback for a suspending route: a small spinner where the
+ * page will be, sized so the shell does not jump. Deliberately not full-screen
+ * — the shell stays mounted (see the Suspense boundary in `Layout`).
+ */
+export function RouteLoadingFallback() {
+  const { t } = useTranslation();
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      className="flex min-h-[50vh] items-center justify-center gap-2 text-muted-foreground"
+    >
+      <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+      <span className="text-sm">{t('common.loading', 'Loading…')}</span>
+    </div>
+  );
 }
 
 export function Layout({ children }: { children?: React.ReactNode }) {
@@ -110,7 +131,15 @@ export function Layout({ children }: { children?: React.ReactNode }) {
         <main id="main-content" className="flex-1 min-h-0 bg-background overflow-auto pb-16 lg:pb-5">
           <div className="mx-auto w-full max-w-[1600px] p-4 lg:p-5 short:p-3">
             <ErrorBoundary>
-              {children || <Outlet />}
+              {/* The route pages are code-split, so a navigation suspends. This
+                  boundary is what keeps that suspension *inside the content
+                  area*: the shell (sidebar, topbar, bottom nav) stays put and
+                  only the page slot swaps — the app used to flash a blank
+                  screen with a centred "Loading" because the nearest boundary
+                  was the one around the whole router. */}
+              <Suspense fallback={<RouteLoadingFallback />}>
+                {children || <Outlet />}
+              </Suspense>
             </ErrorBoundary>
           </div>
         </main>
