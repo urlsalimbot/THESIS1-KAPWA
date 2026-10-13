@@ -152,6 +152,33 @@ export class NotificationsService {
   }
 
   /**
+   * The lifecycle's "someone owes this case an action" notice.
+   *
+   * `audience: 'admin'` is the approval queue (category APPROVAL, which the
+   * client routes to /approvals); `audience: 'worker'` is the assigned worker's
+   * work queue (category CASE_UPDATE, which routes to the case). The next
+   * action is named in the body so the recipient does not have to open the case
+   * to learn what it wants.
+   */
+  async notifyCaseActionNeeded(opts: {
+    recipientId: string;
+    caseId: string;
+    controlNo: string;
+    status: string;
+    action: string;
+    audience: 'admin' | 'worker';
+  }) {
+    const isAdmin = opts.audience === 'admin';
+    return this.create({
+      recipientId: opts.recipientId,
+      title: `${isAdmin ? 'Approval needed' : 'Case needs work'} — ${opts.controlNo}`,
+      message: `Case ${opts.controlNo} (${this.statusLabel(opts.status)}): ${opts.action}`,
+      category: isAdmin ? NotificationCategory.APPROVAL : NotificationCategory.CASE_UPDATE,
+      referenceId: opts.caseId,
+    });
+  }
+
+  /**
    * Best-effort out-of-band delivery for an auto-created in-app notification.
    * Only fires when the recipient opted into the given channel for the
    * category; in-app delivery is never affected. Failures are logged, never

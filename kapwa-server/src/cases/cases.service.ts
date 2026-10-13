@@ -17,7 +17,8 @@ import { InterventionRequiredDocument } from './intervention-required-document.e
 // error that spells a step differently from the stepper costs the worker a trip
 // to the UI to find out what is open.
 import { CASE_STEP_LABELS, stepsDueAt, stepsForCategory, stepsInPhase } from './case-step-labels';
-import { isValidTransition, canTransition } from './case-fsm';
+import { isValidTransition, canTransition, nextActionFor } from './case-fsm';
+import { NotificationCategory } from '../notifications/notification.entity';
 import { CaseHistory } from './case-history.entity';
 import { CasesExportService } from './cases-export.service';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
@@ -635,7 +636,44 @@ export class CasesService {
     await this.auditLog?.log('case.transition', id, opts?.actorId, { from: oldStatus, to: newStatus, by: opts?.userRole, controlNo: c.controlNo });
 
     if (c.assignedWorkerId) {
-      await this.notifService.notifyCaseUpdate(c.assignedWorkerId, c.id, c.controlNo, newStatus);
+      // The lifecycle's action routing: a status that waits on the worker gets
+      // a "needs work" notice naming the action; every other status keeps the
+      // plain status-change update. One notification either way — the worker is
+      // never told the same transition twice.
+      const action = nextActionFor(newStatus);
+      if (action?.audience === 'worker') {
+        await this.notifService.notifyCaseActionNeeded({
+          recipientId: c.assignedWorkerId,
+          caseId: c.id,
+          controlNo: c.controlNo,
+          status: newStatus,
+          action: action.action,
+          audience: 'worker',
+        });
+      } else {
+        await this.notifService.notifyCaseUpdate(c.assignedWorkerId, c.id, c.controlNo, newStatus);
+      }
+    }
+
+    // A status whose forward edge is admin-only puts the case in the approval
+    // queue: every active admin is told, with the action named. The actor is
+    // skipped — an admin who moved the case does not need to be told about it.
+    const waitingOnAdmin = nextActionFor(newStatus);
+    if (waitingOnAdmin?.audience === 'admin') {
+      const admins = await this.caseRepo.manager.query(
+        `SELECT id FROM users WHERE role = 'admin' AND is_active = TRUE`,
+      ) as Array<{ id: string }>;
+      for (const admin of admins) {
+        if (admin.id === opts?.actorId) continue;
+        await this.notifService.notifyCaseActionNeeded({
+          recipientId: admin.id,
+          caseId: c.id,
+          controlNo: c.controlNo,
+          status: newStatus,
+          action: waitingOnAdmin.action,
+          audience: 'admin',
+        });
+      }
     }
 
     // The beneficiary's linked claimant account should also be notified of
@@ -738,6 +776,18 @@ export class CasesService {
       'standard',
     );
     await this.auditLog?.log('case.reject', id, actorId, { from: oldStatus, reason, controlNo: c.controlNo });
+    // A rejection is the strongest "this case needs attention" signal there is:
+    // the assigned worker is told, with the reason attached. (Rejection is not
+    // an FSM transition, so the routing in `transition()` never sees it.)
+    if (c.assignedWorkerId) {
+      await this.notifService.create({
+        recipientId: c.assignedWorkerId,
+        title: `Case rejected — ${c.controlNo}`,
+        message: `Case ${c.controlNo} was rejected and closed as incomplete. Reason: ${reason}`,
+        category: NotificationCategory.CASE_UPDATE,
+        referenceId: c.id,
+      });
+    }
     return c;
   }
 

@@ -1,5 +1,5 @@
 import { CaseStatus } from './case.entity';
-import { CASE_FSM, CASE_FSM_ROLES, isValidTransition, canTransition } from './case-fsm';
+import { CASE_FSM, CASE_FSM_ROLES, isValidTransition, canTransition, nextActionFor } from './case-fsm';
 
 describe('case-fsm', () => {
   it('enforces the documented transition table', () => {
@@ -40,5 +40,33 @@ describe('case-fsm', () => {
       expect(CASE_FSM_ROLES[s]).toBeDefined();
       expect(Array.isArray(CASE_FSM[s])).toBe(true);
     }
+  });
+});
+
+describe('CASE_NEXT_ACTION — who each status waits on', () => {
+  it('names an owner for every status the case can act from, and nobody for the terminals', () => {
+    for (const status of Object.keys(CASE_FSM)) {
+      const action = nextActionFor(status);
+      if (status === 'closed' || status === 'aftercare') {
+        expect(action).toBeNull();
+        continue;
+      }
+      expect(action).toBeTruthy();
+    }
+    // `in_review` is the approval queue: its work is done and the only forward
+    // edge is admin-only, so the admin is who it waits on.
+    expect(nextActionFor('in_review')?.audience).toBe('admin');
+    // `active` is deliberately NOT the admin's queue even though its exit is
+    // admin-only: the implementation work is the worker's, and the admin is
+    // asked for the move only once that work is sealed.
+    expect(nextActionFor('active')?.audience).toBe('worker');
+    for (const status of ['enrolled', 'assessed', 'transitioning']) {
+      expect(nextActionFor(status)?.audience).toBe('worker');
+    }
+  });
+
+  it('treats an unknown or missing status as waiting on nobody', () => {
+    expect(nextActionFor('nonsense')).toBeNull();
+    expect(nextActionFor(null)).toBeNull();
   });
 });

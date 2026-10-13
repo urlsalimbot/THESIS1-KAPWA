@@ -184,8 +184,10 @@ export function CaseViewPage() {
   // the authenticated helper instead and let the browser show the PDF.
   // Export buttons were fire-and-forget — a failed GIS/CSR export left nothing
   // on screen (audit 3.3.6); everything routes through this reported runner.
-  const runDownload = (p: Promise<unknown>) => {
-    p.catch((e) => toast.error(t('cases.downloadFailed', 'Download failed'), { description: humanizeError(e) }));
+  const runDownload = (p: Promise<unknown> | undefined) => {
+    // `Promise.resolve` tolerates a stubbed/absent return (the tests mock these
+    // helpers as no-ops), so the runner never throws on its own plumbing.
+    Promise.resolve(p).catch((e) => toast.error(t('cases.downloadFailed', 'Download failed'), { description: humanizeError(e) }));
   };
   async function viewGeneratedDoc(url: string, fallbackName: string) {
     const docId = filingDocIdFromUrl(url);

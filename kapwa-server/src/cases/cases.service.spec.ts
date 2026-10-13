@@ -41,6 +41,7 @@ describe('CasesService', () => {
 
     notifMock = {
       notifyCaseUpdate: jest.fn().mockResolvedValue(undefined),
+      notifyCaseActionNeeded: jest.fn().mockResolvedValue(undefined),
       create: jest.fn().mockResolvedValue({}),
     };
 
@@ -689,7 +690,12 @@ describe('CasesService', () => {
 
       const result = await service.updateStatus('1', CaseStatus.ASSESSED);
       expect(result.status).toBe(CaseStatus.ASSESSED);
-      expect(notifMock.notifyCaseUpdate).toHaveBeenCalledWith('w1', '1', 'KAPWA-001', CaseStatus.ASSESSED);
+      // `assessed` waits on the worker, so the worker's notice names the action
+      // instead of the plain status change.
+      expect(notifMock.notifyCaseActionNeeded).toHaveBeenCalledWith(expect.objectContaining({
+        recipientId: 'w1', caseId: '1', status: CaseStatus.ASSESSED, audience: 'worker',
+      }));
+      expect(notifMock.notifyCaseUpdate).not.toHaveBeenCalledWith('w1', '1', 'KAPWA-001', CaseStatus.ASSESSED);
     });
 
     it('should notify the linked claimant account on transition', async () => {
@@ -705,6 +711,56 @@ describe('CasesService', () => {
         ['ben-1'],
       );
       expect(notifMock.notifyCaseUpdate).toHaveBeenCalledWith('claimant-user-1', '1', 'KAPWA-001', CaseStatus.ASSESSED);
+    });
+
+    it('tells every active admin when the case reaches the approval queue', async () => {
+      // `in_review`'s only forward edge is admin-only: the case is parked until
+      // an admin approves it, so the admins are the ones who must hear about it.
+      repoMock.findOne.mockResolvedValue({ id: '1', status: CaseStatus.ASSESSED, controlNo: 'KAPWA-2026-00001', frvaScore: 62, beneficiaryId: null, assignedWorkerId: 'w1', updatedAt: new Date() } as unknown as Case);
+      stepLocksRepoMock.find.mockResolvedValue(['assessment', 'enrollments', 'interventions', 'referrals'].map((key) => ({ id: `lock-${key}`, caseId: '1', stepKey: key, lockedBy: 'u1', lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-01') })));
+      repoMock.manager.query.mockResolvedValue([{ id: 'admin-1' }, { id: 'admin-2' }]);
+
+      await service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker', actorId: 'sw-1' });
+
+      expect(notifMock.notifyCaseActionNeeded).toHaveBeenCalledWith(expect.objectContaining({
+        recipientId: 'admin-1', caseId: '1', status: CaseStatus.IN_REVIEW, audience: 'admin',
+      }));
+      expect(notifMock.notifyCaseActionNeeded).toHaveBeenCalledWith(expect.objectContaining({
+        recipientId: 'admin-2', audience: 'admin',
+      }));
+    });
+
+    it('does not notify the admin who performed the transition', async () => {
+      repoMock.findOne.mockResolvedValue({ id: '1', status: CaseStatus.ASSESSED, controlNo: 'KAPWA-2026-00001', frvaScore: 62, beneficiaryId: null, assignedWorkerId: 'w1', updatedAt: new Date() } as unknown as Case);
+      stepLocksRepoMock.find.mockResolvedValue(['assessment', 'enrollments', 'interventions', 'referrals'].map((key) => ({ id: `lock-${key}`, caseId: '1', stepKey: key, lockedBy: 'u1', lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-01') })));
+      repoMock.manager.query.mockResolvedValue([{ id: 'admin-1' }]);
+
+      await service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'admin', actorId: 'admin-1' });
+
+      expect(notifMock.notifyCaseActionNeeded).not.toHaveBeenCalledWith(expect.objectContaining({ audience: 'admin' }));
+    });
+
+    it('keeps the plain status update when the new status waits on nobody', async () => {
+      repoMock.findOne.mockResolvedValue({ id: '1', assignedWorkerId: 'w1', controlNo: 'KAPWA-001', status: CaseStatus.TRANSITIONING, closureOutcome: 'completed', updatedAt: new Date() } as Case);
+      stepLocksRepoMock.find.mockResolvedValue(['assessment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure'].map((key) => ({ id: `lock-${key}`, caseId: '1', stepKey: key, lockedBy: 'u1', lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-01') })));
+
+      await service.transition('1', CaseStatus.CLOSED, { userRole: 'social_worker' });
+
+      expect(notifMock.notifyCaseUpdate).toHaveBeenCalledWith('w1', '1', 'KAPWA-001', CaseStatus.CLOSED);
+    });
+
+    it('tells the assigned worker when a case is rejected, with the reason', async () => {
+      repoMock.findOne.mockResolvedValue({
+        id: '1', assignedWorkerId: 'w1', controlNo: 'KAPWA-001', status: CaseStatus.IN_REVIEW, updatedAt: new Date(),
+      } as Case);
+
+      await service.reject('1', 'Incomplete documents', 'admin', 'admin-9');
+
+      expect(notifMock.create).toHaveBeenCalledWith(expect.objectContaining({
+        recipientId: 'w1',
+        message: expect.stringContaining('Incomplete documents'),
+        referenceId: '1',
+      }));
     });
 
     it('refuses enrolled -> assessed while the case category is missing', async () => {

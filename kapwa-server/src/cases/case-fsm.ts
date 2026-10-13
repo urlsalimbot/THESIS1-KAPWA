@@ -40,3 +40,33 @@ export function canTransition(from: CaseStatus, role: string): boolean {
   if (role === 'admin') return true;
   return (CASE_FSM_ROLES[from] ?? []).includes(role);
 }
+
+/**
+ * Who the case waits on once it reaches a status, and the action they owe it.
+ * A status whose forward edge is admin-only (`in_review`) puts the case in the
+ * admin's queue; the rest are the worker's. `closed`/`aftercare` wait on nobody
+ * — the existing status-change notice is all they carry.
+ *
+ * Declared here beside the roles because it is the same fact seen from the
+ * other side: `CASE_FSM_ROLES` says who *may* act from a status, this says who
+ * *must* — and the notification layer reads it so a case is never parked
+ * waiting on someone nobody told.
+ */
+export interface CaseNextAction {
+  audience: 'admin' | 'worker';
+  action: string;
+}
+
+export const CASE_NEXT_ACTION: Record<string, CaseNextAction | null> = {
+  [CaseStatus.ENROLLED]: { audience: 'worker', action: 'Complete the assessment and interview.' },
+  [CaseStatus.ASSESSED]: { audience: 'worker', action: 'Score the assessment tools and flag the case for admin review.' },
+  [CaseStatus.IN_REVIEW]: { audience: 'admin', action: 'Review and approve the case to activate it.' },
+  [CaseStatus.ACTIVE]: { audience: 'worker', action: 'Implement the approved services and record the interventions.' },
+  [CaseStatus.TRANSITIONING]: { audience: 'worker', action: 'Complete the case study and close the case.' },
+  [CaseStatus.CLOSED]: null,
+  [CaseStatus.AFTERCARE]: null,
+};
+
+export function nextActionFor(status: string | null | undefined): CaseNextAction | null {
+  return (status && CASE_NEXT_ACTION[status]) || null;
+}
