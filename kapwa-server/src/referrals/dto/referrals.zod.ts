@@ -11,6 +11,10 @@ export const CreateReferralSchema = z.object({
   phone: z.string().optional(),
   personId: z.string().uuid().optional(),
   reason: z.string().min(1, 'Reason for referral is required'),
+  // The case category guides the MSWDO review lane (and the intake that
+  // accepts the referral). The coordinator picks it from the same vocabulary
+  // the assessment step uses.
+  caseCategory: z.string().min(1, 'Case category is required'),
 });
 
 export type CreateReferralInput = z.infer<typeof CreateReferralSchema>;

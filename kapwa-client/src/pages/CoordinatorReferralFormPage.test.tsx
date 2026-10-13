@@ -186,6 +186,7 @@ describe('CoordinatorReferralFormPage extension options', () => {
     fireEvent.change(screen.getByLabelText('Date of Birth *'), { target: { value: '1990-01-02' } });
     fireEvent.change(screen.getByLabelText('Barangay'), { target: { value: 'Bigte' } });
     fireEvent.change(screen.getByLabelText('Reason for Referral *'), { target: { value: 'Needs support' } });
+    fireEvent.change(screen.getByLabelText('Case Category *'), { target: { value: 'Individual in Crisis Situation (AICS)' } });
     fireEvent.submit(screen.getByRole('button', { name: /submit referral/i }).closest('form')!);
 
     await waitFor(() => expect(mockApiPost).toHaveBeenCalled());
@@ -266,6 +267,7 @@ describe('CoordinatorReferralFormPage barangay options', () => {
     await user.click(screen.getByLabelText('Barangay'));
     await user.click(await screen.findByRole('option', { name: 'Minuyan' }));
     fireEvent.change(screen.getByLabelText('Reason for Referral *'), { target: { value: 'Medical' } });
+    fireEvent.change(screen.getByLabelText('Case Category *'), { target: { value: 'Individual in Crisis Situation (AICS)' } });
 
     fireEvent.submit(screen.getByRole('button', { name: /Submit Referral/i }).closest('form') as HTMLFormElement);
 
@@ -286,6 +288,7 @@ describe('CoordinatorReferralFormPage barangay options', () => {
     fireEvent.click(screen.getByLabelText('Female'));
     fireEvent.change(screen.getByLabelText('Date of Birth *'), { target: { value: '2015-03-30' } });
     fireEvent.change(screen.getByLabelText('Reason for Referral *'), { target: { value: 'Medical' } });
+    fireEvent.change(screen.getByLabelText('Case Category *'), { target: { value: 'Individual in Crisis Situation (AICS)' } });
 
     fireEvent.submit(screen.getByRole('button', { name: /Submit Referral/i }).closest('form') as HTMLFormElement);
 

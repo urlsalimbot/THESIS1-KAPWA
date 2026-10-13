@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { referralStatusLabel } from '@/i18n/display';
-import { api } from '../lib/api';
+import { api, downloadReferralGis } from '../lib/api';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { DataTable } from '@/components/data-table';
-import { Plus, Eye, Send } from 'lucide-react';
+import { Plus, Eye, Send, FileText } from 'lucide-react';
 import type { ColumnDef, PaginationState } from '@tanstack/react-table';
 import { formatDate, residentName } from '../lib/format';
 
@@ -23,6 +23,8 @@ interface Referral {
   status: 'pending' | 'accepted' | 'declined';
   createdAt: string;
   declineReason?: string;
+  controlNo?: string;
+  caseCategory?: string;
   case?: { controlNo?: string } | null;
 }
 
@@ -80,17 +82,40 @@ export function CoordinatorReferralListPage() {
       cell: ({ row }) => formatDate(row.original.createdAt),
     },
     {
+      id: 'controlNo',
+      header: t('coordinator.controlNo', 'Control No.'),
+      cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{(row.original as any).controlNo || '—'}</span>,
+    },
+    {
+      id: 'caseCategory',
+      header: t('coordinator.caseCategory', 'Case Category'),
+      cell: ({ row }) => (
+        <span className="text-xs line-clamp-2 max-w-[180px]">{(row.original as any).caseCategory || '—'}</span>
+      ),
+    },
+    {
       id: 'actions',
       header: '',
       cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate(`/coordinator/referrals/${row.original.id}`)}
-          aria-label={t('coordinator.view', 'View')}
-        >
-          <Eye size={14} />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(`/coordinator/referrals/${row.original.id}`)}
+            aria-label={t('coordinator.view', 'View')}
+          >
+            <Eye size={14} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            title={t('coordinator.gisAria', 'Download the GIS-style intake sheet')}
+            aria-label={t('coordinator.gisAria', 'Download the GIS-style intake sheet')}
+            onClick={() => { void downloadReferralGis(row.original.id); }}
+          >
+            <FileText size={14} />
+          </Button>
+        </div>
       ),
     },
   ];

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Request, UseInterceptors, SerializeOptions } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Request, UseInterceptors, SerializeOptions, Res } from '@nestjs/common';
 import { ClassSerializerInterceptor } from '@nestjs/common';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { CreateReferralSchema, DeclineReferralSchema, CreateReferralInput, DeclineReferralInput } from './dto/referrals.zod';
@@ -62,6 +62,21 @@ export class ReferralsController {
   @ApiOperation({ summary: 'Get referral details' })
   async findById(@Param('id') id: string) {
     return this.svc.findById(id);
+  }
+
+  // GIS-style intake sheet for the referral: the coordinator's mirror of the
+  // case GIS — a read of the referral row, downloadable by the coordinator
+  // who filed it and by MSWDO when reviewing.
+  @Get(':id/gis-pdf')
+  @Roles('admin', 'social_worker', 'coordinator')
+  @ApiOperation({ summary: 'Download the referral GIS-style intake sheet (PDF)' })
+  async gisPdf(@Param('id') id: string, @Res() res: any) {
+    const pdf = await this.svc.gisPdf(id);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="GIS-REFERRAL-${id.slice(0, 8).toUpperCase()}.pdf"`,
+    });
+    res.send(pdf);
   }
 
   @Patch(':id/accept')

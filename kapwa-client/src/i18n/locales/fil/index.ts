@@ -1069,6 +1069,11 @@ const fil: EnLocale = {
   },
   "referral": {
     "accept": "Tanggapin",
+    "controlNo": "Control No.",
+    "caseCategory": "Kategorya ng Kaso",
+    "caseCategoryRequired": "Kategorya ng Kaso *",
+    "selectCategory": "Pumili ng kategorya ng kaso...",
+    "gisAria": "I-download ang GIS-style intake sheet",
     "acceptAria": "Tanggapin ang referral para kay {{name}}",
     "accepted": "Tinanggap ang referral",
     "acceptFailed": "Nabigo ang pagtanggap ng referral",
@@ -1428,6 +1433,9 @@ const fil: EnLocale = {
     "write": "Isulat"
   },
   "coordinator": {
+    "categoryHint": "Ireruta sa tamang assessment lane kapag tinanggap ng MSWDO ang referral.",
+    "caseCategory": "Kategorya ng Kaso",
+    "controlNo": "Control No.",
     "address": "Tirahan",
     "barangay": "Barangay",
     "selectBarangay": "Pumili...",
@@ -1719,7 +1727,7 @@ const fil: EnLocale = {
       "socialWorkerAssessment": "Pagsusuri ng Social Worker *",
       "swdiPlaceholder": "Social Welfare Development Index",
       "swdiScore": "SWDI Iskor (0-100)",
-      "caseCategory": "Kategorya ng Kaso *",
+      "caseCategory": "Kategorya ng Kaso",
       "selectCaseCategory": "Pumili ng kategorya…",
       "caseCategoryGroup": {
         "childProtection": "Proteksyon ng Bata at Kabataan",

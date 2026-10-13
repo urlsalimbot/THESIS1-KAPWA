@@ -511,6 +511,23 @@ export async function downloadEndorsementLetterById(referralId: string): Promise
   URL.revokeObjectURL(url);
 }
 
+// GIS-style intake sheet for a coordinator referral (the referral's mirror of
+// the case GIS). Downloadable by the filing coordinator and by MSWDO review.
+export async function downloadReferralGis(referralId: string): Promise<void> {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const res = await fetch(`${API_BASE}/referrals/${referralId}/gis-pdf`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(`Referral GIS failed: ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = window.document.createElement('a');
+  a.href = url;
+  a.download = dispositionFilename(res, exportFileName('GIS-REFERRAL', referralId));
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 /**
  * Extract the filing document id from a `/filing/:id/download` URL (the shape
  * server-stored fields like certificateUrl / pettyCashVoucherUrl hold), so the

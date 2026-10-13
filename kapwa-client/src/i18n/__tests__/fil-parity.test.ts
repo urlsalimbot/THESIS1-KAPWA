@@ -180,6 +180,9 @@ const ALLOWED_IDENTICAL = new Set([
   'usersPanel.role.claimant',
   'usersPanel.role.coordinator',
   'programs.interventionAria', // placeholder-only string ("Intervention {{n}}")
+  // 'Control No.' — the same standard label in both languages.
+  'coordinator.controlNo',
+  'referral.controlNo',
   ...Object.keys(flat(en)).filter(k => k.startsWith('category.') || k.startsWith('interventionType.') || k.startsWith('interventionForms.')),
 ]);
 

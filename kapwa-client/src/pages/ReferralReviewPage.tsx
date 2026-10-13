@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { referralStatusLabel } from '@/i18n/display';
-import { api } from '../lib/api';
+import { api, downloadReferralGis } from '../lib/api';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { DataTable } from '@/components/data-table';
 import { referralIntakeState, referralListName } from '@/components/referrals/referral-utils';
-import { Check, X, Loader2, Inbox } from 'lucide-react';
+import { Check, X, Loader2, Inbox, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ColumnDef, PaginationState } from '@tanstack/react-table';
 import { formatDate } from '../lib/format';
@@ -36,6 +36,8 @@ interface Referral {
   addressLine?: string;
   barangay: string;
   reason: string;
+  controlNo?: string;
+  caseCategory?: string;
   status: 'pending' | 'accepted' | 'declined';
   createdAt: string;
   coordinator?: { fullName?: string };
@@ -112,6 +114,18 @@ export function ReferralReviewPage() {
     },
     { accessorKey: 'barangay', header: t('referral.barangay', 'Barangay') },
     {
+      id: 'controlNo',
+      header: t('referral.controlNo', 'Control No.'),
+      cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.controlNo || '—'}</span>,
+    },
+    {
+      id: 'caseCategory',
+      header: t('referral.caseCategory', 'Case Category'),
+      cell: ({ row }) => (
+        <span className="text-xs line-clamp-2 max-w-[180px]">{row.original.caseCategory || '—'}</span>
+      ),
+    },
+    {
       id: 'coordinator',
       header: t('referral.referredBy', 'Referred By'),
       // `fullName` is first-name-first by design — staff read that way, residents
@@ -140,6 +154,15 @@ export function ReferralReviewPage() {
       header: t('referral.actions', 'Actions'),
       cell: ({ row }) => (
         <div className="flex gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            title={t('referral.gisAria', 'Download the GIS-style intake sheet')}
+            aria-label={t('referral.gisAria', 'Download the GIS-style intake sheet')}
+            onClick={() => { void downloadReferralGis(row.original.id); }}
+          >
+            <FileText size={14} />
+          </Button>
           <Button
             variant="ghost"
             size="sm"

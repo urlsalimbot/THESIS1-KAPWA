@@ -30,6 +30,7 @@ describe('ReferralsService', () => {
       findOne: jest.fn(),
       find: jest.fn(),
       createQueryBuilder: jest.fn(),
+      manager: { query: jest.fn().mockResolvedValue([{ last_seq: 1 }]) },
     };
     personRepoMock = {
       create: jest.fn(),
@@ -142,4 +143,38 @@ describe('ReferralsService', () => {
       expect(savedPerson.addresses[0].raw).toBe('123 Mabini St');
     });
   });
+    it('assigns the RFRL control number and persists the case category', async () => {
+      repoMock.create.mockImplementation((d: any) => d);
+      const saved: any = {};
+      repoMock.save.mockImplementation(async (d: any) => { Object.assign(saved, d); return d; });
+      personRepoMock.save.mockResolvedValue({ id: 'p1' });
+      personRepoMock.createQueryBuilder.mockReturnValue({ where: jest.fn().mockReturnThis(), andWhere: jest.fn().mockReturnThis(), getMany: jest.fn().mockResolvedValue([]) });
+
+      const referral = await service.create(
+        { reason: 'Needs AICS help', caseCategory: 'Individual in Crisis Situation (AICS)' } as any,
+        'coor-1', 'Bigte',
+      );
+
+      expect(saved.controlNo).toBe('RFRL-2026-0001');
+      expect(repoMock.manager.query).toHaveBeenCalledWith(
+        expect.stringContaining('referral_control_counters'),
+        [new Date().getFullYear()],
+      );
+      expect(saved.caseCategory).toBe('Individual in Crisis Situation (AICS)');
+    });
+
+    it('builds a GIS-style intake sheet PDF from the referral', async () => {
+      const referral = {
+        id: 'r1', controlNo: 'RFRL-2026-0001', barangay: 'Bigte', status: 'pending',
+        reason: 'Needs AICS help', caseCategory: 'Individual in Crisis Situation (AICS)',
+        createdAt: new Date(), coordinator: { firstName: 'Ana', lastName: 'Cruz' },
+        surname: 'Reyes', firstName: 'Pedro', gender: 'Male', phone: '09171234567',
+        addressLine: 'Blk 2, Bigte',
+      };
+      repoMock.findOne.mockResolvedValue(referral);
+      const pdf = await service.gisPdf('r1');
+      expect(pdf.subarray(0, 4).toString('latin1')).toBe('%PDF');
+      expect(pdf.length).toBeGreaterThan(500);
+    });
+
 });

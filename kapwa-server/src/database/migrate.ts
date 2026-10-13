@@ -755,6 +755,13 @@ export async function migrate() {
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
+  await q.query(`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS control_no TEXT`);
+  await q.query(`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS case_category TEXT`);
+  await q.query(`CREATE TABLE IF NOT EXISTS referral_control_counters (
+    year INT PRIMARY KEY,
+    last_seq INT NOT NULL
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_referrals_control_no ON referrals(control_no)`);
   // The denormalized person copy on referrals (surname, first_name, gender, dob)
   // is optional. ReferralPersonLink…0049 (Wave 2) replaced it with a person_id
   // relation and dropped the columns, so relaxing NOT NULL is a no-op on any

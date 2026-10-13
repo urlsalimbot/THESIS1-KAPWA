@@ -6,6 +6,7 @@ import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import { CASE_CATEGORY_GROUPS } from '@/lib/constants';
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@/components/ui/select';
@@ -37,6 +38,7 @@ export function CoordinatorReferralFormPage() {
     gender: '', dob: '', phone: '', street: '',
     barangay: assignedBarangay,
     reason: '',
+    caseCategory: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -47,7 +49,7 @@ export function CoordinatorReferralFormPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.surname || !form.firstName || !form.gender || !form.dob || !form.reason) {
+    if (!form.surname || !form.firstName || !form.gender || !form.dob || !form.reason || !form.caseCategory) {
       setError(t('coordinator.fillRequired', 'Please fill in all required fields'));
       return;
     }
@@ -64,6 +66,7 @@ export function CoordinatorReferralFormPage() {
         phone: form.phone || undefined,
         address: { street: form.street, barangay: form.barangay },
         reason: form.reason,
+        caseCategory: form.caseCategory,
       });
       toast.success(t('coordinator.submitted', 'Referral submitted'), { description: t('coordinator.submittedDesc', 'Resident has been referred to MSWDO for assessment.') });
       navigate('/coordinator/referrals');
@@ -199,6 +202,30 @@ export function CoordinatorReferralFormPage() {
           <div className="p-4 space-y-1.5">
             <label htmlFor="crf-reason" className="text-xs text-muted-foreground font-medium">{t('coordinator.reasonForReferral', 'Reason for Referral *')}</label>
             <Textarea id="crf-reason" required value={form.reason} onChange={e => update('reason', e.target.value)} placeholder={t('coordinator.reasonPlaceholder', 'Describe why this resident is being referred to MSWDO...')} />
+          </div>
+          <div className="border-t px-4 py-3 space-y-1.5">
+            <label htmlFor="crf-category" className="text-xs text-muted-foreground font-medium">
+              {t('referral.caseCategoryRequired', 'Case Category *')}
+            </label>
+            <select
+              id="crf-category"
+              required
+              value={form.caseCategory}
+              onChange={e => update('caseCategory', e.target.value)}
+              className="h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="">{t('referral.selectCategory', 'Select case category...')}</option>
+              {CASE_CATEGORY_GROUPS.map(group => (
+                <optgroup key={group.key} label={t(group.key, group.fallback)}>
+                  {group.items.map(item => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              {t('coordinator.categoryHint', 'Routed to the matching assessment lane when MSWDO accepts the referral.')}
+            </p>
           </div>
         </div>
 

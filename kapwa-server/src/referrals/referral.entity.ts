@@ -39,6 +39,14 @@ export class Referral extends BaseEntity {
   @JoinColumn({ name: 'case_id' })
   case?: Case;
 
+  /** RFRL-yyyy-#### series, issued when the coordinator submits. */
+  @Column({ name: 'control_no', nullable: true })
+  controlNo?: string;
+
+  /** Case category the coordinator attaches so a review can route the intake. */
+  @Column({ name: 'case_category', nullable: true })
+  caseCategory?: string;
+
   @Column({ name: 'person_id', nullable: true })
   personId?: string;
 

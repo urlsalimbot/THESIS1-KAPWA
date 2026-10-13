@@ -1436,6 +1436,9 @@ const en = {
     "title": "Get in Touch",
   },
   "coordinator": {
+    "categoryHint": "Routed to the matching assessment lane when MSWDO accepts the referral.",
+    "caseCategory": "Case Category",
+    "controlNo": "Control No.",
     "address": "Address",
     "barangay": "Barangay",
     "selectBarangay": "Select...",
@@ -2211,6 +2214,11 @@ const en = {
   },
   "referral": {
     "accept": "Accept",
+    "controlNo": "Control No.",
+    "caseCategory": "Case Category",
+    "caseCategoryRequired": "Case Category *",
+    "selectCategory": "Select case category...",
+    "gisAria": "Download the GIS-style intake sheet",
     "acceptAria": "Accept referral for {{name}}",
     "accepted": "Referral accepted",
     "acceptFailed": "Failed to accept referral",

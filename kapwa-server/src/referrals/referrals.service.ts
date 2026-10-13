@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Referral, ReferralStatus } from './referral.entity';
 import { Person } from '../beneficiaries/person.entity';
 import type { CreateReferralInput, DeclineReferralInput } from './dto/referrals.zod';
+import { buildReferralGisPdf, ReferralGisData } from './referral-gis.builder';
 
 @Injectable()
 export class ReferralsService {
@@ -79,8 +80,54 @@ export class ReferralsService {
       barangay,
       personId: person?.id,
       status: ReferralStatus.PENDING,
+      caseCategory: dto.caseCategory,
+      controlNo: await this.generateControlNo(),
     });
     return this.repo.save(referral);
+  }
+
+  /** RFRL-yyyy-#### series — the coordinator-side pendant of the case control numbers. */
+  async generateControlNo(): Promise<string> {
+    const year = new Date().getFullYear();
+    const rows: Array<{ last_seq: number }> = await this.repo.manager.query(
+      `INSERT INTO referral_control_counters (year, last_seq)
+       VALUES ($1, 1)
+       ON CONFLICT (year) DO UPDATE
+         SET last_seq = referral_control_counters.last_seq + 1
+       RETURNING last_seq`,
+      [year],
+    );
+    const seq = Number(rows[0]?.last_seq ?? 1);
+    return `RFRL-${year}-${String(seq).padStart(4, '0')}`;
+  }
+
+  /** GIS-style intake sheet for a referral — the coordinator's mirror of the case GIS. */
+  async gisPdf(id: string): Promise<Buffer> {
+    const referral = await this.findById(id);
+    const data: ReferralGisData = {
+      controlNo: referral.controlNo || id.slice(0, 8).toUpperCase(),
+      dateLabel: new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric',
+      }).format(referral.createdAt || new Date()),
+      barangay: referral.barangay,
+      status: referral.status,
+      caseCategory: referral.caseCategory,
+      reason: referral.reason,
+      referredBy: referral.coordinator
+        ? `${referral.coordinator.firstName || ''} ${referral.coordinator.lastName || ''}`.trim() || 'Barangay Coordinator'
+        : 'Barangay Coordinator',
+      person: {
+        surname: referral.surname,
+        firstName: referral.firstName,
+        middleName: referral.middleName,
+        extension: referral.extension,
+        sex: referral.gender,
+        dob: referral.dob ? new Date(referral.dob).toISOString().slice(0, 10) : '',
+        phone: referral.phone || '',
+        addressLine: referral.addressLine || '',
+      },
+    };
+    return buildReferralGisPdf(data);
   }
 
   async findAll(options?: { barangay?: string; status?: string; intakePending?: boolean }): Promise<Referral[]> {
