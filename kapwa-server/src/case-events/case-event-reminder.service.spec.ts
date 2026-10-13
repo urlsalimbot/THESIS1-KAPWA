@@ -5,9 +5,15 @@ describe('CaseEventReminderService', () => {
   const reminders = { findOne: jest.fn(), insert: jest.fn(), update: jest.fn() };
   const reminderSettings = { resolveOffsets: jest.fn() };
   const cases = { findOne: jest.fn() };
-  const users = { findOne: jest.fn() };
+  const users = { findOne: jest.fn(), find: jest.fn() };
+  const beneficiaries = { findOne: jest.fn() };
+  const claimants = { find: jest.fn() };
+  const followUps = { find: jest.fn() };
   const notifs = { create: jest.fn(), checkConsent: jest.fn(), sendEmailDirect: jest.fn() };
-  const svc = new CaseEventReminderService(events as any, reminders as any, reminderSettings as any, cases as any, users as any, notifs as any);
+  const svc = new CaseEventReminderService(
+    events as any, reminders as any, reminderSettings as any, cases as any,
+    users as any, beneficiaries as any, claimants as any, followUps as any, notifs as any,
+  );
 
   // 2026-10-19 09:00. The event is 2026-10-20 09:00.
   // offset 4320 (3d) → remind_at 10-17 09:00 — due (catch-up)
@@ -25,6 +31,10 @@ describe('CaseEventReminderService', () => {
     events.find.mockResolvedValue([event]);
     cases.findOne.mockResolvedValue(caseRow);
     users.findOne.mockResolvedValue({ id: 'w1', email: 'worker@mswdo.gov', isActive: true });
+    users.find.mockResolvedValue([]);
+    beneficiaries.findOne.mockResolvedValue(null);
+    claimants.find.mockResolvedValue([]);
+    followUps.find.mockResolvedValue([]);
     reminderSettings.resolveOffsets.mockResolvedValue([4320, 1440, 180]);
     reminders.findOne.mockResolvedValue(null);
     reminders.insert.mockResolvedValue({});
@@ -127,5 +137,67 @@ describe('CaseEventReminderService', () => {
     ]);
     const res = await svc.checkForReminders(now);
     expect(res.dispatched).toBe(0);
+  });
+
+  it('also notifies the case client accounts, alongside the worker', async () => {
+    cases.findOne.mockResolvedValue({ ...caseRow, beneficiaryId: 'b1' });
+    beneficiaries.findOne.mockResolvedValue({ id: 'b1', personId: 'p-ben' });
+    claimants.find.mockResolvedValue([{ claimantId: 'p-rep' }]);
+    users.find.mockResolvedValue([{ id: 'cl1', email: 'client@example.com', isActive: true }]);
+    const res = await svc.checkForReminders(now);
+    // The claims are unchanged (two due offsets × two channels) — the client
+    // rides the worker's existing claim, so no extra dispatch happens.
+    expect(res.dispatched).toBe(4);
+    expect(users.find).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ role: 'claimant', isActive: true }),
+    }));
+    expect(notifs.create).toHaveBeenCalledWith(expect.objectContaining({ recipientId: 'cl1', referenceId: 'c1' }));
+    expect(notifs.sendEmailDirect).toHaveBeenCalledWith('client@example.com', expect.any(String), expect.any(String));
+    expect(notifs.sendEmailDirect).toHaveBeenCalledWith('worker@mswdo.gov', expect.any(String), expect.any(String));
+  });
+
+  it('reminds the client about an upcoming follow-up visit — never the worker', async () => {
+    events.find.mockResolvedValue([]);
+    followUps.find.mockResolvedValue([
+      { id: 'v1', caseId: 'c1', visitDate: '2026-10-20', visitType: 'Home Visit' },
+    ]);
+    cases.findOne.mockResolvedValue({ ...caseRow, beneficiaryId: 'b1' });
+    beneficiaries.findOne.mockResolvedValue({ id: 'b1', personId: 'p-ben' });
+    users.find.mockResolvedValue([{ id: 'cl1', email: 'client@example.com', isActive: true }]);
+    const res = await svc.checkForReminders(now);
+    // Visit at 10-20 00:00; 3d (10-17 00:00) and 1d (10-19 00:00) are due.
+    expect(res.dispatched).toBe(4);
+    expect(reminderSettings.resolveOffsets).toHaveBeenCalledWith('home_visit', 'w1');
+    expect(reminders.insert).toHaveBeenCalledWith(expect.objectContaining({
+      visitKey: 'c1|2026-10-20|Home Visit', channel: 'in_app',
+    }));
+    expect(notifs.create).toHaveBeenCalledWith(expect.objectContaining({ recipientId: 'cl1' }));
+    expect(notifs.create).not.toHaveBeenCalledWith(expect.objectContaining({ recipientId: 'w1' }));
+    expect(notifs.sendEmailDirect).toHaveBeenCalledWith(
+      'client@example.com', expect.stringContaining('Follow-up visit'), expect.any(String),
+    );
+  });
+
+  it('sends no reminder for a follow-up visit already past', async () => {
+    events.find.mockResolvedValue([]);
+    followUps.find.mockResolvedValue([
+      { id: 'v2', caseId: 'c1', visitDate: '2026-10-18', visitType: 'Office Visit' },
+    ]);
+    beneficiaries.findOne.mockResolvedValue({ id: 'b1', personId: 'p-ben' });
+    users.find.mockResolvedValue([{ id: 'cl1', email: 'client@example.com', isActive: true }]);
+    const res = await svc.checkForReminders(now);
+    expect(res.dispatched).toBe(0);
+    expect(reminders.insert).not.toHaveBeenCalled();
+  });
+
+  it('does not claim a visit reminder when the case has no client account', async () => {
+    events.find.mockResolvedValue([]);
+    followUps.find.mockResolvedValue([
+      { id: 'v1', caseId: 'c1', visitDate: '2026-10-20', visitType: 'Home Visit' },
+    ]);
+    // beneficiaries.findOne defaults to null — no client users resolve.
+    const res = await svc.checkForReminders(now);
+    expect(res.dispatched).toBe(0);
+    expect(reminders.insert).not.toHaveBeenCalled();
   });
 });

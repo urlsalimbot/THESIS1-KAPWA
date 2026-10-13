@@ -279,6 +279,12 @@ export async function migrate() {
     created_at TIMESTAMP DEFAULT NOW()
   )`);
   await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_case_event_reminders ON case_event_reminders(event_id, offset_minutes, channel)`);
+  // Follow-up visit claims (mirrors AddVisitKeysToReminders…0096): visits are
+  // not case_events, and their rows are regenerated on each plan save, so the
+  // dedupe key is the stable text `<caseId>|<date>|<type>`.
+  await q.query(`ALTER TABLE case_event_reminders ADD COLUMN IF NOT EXISTS visit_key text`);
+  await q.query(`ALTER TABLE case_event_reminders ALTER COLUMN event_id DROP NOT NULL`);
+  await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_case_event_reminders_visit ON case_event_reminders(visit_key, offset_minutes, channel)`);
   await q.query(`CREATE TABLE IF NOT EXISTS reminder_settings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
     scope VARCHAR(16) NOT NULL,
@@ -1139,6 +1145,16 @@ export async function migrate() {
     END IF;
   END $$`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_blocks_source_ref ON team_schedule_blocks(source_ref)`);
+  // Case-linked blocks (Phase-Out follow-up visit mirrors) key off `case_id`:
+  // `source_ref`'s FK targets case_events and a case id there violates it.
+  // Mirrors AddTeamScheduleCaseId…0095.
+  await q.query(`ALTER TABLE team_schedule_blocks ADD COLUMN IF NOT EXISTS case_id uuid`);
+  await q.query(`DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='fk_blocks_case_id') THEN
+      ALTER TABLE team_schedule_blocks ADD CONSTRAINT fk_blocks_case_id FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE;
+    END IF;
+  END $$`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_blocks_case_id ON team_schedule_blocks(case_id)`);
   await q.query(`CREATE TABLE IF NOT EXISTS office_events (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
     title text NOT NULL,

@@ -4,7 +4,10 @@ import { CaseEvent } from './case-event.entity';
 import { CaseEventReminder } from './case-event-reminder.entity';
 import { ReminderSetting } from './reminder-setting.entity';
 import { Case } from '../cases/case.entity';
+import { CaseFollowUpVisit } from '../cases/case-follow-up-visit.entity';
 import { User } from '../auth/user.entity';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity';
+import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -20,7 +23,12 @@ import { ReminderSettingsController } from './reminder-settings.controller';
   imports: [
     // ConsentLedger is registered here for the AbacGuard every guarded
     // controller module must satisfy (same wiring as TeamModule/CasesModule).
-    TypeOrmModule.forFeature([CaseEvent, CaseEventReminder, ReminderSetting, Case, User, ConsentLedger]),
+    // Beneficiary/BeneficiaryClaimant/CaseFollowUpVisit serve the reminder
+    // dispatcher's client-recipient resolution and its visit pass.
+    TypeOrmModule.forFeature([
+      CaseEvent, CaseEventReminder, ReminderSetting, Case, CaseFollowUpVisit,
+      User, Beneficiary, BeneficiaryClaimant, ConsentLedger,
+    ]),
     AuthModule, NotificationsModule, AuditModule, TeamModule,
   ],
   providers: [CaseEventsService, CaseEventReminderService, ReminderSettingsService],

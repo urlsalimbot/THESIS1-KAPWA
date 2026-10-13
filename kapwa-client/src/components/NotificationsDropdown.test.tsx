@@ -37,4 +37,11 @@ describe('navTarget', () => {
     expect(navTarget(notif({ category: 'approval' }))).toBe('/approvals');
     expect(navTarget(notif({ category: 'unknown' }))).toBe('/notifications');
   });
+
+  it('routes case reminders to the claimant dashboard, and to the case for staff', () => {
+    for (const category of ['court_hearing', 'home_visit']) {
+      expect(navTarget(notif({ category, referenceId: 'case-1' }), 'claimant')).toBe('/my-dashboard');
+      expect(navTarget(notif({ category, referenceId: 'case-1' }), 'social_worker')).toBe('/cases/case-1');
+    }
+  });
 });

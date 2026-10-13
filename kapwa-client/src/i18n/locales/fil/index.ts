@@ -2567,6 +2567,7 @@ const fil: EnLocale = {
       "allDay": "Buong araw",
       "blockAria": "{{name}} — {{type}} noong {{date}}",
       "courtHearing": "Pagdinig sa Korte",
+      "followUpVisit": "Follow-up na Pagbisita",
       "syncedFromCase": "Pinamamahalaan ng case file — i-edit ang pagdinig o pagbisita sa kaso.",
       "events": "Mga event",
       "newBlockAria": "Bagong block para kay {{name}} noong {{date}}",

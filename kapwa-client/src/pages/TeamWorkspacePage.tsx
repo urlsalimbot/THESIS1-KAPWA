@@ -65,6 +65,9 @@ export function TeamWorkspacePage() {
   const [draftSlot, setDraftSlot] = useState<{ staffId: string; date: string } | null>(null);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [activeBlock, setActiveBlock] = useState<TeamBlock | null>(null);
+  // Synced blocks (case hearings/visits and follow-up visits) are read-only —
+  // the case file is their source of truth. Missing source = manual.
+  const syncedBlock = !!activeBlock?.source && activeBlock.source !== 'manual';
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [activeEvent, setActiveEvent] = useState<TeamEvent | null>(null);
   // Schedule-suggestion state (amendment): the dialog prefills from a clicked
@@ -377,8 +380,8 @@ export function TeamWorkspacePage() {
           staffId={draftSlot?.staffId ?? (canEdit ? myUserId : null)}
           date={draftSlot?.date ?? (canEdit ? fromStr : null)}
           block={activeBlock}
-          readOnly={!canEdit || activeBlock?.source === 'case_event'}
-          readOnlyNotice={activeBlock?.source === 'case_event'
+          readOnly={!canEdit || syncedBlock}
+          readOnlyNotice={syncedBlock
             ? t('team.week.syncedFromCase', 'Managed by the case file — edit the hearing or visit on the case instead.')
             : undefined}
           onSave={handleSaveBlock}

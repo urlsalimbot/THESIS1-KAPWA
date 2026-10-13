@@ -2555,6 +2555,7 @@ const en = {
       "allDay": "All day",
       "blockAria": "{{name}} — {{type}} on {{date}}",
       "courtHearing": "Court Hearing",
+      "followUpVisit": "Follow-up Visit",
       "syncedFromCase": "Managed by the case file — edit the hearing or visit on the case instead.",
       "events": "Events",
       "newBlockAria": "New block for {{name}} on {{date}}",

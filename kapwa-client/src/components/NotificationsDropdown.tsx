@@ -20,18 +20,20 @@ interface Notification {
   isRead: boolean; createdAt: string; referenceId?: string;
 }
 
-export // Claimants cannot open /cases/:id (staff-only), so case-update notifications
-// route them to their dashboard instead.
+export // Claimants cannot open /cases/:id (staff-only), so case-update and
+// case-reminder notifications route them to their dashboard instead.
 const navTarget = (n: Notification, role?: string): string => {
+  const staffCase = n.referenceId ? `/cases/${n.referenceId}` : '/cases';
+  const caseTarget = role === 'claimant' ? '/my-dashboard' : staffCase;
   const map: Record<string, string> = {
-    case_update: role === 'claimant' ? '/my-dashboard' : n.referenceId ? `/cases/${n.referenceId}` : '/cases',
+    case_update: caseTarget,
     approval: '/approvals',
     disbursement: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
     chat: n.referenceId ? `/messages/${n.referenceId}` : '/messages',
     sync_conflict: '/tracker',
     sla_escalation: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
-    court_hearing: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
-    home_visit: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
+    court_hearing: caseTarget,
+    home_visit: caseTarget,
   };
   return map[n.category] || '/notifications';
 };

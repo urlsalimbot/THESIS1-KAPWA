@@ -51,6 +51,11 @@ export class TeamScheduleBlock extends BaseEntity {
   @Column({ name: 'source_ref', type: 'uuid', nullable: true })
   sourceRef?: string | null;
 
+  // Case-linked mirrors (follow-up visits) key off this column: `source_ref`'s
+  // FK targets case_events, so a case id cannot live there.
+  @Column({ name: 'case_id', type: 'uuid', nullable: true })
+  caseId?: string | null;
+
   @Column({ name: 'created_by', nullable: true })
   createdBy?: string;
 

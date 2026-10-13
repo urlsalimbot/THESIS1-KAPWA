@@ -810,6 +810,11 @@ export class CasesService {
         }),
       );
       if (visits.length > 0) await this.caseRepo.manager.save(CaseFollowUpVisit, visits);
+      // The team calendar mirrors the visits (one block per visit); the empty
+      // list still runs so removing a visit clears its block.
+      await this.syncService?.syncFollowUpVisitsForCase(
+        id, caseEntity.assignedWorkerId, caseEntity.controlNo, visits,
+      );
     }
     return this.caseRepo.findOne({ where: { id }, relations: ['followUpVisitRows'] });
   }

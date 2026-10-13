@@ -48,6 +48,7 @@ describe('CasesService', () => {
       moveForCase: jest.fn().mockResolvedValue(undefined),
       upsertForEvent: jest.fn().mockResolvedValue(undefined),
       removeForEvent: jest.fn().mockResolvedValue(undefined),
+      syncFollowUpVisitsForCase: jest.fn().mockResolvedValue(undefined),
     };
 
     const qbMock = {
@@ -73,6 +74,9 @@ describe('CasesService', () => {
           createQueryRunner: jest.fn().mockReturnValue(queryRunnerMock),
         },
         query: jest.fn().mockResolvedValue([]),
+        delete: jest.fn().mockResolvedValue({}),
+        create: jest.fn((_entity: any, row: any) => row),
+        save: jest.fn().mockResolvedValue([]),
       },
     };
 
@@ -1483,6 +1487,33 @@ describe('updateAssessmentV2 — case_assistances', () => {
       repoMock.save = jest.fn().mockImplementation((c) => Promise.resolve({ ...c, crisisMode: true }));
       await service.updateCaseMeta('case-1', { crisisMode: true } as any, 'u1');
       expect(repoMock.save).toHaveBeenCalledWith(expect.objectContaining({ crisisMode: true }));
+    });
+  });
+
+  describe('transition plan follow-up visit sync', () => {
+    const caseRow = {
+      id: 'case-1', controlNo: 'MSWD-2026-0012', assignedWorkerId: 'w1',
+      status: CaseStatus.TRANSITIONING, updatedAt: new Date(),
+    };
+
+    beforeEach(() => {
+      repoMock.findOne = jest.fn().mockResolvedValue(caseRow);
+      repoMock.save = jest.fn().mockImplementation((c) => Promise.resolve(c));
+    });
+
+    it('mirrors the saved visits onto the team calendar', async () => {
+      await service.updateTransitionPlan('case-1', {
+        followUpVisits: [{ date: '2026-10-25', type: 'Home Visit', notes: 'check-in' }],
+      } as any, 'u1');
+      expect(syncMock.syncFollowUpVisitsForCase).toHaveBeenCalledWith(
+        'case-1', 'w1', 'MSWD-2026-0012',
+        [expect.objectContaining({ visitDate: '2026-10-25', visitType: 'Home Visit' })],
+      );
+    });
+
+    it('clears the calendar blocks when the visits are removed', async () => {
+      await service.updateTransitionPlan('case-1', { followUpVisits: null } as any, 'u1');
+      expect(syncMock.syncFollowUpVisitsForCase).toHaveBeenCalledWith('case-1', 'w1', 'MSWD-2026-0012', []);
     });
   });
 });

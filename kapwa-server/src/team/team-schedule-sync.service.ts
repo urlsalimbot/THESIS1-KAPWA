@@ -60,10 +60,37 @@ export class TeamScheduleSyncService {
     await this.blocks.delete({ source: 'case_event', sourceRef: eventId });
   }
 
+  /**
+   * Mirror a case's follow-up visits (Phase-Out step) onto its assigned
+   * worker's calendar. The visits are replaced wholesale on every save, so the
+   * old blocks are cleared first and they key off `case_id` — the visit row ids
+   * are regenerated each save and would orphan blocks.
+   */
+  async syncFollowUpVisitsForCase(
+    caseId: string,
+    workerId: string | null | undefined,
+    controlNo: string,
+    visits: Array<{ visitDate: string; visitType: string }>,
+  ): Promise<void> {
+    await this.blocks.delete({ source: 'follow_up_visit', caseId });
+    if (!workerId) return;
+    for (const visit of visits) {
+      await this.blocks.save(this.blocks.create({
+        userId: workerId,
+        blockDate: visit.visitDate,
+        blockType: 'follow_up_visit',
+        note: `Case ${controlNo} — Follow-up visit (${visit.visitType})`,
+        source: 'follow_up_visit',
+        caseId,
+      } as Partial<TeamScheduleBlock>));
+    }
+  }
+
   async moveForCase(caseId: string, newWorkerId: string | null | undefined): Promise<void> {
     const events = await this.events.find({ where: { caseId } });
     if (!newWorkerId) {
       for (const e of events) await this.removeForEvent(e.id);
+      await this.blocks.delete({ source: 'follow_up_visit', caseId });
       return;
     }
     const c = await this.cases.findOne({ where: { id: caseId } });
@@ -76,5 +103,7 @@ export class TeamScheduleSyncService {
         await this.upsertForEvent(e, newWorkerId, controlNo);
       }
     }
+    // Follow-up visit blocks follow the case's worker too.
+    await this.blocks.update({ source: 'follow_up_visit', caseId }, { userId: newWorkerId });
   }
 }

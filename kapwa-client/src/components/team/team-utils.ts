@@ -36,6 +36,8 @@ export const BLOCK_COLORS: Record<string, string> = {
   remote: 'bg-violet-200/70 border-violet-600 text-violet-900',
   // System-synced court appearances (case_events mirrors).
   court_hearing: 'bg-purple-200/70 border-purple-600 text-purple-900',
+  // System-synced Phase-Out visits (case_follow_up_visits mirrors).
+  follow_up_visit: 'bg-teal-200/70 border-teal-600 text-teal-900',
 };
 export const BLOCK_COLOR_FALLBACK = 'bg-muted border-muted-foreground/40 text-muted-foreground';
 
@@ -70,6 +72,7 @@ export const BLOCK_TYPE_LABEL_KEYS: Record<string, string> = {
   on_leave: 'team.status.onLeave',
   remote: 'team.status.remote',
   court_hearing: 'team.week.courtHearing',
+  follow_up_visit: 'team.week.followUpVisit',
 };
 
 // Monday-first weekday headers shared by the week grid and the month grid.

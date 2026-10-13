@@ -1,7 +1,7 @@
 import { TeamScheduleSyncService } from './team-schedule-sync.service';
 
 describe('TeamScheduleSyncService', () => {
-  const blockRepo = { findOne: jest.fn(), create: jest.fn(), save: jest.fn(), delete: jest.fn(), merge: jest.fn() };
+  const blockRepo = { findOne: jest.fn(), create: jest.fn(), save: jest.fn(), delete: jest.fn(), merge: jest.fn(), update: jest.fn() };
   const caseRepo = { findOne: jest.fn() };
   const eventRepo = { find: jest.fn() };
   const svc = new TeamScheduleSyncService(blockRepo as any, caseRepo as any, eventRepo as any);
@@ -103,5 +103,50 @@ describe('TeamScheduleSyncService', () => {
     blockRepo.save.mockResolvedValue({});
     await svc.moveForCase('case-9', 'worker-2');
     expect(blockRepo.create).toHaveBeenCalledWith(expect.objectContaining({ userId: 'worker-2', blockType: 'home_visit' }));
+  });
+
+  it('mirrors follow-up visits onto the worker calendar, replacing the previous set', async () => {
+    blockRepo.create.mockImplementation((x) => x);
+    blockRepo.save.mockResolvedValue({});
+    await svc.syncFollowUpVisitsForCase('case-9', 'worker-1', 'MSWD-2026-0012', [
+      { visitDate: '2026-10-25', visitType: 'Home Visit' },
+      { visitDate: '2026-11-02', visitType: 'Phone Call' },
+    ]);
+    expect(blockRepo.delete).toHaveBeenCalledWith(expect.objectContaining({
+      source: 'follow_up_visit', caseId: 'case-9',
+    }));
+    expect(blockRepo.create).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 'worker-1', blockDate: '2026-10-25', blockType: 'follow_up_visit',
+      source: 'follow_up_visit', caseId: 'case-9',
+    }));
+    expect(blockRepo.save).toHaveBeenCalledTimes(2);
+    const note = (blockRepo.create as jest.Mock).mock.calls[0][0].note as string;
+    expect(note).toBe('Case MSWD-2026-0012 — Follow-up visit (Home Visit)');
+  });
+
+  it('clears follow-up blocks without recreating any when the case has no worker', async () => {
+    await svc.syncFollowUpVisitsForCase('case-9', null, 'MSWD-2026-0012', [
+      { visitDate: '2026-10-25', visitType: 'Home Visit' },
+    ]);
+    expect(blockRepo.delete).toHaveBeenCalledWith(expect.objectContaining({ source: 'follow_up_visit' }));
+    expect(blockRepo.create).not.toHaveBeenCalled();
+    expect(blockRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('moves follow-up visit blocks to the new worker on reassignment', async () => {
+    eventRepo.find.mockResolvedValue([]);
+    await svc.moveForCase('case-9', 'worker-2');
+    expect(blockRepo.update).toHaveBeenCalledWith(
+      expect.objectContaining({ source: 'follow_up_visit', caseId: 'case-9' }),
+      { userId: 'worker-2' },
+    );
+  });
+
+  it('drops follow-up visit blocks when the case loses its worker', async () => {
+    eventRepo.find.mockResolvedValue([]);
+    await svc.moveForCase('case-9', null);
+    expect(blockRepo.delete).toHaveBeenCalledWith(expect.objectContaining({
+      source: 'follow_up_visit', caseId: 'case-9',
+    }));
   });
 });

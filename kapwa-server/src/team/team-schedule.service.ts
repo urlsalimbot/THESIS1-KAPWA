@@ -18,6 +18,10 @@ export const BLOCK_TYPES: ReadonlySet<string> = new Set([
   // manual block because createBlock only accepts the TeamBlockInput shape
   // and the sync service is the only writer of `source='case_event'`.
   'court_hearing',
+  // System-synced visits from the Phase-Out transition plan (mirrors
+  // case_follow_up_visits rows, `source='follow_up_visit'`). Visits are not
+  // staff day-blocks, so they share the synced-only shape above.
+  'follow_up_visit',
 ]);
 
 // Canonical block-visibility vocabulary (plan constraint): a block is visible
@@ -184,7 +188,9 @@ export class TeamScheduleService {
     // Synced blocks are the case file's mirror — never editable through the
     // calendar API. The worker edits the hearing/visit on the case instead;
     // the sync service re-applies the block on the next event mutation.
-    if (block.source === 'case_event') {
+    // (A missing source is treated as manual: the column is NOT NULL with a
+    // 'manual' default, so only synced writers can produce a non-manual value.)
+    if (block.source && block.source !== 'manual') {
       throw new ForbiddenException('Synced blocks are managed by the case file — edit the hearing or visit on the case instead.');
     }
     // Ownership lives on `userId`, and the PATCH path assigns the body onto
@@ -232,7 +238,7 @@ export class TeamScheduleService {
     if (block.userId !== requester.id) {
       throw new ForbiddenException('Forbidden: you can only delete your own blocks.');
     }
-    if (block.source === 'case_event') {
+    if (block.source && block.source !== 'manual') {
       throw new ForbiddenException('Synced blocks are managed by the case file — edit the hearing or visit on the case instead.');
     }
     await this.repo.delete(id);
