@@ -181,6 +181,9 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
   // a closed case's.
   const assessmentReadOnly = Boolean(readOnly) || stepLock != null;
   const visitsReadOnly = Boolean(readOnly);
+  // Deep-compare: the visits array is small and object identity changes on
+  // every keystroke, so a structural check is the only reliable "dirty" test.
+  const visitsDirty = JSON.stringify(followUps) !== JSON.stringify(caseData?.followUpVisits || []);
 
   const selfSufficient = isSelfSufficient(plan.selfRelianceLevel);
 
@@ -473,14 +476,14 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
         </div>
       </div>
 
-      {/* Follow-up visits keep a Save of their own, and only a sealed step needs
-          one: while the step is open the seal bar below is the plan's submit, and
-          once it is sealed the bar offers Unlock instead. The visits cannot ride
-          on that seal — they are in no step's done-predicate and the server's
-          `CASE_STEP_UNGUARDED_FIELDS` deliberately lets a visits-only body past a
-          sealed step 4 — so sealing the plan must not be what stops one being
-          recorded. */}
-      {stepLock != null && !visitsReadOnly && (
+      {/* Follow-up visits keep a Save of their own. The visits are in no step's
+          done-predicate and the server's `CASE_STEP_UNGUARDED_FIELDS` lets a
+          visits-only body past a sealed step 4, so the seal must not be what
+          stops one being recorded. The Save shows once anything changed (sealed
+          or not): previously it rendered only after the seal, which stranded a
+          worker whose evaluate step was not yet sealable with visits no control
+          could persist (audit: follow-up visits can be recorded and lost). */}
+      {!visitsReadOnly && (stepLock != null || visitsDirty) && (
         <div className="flex justify-end">
           <Button
             onClick={async () => {

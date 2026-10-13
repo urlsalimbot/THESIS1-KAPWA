@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useId } from 'react';
+import { useState, useEffect, useRef, useMemo, useId, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -198,7 +198,7 @@ export function CaseViewPage() {
   const [currentStep, setCurrentStep] = useState('assessment');
   const initialNavDone = useRef(false);
 
-  const { data: caseData, isLoading } = useSWR<any>(
+  const { data: caseData, isLoading, error: caseError } = useSWR<any>(
     id ? queryKeys.cases.detail(id) : null,
   );
   const { data: interventions = [] } = useSWR<any[]>(
@@ -216,7 +216,7 @@ export function CaseViewPage() {
   const { data: interventionDocs = [] } = useSWR<any[]>(
     queryKeys.cases.interventionDocuments(),
   );
-  const { data: documents = [] } = useSWR<any[]>(
+  const { data: documents = [], error: documentsError } = useSWR<any[]>(
     id ? queryKeys.filing.byCase(id) : null,
   );
   const canViewIdPhoto = ['admin', 'social_worker'].includes(user?.role ?? '');
@@ -260,7 +260,7 @@ export function CaseViewPage() {
     (key) => api.get<InterAgencyReferral[]>(key),
   );
 
-  const { data: programs } = useSWR<any[]>(queryKeys.programs.list());
+  const { data: programs } = useSWR<any[]>(queryKeys.programs.listAll());
 
   // "Service Requested" reflects what is actually being delivered: the latest
   // intervention or inter-agency referral, whichever is newer. A referral shows
@@ -310,9 +310,11 @@ export function CaseViewPage() {
   // plan's agency list over `case_referrals`, which no referral letter writes.
   const interAgencyReferralCount = caseData?.interAgencyReferralCount ?? 0;
   // Non-cancelled events only: a cancelled hearing is a decision not to hold
-  // it, which is the same filter the server's seal predicate applies.
+  // it. Only `court_hearing` rows count — a scheduled home visit must not
+  // satisfy or seal the hearings step (audit: page and server now agree on
+  // the filter).
   const courtHearingCount = Array.isArray(caseEvents)
-    ? (caseEvents as any[]).filter((e) => e.status !== 'cancelled').length
+    ? (caseEvents as any[]).filter((e) => e.eventType === 'court_hearing' && e.status !== 'cancelled').length
     : 0;
   const progressOpts: StepperProgressOpts = useMemo(
     // `requirementsMet` is threaded because it is not on the case row.
@@ -357,7 +359,7 @@ export function CaseViewPage() {
   useEffect(() => {
     if (caseData?.id && caseData?.controlNo) setCaseLabel(caseData.id, caseData.controlNo);
   }, [caseData?.id, caseData?.controlNo]);
-  const { data: history, isLoading: historyLoading, mutate: mutateHistory } = useSWR<any[]>(
+  const { data: history, isLoading: historyLoading, mutate: mutateHistory, error: historyError } = useSWR<any[]>(
     id ? queryKeys.cases.detail(`${id}/history`) : null,
   );
   // Case history lives under its own SWR key, so the exact-key mutations that
@@ -395,6 +397,13 @@ export function CaseViewPage() {
   const household = ben?.household;
 
 
+  // Tracks whether the on-screen assessment draft differs from the saved row.
+  // The re-seed effect below must not clobber a working draft when a header
+  // action revalidates the case (audit: silently overwritten drafts); also
+  // refuses to leave the page with an unsaved draft. A ref, not state, so the
+  // effect's closure always reads the current value without re-running.
+  const assessmentDirtyRef = useRef(false);
+
   const [assessment, setAssessment] = useState({
     problemsPresented: caseData?.problemsPresented || '',
     socialWorkerAssessment: caseData?.socialWorkerAssessment || '',
@@ -412,6 +421,21 @@ export function CaseViewPage() {
     otherAssistance: caseData?.otherAssistance || ({} as Record<string, unknown>),
     clientSignature: caseData?.clientSignature || '',
   });
+  const handleAssessmentChange = useCallback((updater: (prev: typeof assessment) => typeof assessment) => {
+    setAssessment(updater);
+    assessmentDirtyRef.current = true;
+  }, []);
+
+  // Refuse to leave the page with an unsaved draft (refresh / close / nav).
+  useEffect(() => {
+    const guard = (event: BeforeUnloadEvent) => {
+      if (!assessmentDirtyRef.current) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', guard);
+    return () => window.removeEventListener('beforeunload', guard);
+  }, []);
   // Throws on failure: the caller is the seal bar, which reports it and leaves
   // the step unsealed. No `saving` flag of its own — the bar is busy for the
   // whole save-then-seal, which is the control the worker is watching.
@@ -436,6 +460,7 @@ export function CaseViewPage() {
         swdiScore: toNumberOrUndefined(assessment.swdiScore),
         familyDialogueNotes: assessment.familyDialogueNotes || undefined,
       });
+      assessmentDirtyRef.current = false;
       await mutate(queryKeys.cases.detail(id!));
     } catch (e) {
       // A Zod-shaped 400 is otherwise unreadable and the card runs well past the
@@ -449,6 +474,8 @@ export function CaseViewPage() {
 
   useEffect(() => {
     if (caseData) {
+      // A working draft is the worker's — revalidation must not replace it.
+      if (assessmentDirtyRef.current) return;
       setAssessment({
         problemsPresented: caseData.problemsPresented || '',
         socialWorkerAssessment: caseData.socialWorkerAssessment || '',
@@ -506,11 +533,19 @@ export function CaseViewPage() {
   }
 
   if (!caseData) {
+    // A 404 means the case itself is gone; anything else is a fetch failure —
+    // the old single "Case Not Found" copy made a 500 or offline read as a
+    // vanished case, with no hint that the file may still exist (audit 3.3.4).
+    const isNotFound = (caseError as { status?: number } | undefined)?.status === 404;
     return (
-      <PageShell title={t('cases.notFoundTitle', 'Case Not Found')} description="" backTo={{ label: t('cases.backToCases', 'Back to Cases'), onClick: () => navigate('/cases') }}>
+      <PageShell title={isNotFound ? t('cases.notFoundTitle', 'Case Not Found') : t('cases.loadFailed', 'Could not load case')} description="" backTo={{ label: t('cases.backToCases', 'Back to Cases'), onClick: () => navigate('/cases') }}>
         <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
           <FileText size={40} className="opacity-30" aria-hidden="true" />
-          <p className="text-sm">{t('cases.notFound', 'This case could not be found. It may have been removed, or the link is incorrect.')}</p>
+          <p className="text-sm">
+            {isNotFound
+              ? t('cases.notFound', 'This case could not be found. It may have been removed, or the link is incorrect.')
+              : t('cases.notFoundFetch', 'This case could not be loaded. Check your connection and try again.')}
+          </p>
           <Button variant="outline" size="sm" onClick={() => mutate(queryKeys.cases.detail(id!))}>
             <RotateCcw size={14} className="mr-1.5" /> {t('common.retry', 'Retry')}
           </Button>
@@ -565,7 +600,7 @@ export function CaseViewPage() {
       switch (key) {
         case 'assessment':
           return <StepAssessment key={stepLockKey(id!, key)} {...common} assessment={assessment}
-            onAssessmentChange={setAssessment} onSave={saveAssessment}
+            onAssessmentChange={handleAssessmentChange} onSave={saveAssessment}
             userRole={user?.role}
             readOnly={bodyReadOnly(caseClosed || !['enrolled', 'assessed'].includes(caseData?.status), key)}
             transitionReadOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)}
@@ -828,7 +863,20 @@ export function CaseViewPage() {
 
           {/* Active Step Content */}
           <div>
-            {stepComponents[currentStep]}
+            {/* The four category steps hold their own drafts in local state, so
+                each gets ONE stable slot here — toggling visibility instead of
+                unmounting keeps typed notes alive across step switches (audit:
+                category-step drafts died on switch). Every other step keeps its
+                conditional mount; only these four are cheap enough to stay
+                mounted (no fetches of their own). */}
+            {(['discernment', 'protection_order', 'solo_parent', 'adoption'] as const)
+              .filter((key) => stepComponents[key])
+              .map((key) => (
+                <div key={key} className={key === currentStep ? '' : 'hidden'}>
+                  {stepComponents[key]}
+                </div>
+              ))}
+            {!['discernment', 'protection_order', 'solo_parent', 'adoption'].includes(currentStep) && stepComponents[currentStep]}
           </div>
 
           {/* The one deliberate control for moving the case along its lifecycle.
@@ -999,7 +1047,9 @@ export function CaseViewPage() {
           {ben && (
             <SectionCard icon={FileText} title={t('cases.documents', 'Uploaded Documents')}>
               <div className="px-4 py-3 space-y-1">
-                {documents.length === 0 ? (
+                {documentsError && documents.length === 0 ? (
+                  <p className="text-xs text-destructive">{t('cases.documentsLoadFailed', 'Could not load the uploaded documents.')}</p>
+                ) : documents.length === 0 ? (
                   <p className="text-xs text-muted-foreground">{t('cases.noDocuments', 'No documents attached to this case.')}</p>
                 ) : (
                   documents.map((doc: any) => (
@@ -1092,7 +1142,20 @@ export function CaseViewPage() {
           {/* Case History */}
           <SectionCard icon={Clock} title={t('cases.caseHistory', 'Case History')}>
               <div className="px-4 py-3">
-                {historyLoading && !history ? (
+                {historyError && !history ? (
+                  // A failed fetch must not read as a quiet "no activity" —
+                  // the panel story is "nothing happened", which actions depend
+                  // on (audit 3.3.4).
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="flex items-center gap-2 text-xs text-destructive">
+                      <Activity size={14} aria-hidden="true" />
+                      {t('cases.historyLoadFailed', 'Could not load the case history.')}
+                    </p>
+                    <Button variant="outline" size="sm" onClick={() => mutateHistory()}>
+                      <RotateCcw size={14} className="mr-1" /> {t('common.retry', 'Retry')}
+                    </Button>
+                  </div>
+                ) : historyLoading && !history ? (
                   <div className="space-y-3" aria-busy="true">
                     <Skeleton className="h-4 w-40" />
                     <Skeleton className="h-4 w-56" />
@@ -1266,16 +1329,41 @@ function IrfCaseList({ caseId }: { caseId: string }) {
   const { t } = useTranslation();
   const [irfs, setIrfs] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
-    api.get(`/irf/by-case/${caseId}`).then((d: any) => setIrfs(d)).finally(() => setLoading(false));
-  }, [caseId]);
+    let cancelled = false;
+    setLoading(true);
+    setFailed(false);
+    // A failure must not read as "no incident reports" — and an unhandled
+    // rejection is a silent error either way (audit 3.3.5).
+    api.get(`/irf/by-case/${caseId}`)
+      .then((d: any) => { if (!cancelled) setIrfs(d); })
+      .catch(() => { if (!cancelled) setFailed(true); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [caseId, reload]);
 
   if (loading) {
     return (
       <div className="space-y-2 px-4 py-3" aria-busy="true">
         <Skeleton className="h-4 w-32" />
         <Skeleton className="h-4 w-24" />
+      </div>
+    );
+  }
+
+  if (failed) {
+    return (
+      <div className="flex items-center justify-between gap-2 px-4 py-3">
+        <p className="flex items-center gap-2 text-xs text-destructive">
+          <FileWarning size={14} aria-hidden="true" />
+          {t('irf.loadFailed', 'Could not load the linked incident reports.')}
+        </p>
+        <Button variant="outline" size="sm" onClick={() => setReload(r => r + 1)}>
+          <RotateCcw size={14} className="mr-1" /> {t('common.retry', 'Retry')}
+        </Button>
       </div>
     );
   }

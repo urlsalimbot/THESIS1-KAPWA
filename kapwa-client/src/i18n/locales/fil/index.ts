@@ -774,6 +774,7 @@ const fil: EnLocale = {
     "newIrfFromCase": "Bagong IRF mula sa Kaso",
     "notFound": "Hindi nahanap ang kaso.",
     "notFoundTitle": "Hindi Nahanap ang Kaso",
+    "notFoundFetch": "Hindi ma-load ang kasong ito. Suriin ang iyong koneksyon at subukang muli.",
     "overdueBadge": "OVERDUE",
     "override": "Override: {{reason}}",
     "pettyCashVoucher": "Petty Cash Voucher",
@@ -801,6 +802,8 @@ const fil: EnLocale = {
     "download": "I-download",
     "downloadFailed": "Nabigo ang pag-download",
     "noDocuments": "Walang kalakip na dokumento sa kasong ito.",
+    "documentsLoadFailed": "Hindi ma-load ang mga in-upload na dokumento.",
+    "historyLoadFailed": "Hindi ma-load ang kasaysayan ng kaso.",
     "noInterAgencyReferrals": "Walang inter-agency referral para sa kasong ito."
   },
   "intake": {
@@ -952,6 +955,7 @@ const fil: EnLocale = {
   "irf": {
     "loadingIrfs": "Naglo-load ng mga IRF...",
     "noLinked": "Walang incident report na naka-link sa kasong ito.",
+    "loadFailed": "Hindi ma-load ang mga naka-link na ulat ng insidente.",
     "actions": "Mga Aksyon",
     "address": "Tirahan",
     "aesEncrypted": "Naka-encrypt sa AES-256",
@@ -1804,6 +1808,7 @@ const fil: EnLocale = {
     },
     "implement": {
       "added": "Naitala ang interbensyon",
+    "noActiveProgram": "Hindi na aktibo ang programang ito — i-reactivate ito para magtala ng mga intervention.",
       "addFailed": "Hindi naitala ang interbensyon",
       "deleted": "Naalis ang interbensyon",
       "deleteFailed": "Hindi naalis ang interbensyon",

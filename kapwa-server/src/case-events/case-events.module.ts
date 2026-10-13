@@ -13,6 +13,8 @@ import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AuditModule } from '../audit/audit.module';
 import { TeamModule } from '../team/team.module';
+// The seal guard: a sealed Court Hearings step refuses hearing mutations.
+import { CasesModule } from '../cases/cases.module';
 import { CaseEventsService } from './case-events.service';
 import { CaseEventsController } from './case-events.controller';
 import { CaseEventReminderService } from './case-event-reminder.service';
@@ -29,7 +31,7 @@ import { ReminderSettingsController } from './reminder-settings.controller';
       CaseEvent, CaseEventReminder, ReminderSetting, Case, CaseFollowUpVisit,
       User, Beneficiary, BeneficiaryClaimant, ConsentLedger,
     ]),
-    AuthModule, NotificationsModule, AuditModule, TeamModule,
+    AuthModule, NotificationsModule, AuditModule, TeamModule, CasesModule,
   ],
   providers: [CaseEventsService, CaseEventReminderService, ReminderSettingsService],
   controllers: [CaseEventsController, ReminderSettingsController],

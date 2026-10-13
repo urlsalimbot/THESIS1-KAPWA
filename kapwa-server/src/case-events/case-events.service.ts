@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
 import { CaseEvent } from './case-event.entity';
 import { Case } from '../cases/case.entity';
+import { CaseStepLocksService } from '../cases/case-step-locks.service';
 import { TeamScheduleSyncService } from '../team/team-schedule-sync.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import { CreateCaseEventInput, CreateCaseEventSchema, UpdateCaseEventInput, UpdateCaseEventSchema } from './dto/case-events.zod';
@@ -17,12 +18,25 @@ export class CaseEventsService {
   constructor(
     @InjectRepository(CaseEvent) private readonly events: Repository<CaseEvent>,
     @InjectRepository(Case) private readonly cases: Repository<Case>,
+    private readonly stepLocks: CaseStepLocksService,
     private readonly sync: TeamScheduleSyncService,
     @Optional() private readonly auditLog?: AuditLogService,
   ) {}
 
   listForCase(caseId: string): Promise<CaseEvent[]> {
     return this.events.find({ where: { caseId }, order: { eventDate: 'ASC', startTime: 'ASC' } });
+  }
+
+  /**
+   * A sealed Court Hearings step refuses hearing mutations — otherwise a worker
+   * could delete the very rows the seal stands on. Home visits pass through:
+   * they are ongoing progress monitoring (like the follow-up visits), not the
+   * hearings the step claims.
+   */
+  private async assertHearingUnsealed(caseId: string, ...eventTypes: Array<string | null | undefined>): Promise<void> {
+    if (eventTypes.includes('court_hearing')) {
+      await this.stepLocks.assertUnsealed(caseId, 'court_hearings');
+    }
   }
 
   // True when the event belongs on the shared calendar — one rule, shared with
@@ -58,6 +72,7 @@ export class CaseEventsService {
     }
     const c = await this.loadCase(caseId);
     this.assertLegalGate(parsed.data.eventType, c.caseCategory);
+    await this.assertHearingUnsealed(caseId, parsed.data.eventType);
     const row = this.events.create({
       ...input,
       caseId,
@@ -78,6 +93,9 @@ export class CaseEventsService {
       throw new BadRequestException(`Invalid case event payload: ${parsed.error.issues.map(i => i.message).join('; ')}`);
     }
     const event = await this.loadOwnedEvent(caseId, eventId);
+    // Either side of the change counts: editing a hearing away is still a
+    // hearing mutation, and turning a visit into one must clear the seal too.
+    await this.assertHearingUnsealed(caseId, event.eventType, parsed.data.eventType);
     Object.assign(event, parsed.data);
     const saved = await this.events.save(event);
     if (saved.status !== 'planned') {
@@ -93,7 +111,8 @@ export class CaseEventsService {
   }
 
   async remove(caseId: string, eventId: string, actor: { id: string }): Promise<{ deleted: boolean }> {
-    await this.loadOwnedEvent(caseId, eventId);
+    const event = await this.loadOwnedEvent(caseId, eventId);
+    await this.assertHearingUnsealed(caseId, event.eventType);
     await this.sync.removeForEvent(eventId);
     await this.events.delete(eventId);
     await this.auditLog?.log('case.event.delete', caseId, actor.id, { eventId });

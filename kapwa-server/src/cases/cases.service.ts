@@ -685,8 +685,8 @@ export class CasesService {
     if (c.status !== CaseStatus.ENROLLED) {
       throw new BadRequestException(`Cannot request review from ${c.status}`);
     }
-    if (!c.problemsPresented || !c.socialWorkerAssessment || !c.clientCategory) {
-      throw new BadRequestException('Assessment must be completed before requesting review (problems presented, social worker assessment, and client category are required)');
+    if (!c.problemsPresented || !c.socialWorkerAssessment || !c.clientCategory || !c.caseCategory) {
+      throw new BadRequestException('Assessment must be completed before requesting review (problems presented, social worker assessment, client category, and case category are required)');
     }
     const oldStatus = c.status;
     c.status = CaseStatus.ASSESSED;

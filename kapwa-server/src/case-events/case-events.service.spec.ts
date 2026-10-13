@@ -4,8 +4,9 @@ import { CaseEventsService } from './case-events.service';
 describe('CaseEventsService', () => {
   const eventRepo = { create: jest.fn(), save: jest.fn(), find: jest.fn(), findOne: jest.fn(), delete: jest.fn(), count: jest.fn() };
   const caseRepo = { findOne: jest.fn() };
+  const stepLocks = { assertUnsealed: jest.fn().mockResolvedValue(undefined) };
   const sync = { upsertForEvent: jest.fn(), removeForEvent: jest.fn(), moveForCase: jest.fn() };
-  const svc = new CaseEventsService(eventRepo as any, caseRepo as any, sync as any, undefined);
+  const svc = new CaseEventsService(eventRepo as any, caseRepo as any, stepLocks as any, sync as any, undefined);
 
   const legalCase = { id: 'c1', controlNo: 'MSWD-2026-0012', caseCategory: 'Children in Conflict with the Law (CICL)', assignedWorkerId: 'w1' };
 
@@ -66,5 +67,34 @@ describe('CaseEventsService', () => {
     await svc.update('c1', 'e1', { attended: false }, { id: 'u1' });
     expect(sync.removeForEvent).toHaveBeenCalledWith('e1');
     expect(sync.upsertForEvent).not.toHaveBeenCalled();
+  });
+
+  it('refuses hearing mutations while the Court Hearings step is sealed', async () => {
+    stepLocks.assertUnsealed
+      .mockRejectedValueOnce(new Error('sealed'))
+      .mockRejectedValueOnce(new Error('sealed'))
+      .mockRejectedValueOnce(new Error('sealed'));
+    await expect(svc.create('c1', { eventType: 'court_hearing', eventDate: '2026-10-20' } as any, { id: 'u1' }))
+      .rejects.toThrow('sealed');
+    expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', 'court_hearings');
+    expect(eventRepo.save).not.toHaveBeenCalled();
+
+    eventRepo.findOne.mockResolvedValue({ id: 'e1', caseId: 'c1', eventType: 'court_hearing', status: 'planned' });
+    await expect(svc.update('c1', 'e1', { status: 'done' }, { id: 'u1' })).rejects.toThrow('sealed');
+    await expect(svc.remove('c1', 'e1', { id: 'u1' })).rejects.toThrow('sealed');
+  });
+
+  it('lets home visits through a sealed Court Hearings step', async () => {
+    // Visits are ongoing progress monitoring, not the hearings the seal claims.
+    eventRepo.create.mockImplementation((x) => x);
+    eventRepo.save.mockImplementation((x) => Promise.resolve({ ...x, id: 'e1' }));
+    await svc.create('c1', { eventType: 'home_visit', eventDate: '2026-10-21' }, { id: 'u1' });
+    expect(stepLocks.assertUnsealed).not.toHaveBeenCalled();
+
+    eventRepo.findOne.mockResolvedValue({ id: 'e1', caseId: 'c1', eventType: 'home_visit', status: 'planned' });
+    eventRepo.save.mockImplementation((x) => Promise.resolve(x));
+    await svc.update('c1', 'e1', { status: 'cancelled' }, { id: 'u1' });
+    await svc.remove('c1', 'e1', { id: 'u1' });
+    expect(stepLocks.assertUnsealed).not.toHaveBeenCalled();
   });
 });

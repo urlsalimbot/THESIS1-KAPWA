@@ -137,6 +137,11 @@ export const queryKeys = {
   programs: {
     all: ['programs'] as const,
     list: () => memo('programs.list', () => ['programs'] as const),
+    // The gates (enrollment + intervention documentary checks) must see
+    // deactivated programs too — an in-flight case stays enrolled in one, and
+    // its documents still weigh the seal (audit 3.2.1). The enrollment
+    // *picker* keeps the active-only list.
+    listAll: () => memo('programs.listAll', () => ['programs', { activeOnly: false }] as const),
     detail: (id: string) => memo(`programs.detail.${id}`, () => ['programs', id] as const),
     publicList: () => memo('programs.public.list', () => ['programs', 'public'] as const),
     publicDetail: (id: string) => memo(`programs.public.${id}`, () => ['programs', 'public', id] as const),

@@ -72,7 +72,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
   const { data: interventions = [], mutate } = useSWR<Intervention[]>(
     queryKeys.cases.interventions(caseId),
   );
-  const { data: programs = [] } = useSWR<Program[]>(queryKeys.programs.list());
+  const { data: programs = [] } = useSWR<Program[]>(queryKeys.programs.listAll());
   // The case's program enrollments (Step 2, Program Enrollments). Per MSWDO
   // practice the treatment plan anchors the services: an intervention is a
   // service rendered under one of these enrollments, so the dialog's program
@@ -181,8 +181,16 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
     setSaving(true);
     try {
       // Only an enrollment-anchored service may be recorded — an intervention
-      // is a service under a program ASSIGNED to this case.
-      if (!selectedEnrollment || !dialogProgram) return;
+      // is a service under a program ASSIGNED to this case. The program list
+      // here is active-only, so a deactivated program resolves to null: say so
+      // instead of failing silently (audit 3.2.1).
+      if (!selectedEnrollment || !dialogProgram) {
+        setSaving(false);
+        toast.error(
+          t('caseView.implement.noActiveProgram', 'This program is no longer active — reactivate it to record interventions.'),
+        );
+        return;
+      }
       const serviceName = dialogProgram?.name || form.serviceName;
       const category = dialogProgram?.category || form.category || undefined;
       await api.post(`/cases/${caseId}/interventions`, {

@@ -192,6 +192,21 @@ export class CaseStepLocksService {
       const required = Object.keys(CASE_STATUS_INDEX).find((k) => CASE_STATUS_INDEX[k] === floor);
       return `"${label}" cannot be sealed yet — it opens once the case reaches ${required} (the case is ${c.status}).`;
     }
+    // The two documentary gates name the missing keys — "not complete yet"
+    // sends a doc-blocked worker back to work they cannot identify (audit:
+    // the deactivated-program case left them with no actionable error at all).
+    if (stepKey === 'enrollments' || stepKey === 'interventions') {
+      const keys = await this.requiredDocumentKeySet(
+        caseId,
+        await this.requiredProgramIds(caseId, stepKey === 'interventions' ? 'interventions' : 'enrollments'),
+        stepKey === 'interventions',
+      );
+      const met = c.requirementsChecklist || {};
+      const missing = [...keys].filter((key) => met[key] !== true);
+      if (missing.length > 0) {
+        return `"${label}" is not complete yet — missing required document(s): ${missing.join(', ')}.`;
+      }
+    }
     return `"${label}" is not complete yet — finish it before sealing it.`;
   }
 
@@ -393,12 +408,16 @@ export class CaseStepLocksService {
   }
 
   /**
-   * The case's non-cancelled hearings/visits. Cancelled rows are excluded
-   * because a cancelled hearing is a decision *not* to hold it — the client's
-   * step reads the same filter off its own fetched list.
+   * The case's non-cancelled hearings. Cancelled rows are excluded because a
+   * cancelled hearing is a decision *not* to hold it — the client's step reads
+   * the same filter off its own fetched list. Home visits are excluded too: the
+   * step is about hearings, and a scheduled visit must neither satisfy nor seal
+   * it (the client counts them separately and would otherwise contradict).
    */
   private async countCourtHearings(caseId: string): Promise<number> {
-    return this.caseEvents.count({ where: { caseId, status: Not('cancelled') } });
+    return this.caseEvents.count({
+      where: { caseId, eventType: 'court_hearing', status: Not('cancelled') },
+    });
   }
 
   /**
@@ -551,6 +570,24 @@ private async requirementsMet(
     programIds: string[],
     includeInterventionDocs: boolean,
   ): Promise<boolean> {
+    const requiredKeys = await this.requiredDocumentKeySet(caseId, programIds, includeInterventionDocs);
+    if (requiredKeys.size === 0) return true;
+    const met = checklist || {};
+    return [...requiredKeys].every((key) => met[key] === true);
+  }
+
+  /**
+   * The documentary minimum a gate weighs: the enrolled/intervening programs'
+   * required documents plus, for the interventions gate, every recorded
+   * intervention's own document keys. Both the boolean gate (`…Met`) and the
+   * refusal message (`notDoneReason`) read this so the message can name the
+   * keys the worker is missing instead of saying "not complete yet".
+   */
+  private async requiredDocumentKeySet(
+    caseId: string,
+    programIds: string[],
+    includeInterventionDocs: boolean,
+  ): Promise<Set<string>> {
     const requiredKeys = new Set<string>();
     if (programIds.length > 0) {
       const programs = await this.programs.find({ where: { id: In(programIds) } });
@@ -568,9 +605,7 @@ private async requirementsMet(
         for (const d of docs) requiredKeys.add(d.documentKey);
       }
     }
-    if (requiredKeys.size === 0) return true;
-    const met = checklist || {};
-    return [...requiredKeys].every((key) => met[key] === true);
+    return requiredKeys;
   }
 
   /**

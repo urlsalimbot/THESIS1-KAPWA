@@ -316,6 +316,13 @@ describe('CaseStepLocksService', () => {
       caseCategory: 'Children in Conflict with the Law (CICL)',
     } as unknown as Case);
     courtHearingCount.mockResolvedValue(1);
+    // The count reads hearings only — a scheduled home visit must not satisfy
+    // the step (audit: the page and the pipeline already filtered; the seal
+    // predicate did not).
+    await service.lock('c1', 'court_hearings', swUser).catch(() => undefined);
+    expect(caseEventRepo.count).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ eventType: 'court_hearing' }),
+    }));
 
     await expect(service.lock('c1', 'court_hearings', swUser)).rejects.toThrow(/reaches in_review/i);
     // Still refused before any write.
@@ -664,6 +671,21 @@ describe('CaseStepLocksService', () => {
       ]);
 
       await expect(service.lock('c1', 'interventions', swUser)).rejects.toThrow(/not complete/i);
+    });
+
+    it('names the missing documents when it refuses the seal', async () => {
+      // "Not complete yet" sends a doc-blocked worker back to work they
+      // cannot identify — the refusal must name the keys (audit 3.1.8).
+      findById.mockResolvedValue(stepInterventionsCase({ 'Valid ID': true }));
+      interventionQuery.mockResolvedValue([{ program_id: 'p1' }]);
+      programFind.mockResolvedValue([
+        programRow('p1', [
+          { key: 'Valid ID', mandatory: true },
+          { key: 'Barangay Certificate', mandatory: true },
+        ]),
+      ]);
+
+      await expect(service.lock('c1', 'interventions', swUser)).rejects.toThrow(/Barangay Certificate/);
     });
 
     // The same case with the missing document recorded as met: now both

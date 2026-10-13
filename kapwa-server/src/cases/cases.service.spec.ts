@@ -1121,11 +1121,20 @@ describe('CasesService', () => {
 
 describe('FSM — requestReview', () => {
   it('should move case from enrolled to assessed when role is social_worker', async () => {
-    const existing = { id: '1', status: CaseStatus.ENROLLED, assignedWorkerId: 'w1', controlNo: 'KAPWA-001', problemsPresented: 'Issue', socialWorkerAssessment: 'Needs aid', clientCategory: 'Senior Citizen', updatedAt: new Date() } as Case;
+    const existing = { id: '1', status: CaseStatus.ENROLLED, assignedWorkerId: 'w1', controlNo: 'KAPWA-001', problemsPresented: 'Issue', socialWorkerAssessment: 'Needs aid', clientCategory: 'Senior Citizen', caseCategory: 'Individual in Crisis Situation (AICS)', updatedAt: new Date() } as Case;
     repoMock.findOne.mockResolvedValue(existing);
     repoMock.save.mockResolvedValue({ ...existing, status: CaseStatus.ASSESSED });
     const result = await service.requestReview('1', 'social_worker');
     expect(result.status).toBe(CaseStatus.ASSESSED);
+  });
+
+  it('should refuse a review request when the case category is missing', async () => {
+    // The category defines the step template and cannot be set once the case
+    // leaves `enrolled` — advancing without it stranded the worker on a step
+    // that could never be sealed (audit F1).
+    const existing = { id: '1', status: CaseStatus.ENROLLED, problemsPresented: 'Issue', socialWorkerAssessment: 'Needs aid', clientCategory: 'Senior Citizen', caseCategory: null, updatedAt: new Date() } as unknown as Case;
+    repoMock.findOne.mockResolvedValue(existing);
+    await expect(service.requestReview('1', 'social_worker')).rejects.toThrow('case category');
   });
 
   it('should forbid requestReview when role is admin', async () => {

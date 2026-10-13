@@ -58,7 +58,7 @@ export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, 
   const { t } = useTranslation();
   const { mutate: globalMutate } = useSWRConfig();
   const { data: interventions = [] } = useSWR<any[]>(queryKeys.cases.interventions(caseId));
-  const { data: programs = [] } = useSWR<Program[]>(queryKeys.programs.list());
+  const { data: programs = [] } = useSWR<Program[]>(queryKeys.programs.listAll());
   const { data: interventionRequiredDocuments = [] } = useSWR<any[]>(
     queryKeys.cases.interventionDocuments(),
   );

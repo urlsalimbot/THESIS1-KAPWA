@@ -188,6 +188,27 @@ describe('StepTransition — sealing step 4', () => {
       expect(screen.queryByRole('button', { name: /Save Transition Plan/i })).toBeNull();
     });
 
+    it('offers the visits Save while the step is OPEN once the draft differs', () => {
+      // Regression (audit): the Save rendered only after the seal, so a worker
+      // whose evaluate step was not yet sealable could add visits that no
+      // control could persist — a step click unmounted them silently.
+      const done = { status: 'active', selfRelianceLevel: 3, sustainabilityPlan: 'sari-sari store' };
+      const first = renderStep(done); // no stepLock
+      expect(screen.queryByRole('button', { name: /Save Follow-up Visits/i })).toBeNull();
+
+      // Server-side rows arrive after the draft was seeded: dirty → Save,
+      // still no seal involved. The rerender must keep the same tree shape
+      // (SWRConfig at the root) or React remounts and re-seeds the draft.
+      first.rerender(
+        <SWRConfig value={{ provider: () => new Map(), fetcher: vi.fn() }}>
+          <StepTransition caseId="c1" caseData={{ ...done, followUpVisits: [{ date: '2026-10-01', type: 'Home Visit' }] }}
+            userRole="admin" />
+        </SWRConfig>,
+      );
+      expect(screen.getByRole('button', { name: /Save Follow-up Visits/i })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: /Save Transition Plan/i })).toBeNull();
+    });
+
     it('sends only the visits, so the server does not refuse the whole body', async () => {
       const user = userEvent.setup();
       // The visits are seeded on the case rather than added through the form:
