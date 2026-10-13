@@ -59,7 +59,8 @@
       "family_welfare",
       "child_welfare",
       "medical",
-      "legal_referral"
+      "legal_referral",
+      "aics"
     ],
     "Violence Against Women and Their Children (VAWC)": [
       "women_welfare",
@@ -77,7 +78,8 @@
       "medical",
       "family_welfare",
       "aics",
-      "aftercare"
+      "aftercare",
+      "disability_aid"
     ],
     "Indigency / Court-Ordered Social Case Study": [
       "aics",
@@ -89,7 +91,8 @@
       "livelihood",
       "counseling",
       "legal_referral",
-      "aftercare"
+      "aftercare",
+      "disability_aid"
     ],
     "Solo Parent": [
       "family_welfare",
@@ -98,14 +101,17 @@
       "legal_referral",
       "livelihood",
       "cct",
-      "medical"
+      "medical",
+      "disability_aid"
     ],
     "Adoption & Foster Care Case": [
       "child_welfare",
       "family_welfare",
       "counseling",
       "legal_referral",
-      "medical"
+      "medical",
+      "disability_aid",
+      "aics"
     ]
   }
 }

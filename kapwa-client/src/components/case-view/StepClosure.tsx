@@ -116,6 +116,7 @@ export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = false, 
         <Separator />
         <div className="px-4 py-3">
           <Textarea
+            aria-label={t('caseView.closure.exitNotes', 'Exit Notes')}
             className="min-h-[100px]"
             value={closure.exitNotes}
             onChange={e => setClosure(c => ({ ...c, exitNotes: e.target.value }))}

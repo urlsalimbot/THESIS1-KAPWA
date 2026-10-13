@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { queryKeys } from '../lib/query-keys';
 import { formatDateTime } from '../lib/format';
+import { CASE_STATUSES } from '@/lib/constants';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/StatusBadge';
 import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
@@ -39,7 +40,6 @@ interface TrackerStats {
   todayEntries: number;
 }
 
-const TRACKER_STATUSES = ['enrolled', 'assessed', 'in_review', 'active', 'transitioning'] as const;
 
 export function CaseTrackerPage() {
   const { t } = useTranslation();
@@ -160,7 +160,7 @@ export function CaseTrackerPage() {
           >
             {t('tracker.allStatuses', 'All')}
           </Button>
-          {TRACKER_STATUSES.map((s) => (
+          {CASE_STATUSES.map((s) => (
             <Button variant="ghost"
               key={s}
               type="button"

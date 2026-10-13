@@ -24,7 +24,8 @@ describe('CaseStepper — lifecycle labels', () => {
   it('renders the six common lifecycle step labels in template order', () => {
     render(<CaseStepper currentStep="assessment" onStepClick={() => {}} caseData={{}} interventionCount={0} enrollmentCount={0} />);
     COMMON_LABELS.forEach((label, i) => {
-      expect(screen.getByRole('button', { name: `${i + 1}. ${label}` })).toBeTruthy();
+      // aria-labels now end with the seal state ("… — not sealed").
+      expect(screen.getByRole('button', { name: new RegExp(`^${i + 1}\\. ${label}`) })).toBeTruthy();
     });
   });
 
@@ -40,15 +41,15 @@ describe('CaseStepper — lifecycle labels', () => {
     );
     // Court hearings are reached only after the inter-agency referral, so they
     // carry the number that follows it — never slot 2.
-    expect(screen.getByRole('button', { name: '1. Assess & Interview' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '2. Discernment Assessment' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '3. Program Enrollments' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '4. Intervention & Requirements' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '5. Inter-agency Referrals' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '6. Court Hearings' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '7. Evaluate Help Given' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '8. Case Study & Closure' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: '2. Court Hearings' })).toBeNull();
+    expect(screen.getByRole('button', { name: /^1\. Assess & Interview/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^2\. Discernment Assessment/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^3\. Program Enrollments/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^4\. Intervention & Requirements/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^5\. Inter-agency Referrals/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^6\. Court Hearings/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^7\. Evaluate Help Given/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^8\. Case Study & Closure/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^2\. Court Hearings/ })).toBeNull();
   });
 });
 
@@ -68,7 +69,7 @@ describe('CaseStepper — the referral count reaches the rendered step', () => {
     // The stepper marks a done step with a check and an accessible label that no
     // longer says the step is merely "not available" — asserted through the
     // check's own presence rather than a class, which Tailwind reorders.
-    expect(screen.getByRole('button', { name: '4. Inter-agency Referrals' }).querySelector('svg')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^4\. Inter-agency Referrals/ }).querySelector('svg')).toBeTruthy();
   });
 
   it('leaves the referrals step pending without one', () => {
@@ -76,7 +77,7 @@ describe('CaseStepper — the referral count reaches the rendered step', () => {
       <CaseStepper currentStep="assessment" onStepClick={() => {}} caseData={doneAssessment} interventionCount={0} enrollmentCount={0} />,
     );
 
-    expect(screen.getByRole('button', { name: '4. Inter-agency Referrals' }).querySelector('svg')).toBeNull();
+    expect(screen.getByRole('button', { name: /^4\. Inter-agency Referrals/ }).querySelector('svg')).toBeNull();
   });
 });
 
@@ -418,7 +419,9 @@ describe('CaseStepper rendering', () => {
     // Document order must equal template order: the number comes from the
     // template index while the group comes from STEP_PHASE, so a hearings step
     // left in `phaseIn` would surface as "6" inside the first group.
-    const labels = [...document.querySelectorAll('nav button[aria-label]')].map(b => b.getAttribute('aria-label'));
+    // The aria-label carries the seal state after the name ("… — not sealed"),
+    // so compare the numbered prefix.
+    const labels = [...document.querySelectorAll('nav button[aria-label]')].map(b => (b.getAttribute('aria-label') ?? '').split(' — ')[0]);
     expect(labels).toEqual([
       '1. Assess & Interview',
       '2. Discernment Assessment',

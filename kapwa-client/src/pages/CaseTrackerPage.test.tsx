@@ -40,6 +40,8 @@ vi.mock('../lib/constants', () => ({
   BARANGAYS: ['Barangay 1', 'Barangay 2'],
   AGE_RANGES: ['0-17', '18-59', '60+'],
   CLIENT_CATEGORIES: ['Senior', 'PWD', 'Child'],
+  // The page's status chips derive from the shared lifecycle list (audit 3.3.9).
+  CASE_STATUSES: ['enrolled', 'assessed', 'in_review', 'active', 'transitioning', 'closed', 'aftercare'],
 }));
 
 function renderWithSWR(ui: React.ReactNode) {

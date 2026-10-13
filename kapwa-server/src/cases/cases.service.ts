@@ -494,7 +494,7 @@ export class CasesService {
     // seal endpoint rejects them with a 400. Requiring them made the gate
     // unsatisfiable for the only role it applies to — a social worker could
     // never hand a case up, and only `admin` (who bypasses) could move it.
-    // `stepsDueAt` derives the set from the same `CASE_STEP_MIN_STATUS` the
+    // `stepsDueAt` derives the set from the same `CASE_STEP_FLOORS` the
     // seal service's done-predicate floors each step with, so the steps this
     // gate names are exactly the steps that can be sealed here.
     //
@@ -526,12 +526,12 @@ export class CasesService {
     // `transitioning` through `in_review -> active`, which already required them,
     // and re-checking also catches a step unlocked after approval.
     //
-    // `active -> transitioning` is deliberately *not* gated, and the gap is real:
-    // `CASE_FSM_ROLES[ACTIVE]` is empty, so `canTransition` admits `admin` and
-    // nothing else, and `admin` is the caller this rule exempts. A gate there
-    // would bind nobody. `cases.service.spec.ts` pins that as a fact about the
-    // FSM, so it becomes a gap to close if a role is ever added there — not a
-    // silent assumption.
+    // `active -> transitioning` carries its own gate further down — the
+    // implementation phase — and deliberately has no admin exemption:
+    // `CASE_FSM_ROLES[ACTIVE]` is empty, so that edge admits `admin` and nobody
+    // else, and exempting the only role that can take it would bind no one.
+    // (An earlier version of this comment described the absence of that gate;
+    // it was written before the phase gate below existed.)
     if (c.status === CaseStatus.TRANSITIONING && newStatus === CaseStatus.CLOSED && userRole !== 'admin') {
       this.assertStepsSealed(c, stepsDueAt(c.status, c.caseCategory), 'closing this case');
     }
@@ -903,10 +903,11 @@ export class CasesService {
   async updateEnrollmentsDecision(id: string, notNeeded: boolean) {
     const caseEntity = await this.caseRepo.findOne({ where: { id } });
     if (!caseEntity) throw new NotFoundException('Case not found');
-    // Recording "no program needed" and enrolling at the same time is a
-    // contradiction a worker might not notice; the enrollments step's
-    // done-predicate accepts either, so the decision is reverted when an
-    // enrollment exists.
+    // Recording "no program needed" while enrollments exist is a
+    // contradiction a worker might not notice. Nothing reverts the flag — the
+    // done-predicate accepts either arm — so this is a recorded decision the
+    // UI keeps visible (the step renders the badge beside the rows), not a
+    // transient state the service normalizes.
     caseEntity.enrollmentsNotNeeded = notNeeded;
     return this.caseRepo.save(caseEntity);
   }
@@ -1117,7 +1118,7 @@ export class CasesService {
    * saves the step-5 data and nothing else, and the close goes through
    * `PATCH /cases/:id/close` -> `transition()`, where the gate lives.
    *
-   * The route still opens with `assertUnsealed(id, 4)`: the exit record *is*
+   * The route still opens with `assertUnsealed(id, 'closure')`: the exit record *is*
    * step 5's own data, so it refuses to move a sealed step. Sealing is a
    * precondition for closing, not a bar to it — the previous code had the two
    * rules inverted, refusing to close a sealed step and closing an unsealed one.

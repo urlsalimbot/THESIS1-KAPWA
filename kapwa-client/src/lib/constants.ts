@@ -71,23 +71,23 @@ export function interventionFormLabel(key: string, t?: (k: string, fb: string) =
 /** Typed programs applicable per statutory case category (catalog Appendix B). */
 export const PROGRAM_TYPES_BY_CASE_CATEGORY: Record<string, readonly string[]> = {
   'Children in Conflict with the Law (CICL)': [
-    'diversion', 'aftercare', 'counseling', 'family_welfare', 'child_welfare', 'medical', 'legal_referral',
+    'diversion', 'aftercare', 'counseling', 'family_welfare', 'child_welfare', 'medical', 'legal_referral', 'aics',
   ],
   'Violence Against Women and Their Children (VAWC)': [
     'women_welfare', 'shelter', 'counseling', 'legal_referral', 'medical', 'aics',
   ],
   'Children in Need of Special Protection (CNSP)': [
-    'child_welfare', 'counseling', 'shelter', 'legal_referral', 'medical', 'family_welfare', 'aics', 'aftercare',
+    'child_welfare', 'counseling', 'shelter', 'legal_referral', 'medical', 'family_welfare', 'aics', 'aftercare', 'disability_aid',
   ],
   'Indigency / Court-Ordered Social Case Study': [
     'aics', 'medical', 'shelter', 'disaster_relief', 'supplemental_feeding',
-    'social_pension', 'livelihood', 'counseling', 'legal_referral', 'aftercare',
+    'social_pension', 'livelihood', 'counseling', 'legal_referral', 'aftercare', 'disability_aid',
   ],
   'Solo Parent': [
-    'family_welfare', 'aics', 'counseling', 'legal_referral', 'livelihood', 'cct', 'medical',
+    'family_welfare', 'aics', 'counseling', 'legal_referral', 'livelihood', 'cct', 'medical', 'disability_aid',
   ],
   'Adoption & Foster Care Case': [
-    'child_welfare', 'family_welfare', 'counseling', 'legal_referral', 'medical',
+    'child_welfare', 'family_welfare', 'counseling', 'legal_referral', 'medical', 'disability_aid', 'aics',
   ],
 };
 export function programTypeAllowedForCaseCategory(
@@ -100,6 +100,14 @@ export function programTypeAllowedForCaseCategory(
   if (!programType) return true;
   return allowed.includes(programType);
 }
+
+/**
+ * The case lifecycle vocabulary, in FSM order (mirrors the server's CASE_FSM).
+ * One list behind every status filter — the cases table and the tracker used
+ * private maps that had already drifted (no `aftercare`, no `closed`), so an
+ * aftercare case rendered but could not be filtered to (audit 3.3.9).
+ */
+export const CASE_STATUSES = ['enrolled', 'assessed', 'in_review', 'active', 'transitioning', 'closed', 'aftercare'] as const;
 
 export const BARANGAYS = [
   'Bangkal', 'Baraka', 'Bigte', 'Bitungol', 'Friendship Village Resources (FVR)',

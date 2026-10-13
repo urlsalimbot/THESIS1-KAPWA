@@ -62,6 +62,9 @@ export function StepAssessment({
   // assessed -> in_review, so offering "Complete Assessment" without it would
   // let a worker advance the case into a state the next step cannot finish.
   const assessmentDone = !!caseData?.problemsPresented && !!caseData?.socialWorkerAssessment && !!caseData?.clientCategory && !!caseData?.caseCategory;
+  // The category is editable only while the case is `enrolled`: it defines the
+  // step template, and the server refuses a change after that (audit 1.4).
+  const categoryLocked = !!caseData?.status && caseData.status !== 'enrolled';
   const hasScore = !!(caseData?.frvaScore || caseData?.swdiScore);
   const canTransition = assessmentDone && hasScore && caseData?.status === 'enrolled' && (userRole === 'social_worker' || userRole === 'admin');
 
@@ -138,11 +141,14 @@ export function StepAssessment({
                 </label>
                 {/* The MSWDO case category: required with the rest of step 1, so
                     the Case Category column in the cases, dashboard and tracker
-                    tables has something to show from day one. */}
+                    tables has something to show from day one. The server locks
+                    it once the case leaves `enrolled` (the category defines the
+                    step template), so the field locks with the same rule instead
+                    of letting a save discover it (audit 1.4). */}
                 <Select
                   value={assessment.caseCategory || ''}
                   onValueChange={v => onAssessmentChange(a => ({ ...a, caseCategory: v }))}
-                  disabled={readOnly}
+                  disabled={readOnly || categoryLocked}
                 >
                   <SelectTrigger id="case-category" aria-required="true">
                     <SelectValue placeholder={t('caseView.assessment.selectCaseCategory', 'Select a category…')} />
@@ -162,6 +168,11 @@ export function StepAssessment({
                     ))}
                   </SelectContent>
                 </Select>
+                {categoryLocked && !readOnly && (
+                  <p className="text-xs text-muted-foreground">
+                    {t('caseView.assessment.categoryLocked', 'The case category cannot change once the case leaves Enrolled — it defines this case’s step template.')}
+                  </p>
+                )}
               </div>
             </div>
             <div className="space-y-3">
@@ -202,23 +213,24 @@ export function StepAssessment({
             <div className="mt-3 space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium">{t('caseView.assessment.frvaScore', 'FRVA Score (0-100)')}</label>
-                  <Input type="number" min="0" max="100"
+                  <label htmlFor="frva-score" className="text-sm font-medium">{t('caseView.assessment.frvaScore', 'FRVA Score (0-100)')}</label>
+                  <Input id="frva-score" type="number" min="0" max="100"
                     value={assessment.frvaScore || ''}
                     onChange={e => onAssessmentChange(a => ({ ...a, frvaScore: e.target.value ? Number(e.target.value) : null }))}
                     placeholder={t('caseView.assessment.frvaPlaceholder', 'Family Risk & Vulnerability Assessment')} disabled={readOnly} />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium">{t('caseView.assessment.swdiScore', 'SWDI Score (0-100)')}</label>
-                  <Input type="number" min="0" max="100"
+                  <label htmlFor="swdi-score" className="text-sm font-medium">{t('caseView.assessment.swdiScore', 'SWDI Score (0-100)')}</label>
+                  <Input id="swdi-score" type="number" min="0" max="100"
                     value={assessment.swdiScore || ''}
                     onChange={e => onAssessmentChange(a => ({ ...a, swdiScore: e.target.value ? Number(e.target.value) : null }))}
                     placeholder={t('caseView.assessment.swdiPlaceholder', 'Social Welfare Development Index')} disabled={readOnly} />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">{t('caseView.assessment.familyDialogueNotes', 'Family Dialogue Notes')}</label>
+                <label htmlFor="family-dialogue-notes" className="text-sm font-medium">{t('caseView.assessment.familyDialogueNotes', 'Family Dialogue Notes')}</label>
                 <Textarea
+                  id="family-dialogue-notes"
                   className="min-h-[80px]"
                   value={assessment.familyDialogueNotes || ''}
                   onChange={e => onAssessmentChange(a => ({ ...a, familyDialogueNotes: e.target.value }))}
@@ -242,7 +254,7 @@ export function StepAssessment({
                 )}
                 {!transitionReadOnly && canTransition && (
                   <Button onClick={markAssessmentComplete} disabled={transitioning} variant="default">
-                    {transitioning ? t('caseView.completing', 'Completing...') : t('caseView.assessment.completeAssessment', '✓ Complete Assessment → Proceed to Intervention')}
+                    {transitioning ? t('caseView.completing', 'Completing...') : t('caseView.assessment.completeAssessment', '✓ Complete Assessment → Proceed to Review')}
                   </Button>
                 )}
                 {!transitionReadOnly && caseData?.status === 'assessed' && (

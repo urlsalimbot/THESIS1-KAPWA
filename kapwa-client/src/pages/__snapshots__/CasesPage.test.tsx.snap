@@ -17,12 +17,12 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
           <h1
             class="text-xl font-bold font-heading text-foreground truncate"
           >
-            Case Tracker
+            Cases
           </h1>
           <p
             class="text-xs text-muted-foreground mt-0.5 truncate"
           >
-            Real-time view of processed interventions and logs.
+            All cases with their status, category and progress.
           </p>
         </div>
       </div>

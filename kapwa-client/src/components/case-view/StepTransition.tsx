@@ -246,9 +246,8 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
         <Separator />
         <div className="px-4 py-3 space-y-3">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">{t('caseView.transition.maintainProgress', 'How will the client maintain progress after case closure?')}</label>
-            <Textarea
-              className="min-h-[100px]"
+            <label htmlFor="sustainability-plan" className="text-sm font-medium">{t('caseView.transition.maintainProgress', 'How will the client maintain progress after case closure?')}</label>
+            <Textarea id="sustainability-plan" className="min-h-[100px]"
               value={plan.sustainabilityPlan}
               onChange={e => setPlan(p => ({ ...p, sustainabilityPlan: e.target.value }))}
               disabled={assessmentReadOnly}
@@ -257,9 +256,8 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">{t('caseView.transition.selfRelianceSteps', 'Self-Reliance Steps')}</label>
-              <Textarea
-                className="min-h-[80px]"
+              <label htmlFor="self-reliance-plan" className="text-sm font-medium">{t('caseView.transition.selfRelianceSteps', 'Self-Reliance Steps')}</label>
+              <Textarea id="self-reliance-plan" className="min-h-[80px]"
                 value={plan.selfReliancePlan}
                 onChange={e => setPlan(p => ({ ...p, selfReliancePlan: e.target.value }))}
                 disabled={assessmentReadOnly}
@@ -267,9 +265,8 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">{t('caseView.transition.targetTransitionDate', 'Target Transition Date')}</label>
-              <Input
-                type="date"
+              <label htmlFor="transition-date" className="text-sm font-medium">{t('caseView.transition.targetTransitionDate', 'Target Transition Date')}</label>
+              <Input id="transition-date" type="date"
                 value={plan.transitionDate}
                 onChange={e => setPlan(p => ({ ...p, transitionDate: e.target.value }))}
                 disabled={assessmentReadOnly}
@@ -295,20 +292,19 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
           {addingFollowUp && (
             <div className="grid grid-cols-2 gap-2 text-sm p-2 border rounded-md bg-muted/30">
               <div className="space-y-1">
-                <label className="text-xs font-medium">{t('caseView.transition.date', 'Date *')}</label>
-                <Input
-                  type="date"
+                <label htmlFor="followup-date" className="text-xs font-medium">{t('caseView.transition.date', 'Date *')}</label>
+                <Input id="followup-date" type="date"
                   value={newFollowUp.date}
                   onChange={e => setNewFollowUp(f => ({ ...f, date: e.target.value }))}
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium">{t('caseView.transition.type', 'Type *')}</label>
+                <label htmlFor="followup-type" className="text-xs font-medium">{t('caseView.transition.type', 'Type *')}</label>
                 <Select
                   value={newFollowUp.type}
                   onValueChange={v => setNewFollowUp(f => ({ ...f, type: v }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="followup-type">
                     <SelectValue placeholder="—" />
                   </SelectTrigger>
                   <SelectContent>
@@ -325,17 +321,15 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
               </div>
               <div className="space-y-1 col-span-2">
                 <label className="text-xs font-medium">{t('caseView.transition.notes', 'Notes')}</label>
-                <Textarea
-                  className="min-h-[60px]"
+                <Textarea id="followup-notes" className="min-h-[60px]"
                   value={newFollowUp.notes}
                   onChange={e => setNewFollowUp(f => ({ ...f, notes: e.target.value }))}
                   placeholder={t('caseView.transition.notesPlaceholder', 'Visit notes...')}
                 />
               </div>
               <div className="space-y-1 col-span-2">
-                <label className="text-xs font-medium">{t('caseView.transition.outcome', 'Outcome')}</label>
-                <Input
-                  value={newFollowUp.outcome}
+                <label htmlFor="followup-outcome" className="text-xs font-medium">{t('caseView.transition.outcome', 'Outcome')}</label>
+                <Input id="followup-outcome" value={newFollowUp.outcome}
                   onChange={e => setNewFollowUp(f => ({ ...f, outcome: e.target.value }))}
                   placeholder={t('caseView.transition.outcomePlaceholder', 'e.g., On track, Needs additional support')}
                 />
@@ -409,18 +403,16 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
           {addingScheduled && (
             <div className="grid grid-cols-2 gap-2 text-sm p-2 border rounded-md bg-muted/30">
               <div className="space-y-1">
-                <label className="text-xs font-medium">{t('caseView.transition.visitDate', 'Visit Date *')}</label>
-                <Input
-                  type="date"
+                <label htmlFor="scheduled-date" className="text-xs font-medium">{t('caseView.transition.visitDate', 'Visit Date *')}</label>
+                <Input id="scheduled-date" type="date"
                   aria-label={t('caseView.transition.visitDate', 'Visit Date *')}
                   value={newScheduled.date}
                   onChange={e => setNewScheduled(s => ({ ...s, date: e.target.value }))}
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium">{t('caseView.transition.visitTime', 'Time')}</label>
-                <Input
-                  type="time"
+                <label htmlFor="scheduled-time" className="text-xs font-medium">{t('caseView.transition.visitTime', 'Time')}</label>
+                <Input id="scheduled-time" type="time"
                   aria-label={t('caseView.transition.visitTime', 'Time')}
                   value={newScheduled.time}
                   onChange={e => setNewScheduled(s => ({ ...s, time: e.target.value }))}

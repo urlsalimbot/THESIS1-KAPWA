@@ -52,23 +52,23 @@ export function isFinancialIntervention(code: string | null | undefined): boolea
  */
 export const PROGRAM_TYPES_BY_CASE_CATEGORY: Record<string, readonly string[]> = {
   'Children in Conflict with the Law (CICL)': [
-    'diversion', 'aftercare', 'counseling', 'family_welfare', 'child_welfare', 'medical', 'legal_referral',
+    'diversion', 'aftercare', 'counseling', 'family_welfare', 'child_welfare', 'medical', 'legal_referral', 'aics',
   ],
   'Violence Against Women and Their Children (VAWC)': [
     'women_welfare', 'shelter', 'counseling', 'legal_referral', 'medical', 'aics',
   ],
   'Children in Need of Special Protection (CNSP)': [
-    'child_welfare', 'counseling', 'shelter', 'legal_referral', 'medical', 'family_welfare', 'aics', 'aftercare',
+    'child_welfare', 'counseling', 'shelter', 'legal_referral', 'medical', 'family_welfare', 'aics', 'aftercare', 'disability_aid',
   ],
   'Indigency / Court-Ordered Social Case Study': [
     'aics', 'medical', 'shelter', 'disaster_relief', 'supplemental_feeding',
-    'social_pension', 'livelihood', 'counseling', 'legal_referral', 'aftercare',
+    'social_pension', 'livelihood', 'counseling', 'legal_referral', 'aftercare', 'disability_aid',
   ],
   'Solo Parent': [
-    'family_welfare', 'aics', 'counseling', 'legal_referral', 'livelihood', 'cct', 'medical',
+    'family_welfare', 'aics', 'counseling', 'legal_referral', 'livelihood', 'cct', 'medical', 'disability_aid',
   ],
   'Adoption & Foster Care Case': [
-    'child_welfare', 'family_welfare', 'counseling', 'legal_referral', 'medical',
+    'child_welfare', 'family_welfare', 'counseling', 'legal_referral', 'medical', 'disability_aid', 'aics',
   ],
 };
 

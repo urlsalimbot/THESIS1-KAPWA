@@ -53,7 +53,7 @@ describe('DataTable', () => {
 
   it('shows loading state when loading is true', () => {
     renderTable({ loading: true });
-    expect(screen.getByText('Loading...')).toBeTruthy();
+    expect(screen.getByText('Loading…')).toBeTruthy();
   });
 
   it('shows no results when data is empty', () => {

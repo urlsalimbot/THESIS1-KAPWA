@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useId, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { statusLabel } from '@/i18n/display';
@@ -204,6 +204,18 @@ export function CaseViewPage() {
 
   const [currentStep, setCurrentStep] = useState('assessment');
   const initialNavDone = useRef(false);
+  // The current step rides the URL (`?step=`), so a reload, a back-navigation
+  // or a pasted link returns the reader to the step they were on instead of
+  // the first pending one (audit 3.3.12). The param is validated against the
+  // case's own template below, so a stale link cannot select a step this case
+  // does not carry.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectStep = useCallback((key: string) => {
+    setCurrentStep(key);
+    const next = new URLSearchParams(searchParams);
+    next.set('step', key);
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const { data: caseData, isLoading, error: caseError } = useSWR<any>(
     id ? queryKeys.cases.detail(id) : null,
@@ -338,11 +350,12 @@ export function CaseViewPage() {
 
   useEffect(() => {
     if (caseData && !initialNavDone.current) {
+      const linked = searchParams.get('step');
       const pending = findFirstPendingStep(caseData, interventions.length, enrollments.length, progressOpts);
-      setCurrentStep(pending);
+      setCurrentStep(linked && stepsForCategory(caseData?.caseCategory).includes(linked) ? linked : pending);
       initialNavDone.current = true;
     }
-  }, [caseData, interventions, progressOpts]);
+  }, [caseData, interventions, progressOpts, searchParams]);
 
   // Every step change puts the reader at the top of the page. The stepper sits
   // in a sticky header, so without this a worker on step 5 (the tallest card)
@@ -869,7 +882,7 @@ export function CaseViewPage() {
             {/* `requirementsMet` only: the stepper applies the case-row fallback
                 for the two "not needed" decisions itself, so naming them here
                 would restate a rule that lives in one place. */}
-            <CaseStepper currentStep={currentStep} onStepClick={(key) => setCurrentStep(key)} caseData={caseData} interventionCount={interventions.length} enrollmentCount={enrollments.length} requirementsMet={requirementsMet} enrollmentRequirementsMet={enrollmentRequirementsMet} interAgencyReferralCount={interAgencyReferralCount} courtHearingCount={courtHearingCount} />
+            <CaseStepper currentStep={currentStep} onStepClick={selectStep} caseData={caseData} interventionCount={interventions.length} enrollmentCount={enrollments.length} requirementsMet={requirementsMet} enrollmentRequirementsMet={enrollmentRequirementsMet} interAgencyReferralCount={interAgencyReferralCount} courtHearingCount={courtHearingCount} />
           </div>
 
           {/* Active Step Content */}

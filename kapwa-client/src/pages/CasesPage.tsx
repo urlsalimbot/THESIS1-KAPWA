@@ -22,6 +22,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { useAuth } from '../lib/auth-context';
+import { CASE_STATUSES } from '@/lib/constants';
 import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
 
 interface CaseRow {
@@ -42,15 +43,7 @@ interface CaseRow {
   createdAt: string;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  enrolled: 'Enrolled',
-  assessed: 'Assessed',
-  in_review: 'In Review',
-  active: 'Active',
-  transitioning: 'Transitioning',
-  closed: 'Closed',
-};
-const STATUS_KEYS = Object.keys(STATUS_LABELS);
+
 const GENDERS = ['Male', 'Female'] as const;
 
 function mapCaseRow(c: Record<string, unknown>, i: number): CaseRow {
@@ -292,7 +285,7 @@ export function CasesPage() {
           <FilterSelect label={t('cases.caseCategory', 'Case Category')} value={urlCaseCategory} onChange={(v) => updateURL({ caseCategory: v || undefined, page: '1' })}
             options={caseCategoryOptions} className="w-60" />
           <FilterSelect label={t('cases.status', 'Status')} value={urlStatus} onChange={(v) => updateURL({ status: v || undefined, page: '1' })}
-            options={[{ value: '', label: t('cases.allStatuses', 'All Statuses') }, ...STATUS_KEYS.map(k => ({ value: k, label: statusLabel(t, k) }))]} className="w-36" />
+            options={[{ value: '', label: t('cases.allStatuses', 'All Statuses') }, ...CASE_STATUSES.map(k => ({ value: k, label: statusLabel(t, k) }))]} className="w-36" />
           <FilterSelect label={t('cases.gender', 'Gender')} value={urlGender} onChange={(v) => updateURL({ gender: v || undefined, page: '1' })}
             options={genderOptions} className="w-32" />
           <div className="flex flex-col gap-0.5">

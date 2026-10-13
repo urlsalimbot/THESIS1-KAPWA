@@ -91,7 +91,7 @@ describe('CasesPage', () => {
 
   it('renders PageShell heading', async () => {
     renderWithSWR(<CasesPage />);
-    expect(await screen.findByRole('heading', { name: 'Case Tracker' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Cases' })).toBeTruthy();
   });
 
   it('renders beneficiary surname from mock', async () => {
@@ -106,7 +106,7 @@ describe('CasesPage', () => {
 
   it('removed the SLA and Age Range filters', async () => {
     renderWithSWR(<CasesPage />);
-    await screen.findByRole('heading', { name: 'Case Tracker' });
+    await screen.findByRole('heading', { name: 'Cases' });
     expect(screen.queryByLabelText('SLA')).toBeNull();
     expect(screen.queryByLabelText('Age Range')).toBeNull();
   });
@@ -138,7 +138,7 @@ describe('CasesPage', () => {
 
   it('snapshot: CasesPage rendered DOM with table layout + status badges + filter controls', async () => {
     const { container } = renderWithSWR(<CasesPage />);
-    expect(await screen.findByRole('heading', { name: 'Case Tracker' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Cases' })).toBeTruthy();
     expect(container).toMatchSnapshot();
   });
 
@@ -162,7 +162,7 @@ describe('CasesPage', () => {
 
   it('has no a11y violations', async () => {
     const { container } = renderWithSWR(<CasesPage />);
-    await screen.findByRole('heading', { name: 'Case Tracker' });
+    await screen.findByRole('heading', { name: 'Cases' });
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });

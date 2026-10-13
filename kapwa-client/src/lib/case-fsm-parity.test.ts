@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { CASE_TRANSITION_ROLES } from './role-access';
-import { STATUS_INDEX, STEP_FLOORS, STEP_PHASE } from '@/components/case-view/CaseStepper';
-import { INTERVENTION_TYPES, PROGRAM_TYPES, FINANCIAL_INTERVENTION_TYPES, PROGRAM_TYPES_BY_CASE_CATEGORY } from '@/lib/constants';
+import { STATUS_INDEX, STEP_FLOORS, STEP_PHASE, CATEGORY_STEP_TEMPLATES } from '@/components/case-view/CaseStepper';
+import { INTERVENTION_TYPES, PROGRAM_TYPES, FINANCIAL_INTERVENTION_TYPES, PROGRAM_TYPES_BY_CASE_CATEGORY, CASE_CATEGORY_GROUPS } from '@/lib/constants';
 
 /**
  * The client's copies of the server's case-FSM facts, asserted equal to the
@@ -260,6 +260,51 @@ it('STEP_FLOORS equals the server CASE_STEP_FLOORS, key for key', () => {
     for (const code of INTERVENTION_TYPES) {
       expect(en).toContain(`"${code}"`);
       expect(fil).toContain(`"${code}"`);
+    }
+  });
+});
+
+/** The server's `CATEGORY_STEP_TEMPLATES` (case-step-labels.ts). */
+function serverCategoryTemplates(): Record<string, string[]> {
+  const body = objectLiteral(serverSource('case-step-labels.ts'), 'CATEGORY_STEP_TEMPLATES');
+  const out: Record<string, string[]> = {};
+  for (const [, key, list] of body.matchAll(/'([^']+)':\s*\[([^\]]*)\]/g)) {
+    out[key] = [...list.matchAll(/'([^']+)'/g)].map(([, step]) => step);
+  }
+  if (Object.keys(out).length === 0) throw new Error('CATEGORY_STEP_TEMPLATES parsed to nothing');
+  return out;
+}
+
+describe('the category step templates', () => {
+  it('mirror the server key-for-key, order included', () => {
+    // Order is behaviour: the stepper derives step reachability from the index,
+    // and court_hearings only reads correctly after referrals.
+    expect(sorted(CATEGORY_STEP_TEMPLATES)).toEqual(sorted(serverCategoryTemplates()));
+  });
+
+  it('treats every picker category as an explicit decision', () => {
+    // A category without a template silently falls back to the common steps.
+    // That is fine for the ones listed here and wrong for a new statutory
+    // category nobody thought about, so adding a picker item without deciding
+    // either way fails this test (audit 3.1.6).
+    const COMMON_TEMPLATE_CATEGORIES = new Set([
+      'Children at Risk (CAR)',
+      'Women in Especially Difficult Circumstances (WEDC)',
+      'Unwed or Disadvantaged Pregnant Woman',
+      'Individual in Crisis Situation (AICS)',
+      'Marital Discord / Family Intervention',
+      'Elderly / Senior Citizen Welfare',
+      'Person with Disability (PWD)',
+      'Internally Displaced / Calamity Victim',
+      'Emergency Shelter Assistance (ESA)',
+    ]);
+    for (const group of CASE_CATEGORY_GROUPS) {
+      for (const item of group.items) {
+        expect(
+          Boolean(CATEGORY_STEP_TEMPLATES[item]) || COMMON_TEMPLATE_CATEGORIES.has(item),
+          `${item} has no step template and is not on the common-template list — decide which it is`,
+        ).toBe(true);
+      }
     }
   });
 });

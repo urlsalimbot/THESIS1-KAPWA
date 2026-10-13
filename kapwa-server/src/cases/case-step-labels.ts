@@ -58,6 +58,15 @@ export const CATEGORY_STEP_TEMPLATES: Record<string, string[]> = {
   'Indigency / Court-Ordered Social Case Study': [
     'assessment', 'enrollments', 'interventions', 'referrals', 'court_hearings', 'evaluate', 'closure',
   ],
+  // Abandoned/Neglected Child (RA 9523 / RA 11642) and PWUD aftercare (RA 9165
+  // drug-court referrals) are court-adjacent: the office attends hearings for
+  // them, so they carry the hearings step like CNSP (audit 3.1.5).
+  'Abandoned or Neglected Child': [
+    'assessment', 'enrollments', 'interventions', 'referrals', 'court_hearings', 'evaluate', 'closure',
+  ],
+  'Person Who Used Drugs (PWUD) — Aftercare': [
+    'assessment', 'enrollments', 'interventions', 'referrals', 'court_hearings', 'evaluate', 'closure',
+  ],
   'Solo Parent': [
     'assessment', 'solo_parent', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
   ],

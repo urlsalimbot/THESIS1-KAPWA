@@ -72,6 +72,15 @@ export const CATEGORY_STEP_TEMPLATES: Record<string, string[]> = {
   'Indigency / Court-Ordered Social Case Study': [
     'assessment', 'enrollments', 'interventions', 'referrals', 'court_hearings', 'evaluate', 'closure',
   ],
+  // Court-adjacent categories (declaration of abandonment / RA 9165 drug-court
+  // referrals): hearings step, same shape as CNSP. Mirror of the server's
+  // case-step-labels.ts — kept equal by case-fsm-parity.test.ts.
+  'Abandoned or Neglected Child': [
+    'assessment', 'enrollments', 'interventions', 'referrals', 'court_hearings', 'evaluate', 'closure',
+  ],
+  'Person Who Used Drugs (PWUD) — Aftercare': [
+    'assessment', 'enrollments', 'interventions', 'referrals', 'court_hearings', 'evaluate', 'closure',
+  ],
   'Solo Parent': [
     'assessment', 'solo_parent', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
   ],
@@ -438,9 +447,16 @@ export function CaseStepper({ currentStep, onStepClick, caseData, interventionCo
     { name: t('caseView.stepper.phaseImplementation', 'Implementation'), steps: STEPS.filter((s) => s.phase === 'implementation') },
     { name: t('caseView.stepper.phaseOut', 'Phase-Out'), steps: STEPS.filter((s) => s.phase === 'phaseOut') },
   ].filter((p) => p.steps.length > 0);
+  // Progress summary: how much of this case's template is sealed. The check
+  // icons are aria-hidden, so without this the strip carried no completion
+  // state for assistive tech at all (audit #16).
+  const sealedCount = STEPS.filter((s) => doneFor(s.key)).length;
 
   return (
     <nav className="px-4 py-3 overflow-x-auto">
+      <div className="mb-2 text-xs text-muted-foreground" aria-live="polite">
+        {t('caseView.stepper.sealedCount', '{{done}} of {{total}} steps sealed', { done: sealedCount, total: STEPS.length })}
+      </div>
       <div className="flex items-center gap-2">
         {phases.map((phase, phaseIdx) => (
           <div key={phase.name} className="flex items-center">
@@ -473,7 +489,13 @@ export function CaseStepper({ currentStep, onStepClick, caseData, interventionCo
                       onClick={() => handleClick(step.key)}
                       aria-current={isActive ? 'step' : undefined}
                       aria-disabled={!isClickable}
-                      aria-label={`${idxOf(step.key) + 1}. ${step.label}`}
+                      aria-label={`${idxOf(step.key) + 1}. ${step.label} — ${
+                        done
+                          ? t('caseView.stepper.sealedShort', 'sealed')
+                          : isActive
+                          ? t('caseView.stepper.currentShort', 'current step')
+                          : t('caseView.stepper.openShort', 'not sealed')
+                      }`}
                       title={isClickable ? step.description : t('caseView.stepper.accomplishStepFirst', 'Accomplish current step first.')}
                       className={`flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
                         isActive

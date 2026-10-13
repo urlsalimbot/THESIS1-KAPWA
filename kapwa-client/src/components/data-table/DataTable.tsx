@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   type ColumnDef,
   type PaginationState,
@@ -57,6 +58,7 @@ export function DataTable<TData, TValue>({
   onRowSelectionChange,
   getRowId,
 }: DataTableProps<TData, TValue>) {
+  const { t } = useTranslation();
   const tableColumns = useMemo(() => {
     if (!enableRowSelection) return columns;
 
@@ -156,7 +158,7 @@ export function DataTable<TData, TValue>({
                   colSpan={columnCount}
                   className="h-24 text-center"
                 >
-                  Loading...
+                  {t('table.loading', 'Loading…')}
                 </TableCell>
               </TableRow>
             ) : table.getRowModel().rows.length === 0 ? (
@@ -165,7 +167,7 @@ export function DataTable<TData, TValue>({
                   colSpan={columnCount}
                   className="h-24 text-center text-muted-foreground"
                 >
-                  No results.
+                  {t('table.noResults', 'No results.')}
                 </TableCell>
               </TableRow>
             ) : (

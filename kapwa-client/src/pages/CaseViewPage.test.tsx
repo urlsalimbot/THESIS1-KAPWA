@@ -511,11 +511,11 @@ describe('CaseViewPage — stepper gating', () => {
   // stepper. The stepper labels its own buttons "<n>. <label>", which is
   // unique to it.
   function hipStepButton() {
-    return screen.getByRole('button', { name: '3. Intervention & Requirements' });
+    return screen.getByRole('button', { name: /^3\. Intervention & Requirements/ });
   }
 
   function deliveryStepButton() {
-    return screen.getByRole('button', { name: '4. Inter-agency Referrals' });
+    return screen.getByRole('button', { name: /^4\. Inter-agency Referrals/ });
   }
 
   it('keeps Intervention & Requirements unchecked when an intervention exists but required documents are missing', async () => {
@@ -714,7 +714,7 @@ describe('CaseViewPage — step 5 is sealable once its closure is complete', () 
     // Step 5 has to be the one on screen: the nav lands on the first pending
     // step, and a case with all five done lands on the last.
     await screen.findByRole('heading', { name: 'Case Closure' });
-    expect(screen.getByRole('button', { name: '6. Case Study & Closure' })).toHaveAttribute('aria-current', 'step');
+    expect(screen.getByRole('button', { name: /^6\. Case Study & Closure/ })).toHaveAttribute('aria-current', 'step');
 
     // The step really is read-only — its own Save is gone, because the closure
     // is complete. This is the state that used to swallow the Lock button too.

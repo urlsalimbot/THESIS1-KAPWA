@@ -6,6 +6,10 @@ export const LEGAL_CATEGORIES: ReadonlySet<string> = new Set([
   'Children in Need of Special Protection (CNSP)',
   'Adoption & Foster Care Case',
   'Indigency / Court-Ordered Social Case Study',
+  // Declaration-of-abandonment petitions and RA 9165 drug-court referrals put
+  // these two in front of a court like the categories above (audit 3.1.5).
+  'Abandoned or Neglected Child',
+  'Person Who Used Drugs (PWUD) — Aftercare',
 ]);
 
 /**

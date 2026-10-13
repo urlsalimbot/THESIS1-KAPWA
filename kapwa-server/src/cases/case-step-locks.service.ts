@@ -529,9 +529,10 @@ export class CaseStepLocksService {
    * Server-side mirror of the client's `interventionRequirementsMet` in
    * `kapwa-client/src/lib/case-progress.ts`.
    *
-   * The key set is the *programs'* required documents, not the checklist's keys,
-   * because that is what the client's Lock button is gated on and a seal taken
-   * against a different key set is a claim the UI never made. The two copies
+   * The key set is the required documents the case's programs AND its recorded
+   * interventions name — the programs' keys plus every intervention's own
+   * documentary minimum — not the checklist's keys, because that is what the
+   * client's Lock button is gated on and a seal taken against a different key set is a claim the UI never made. The two copies
    * therefore agree on all three inputs: the programs behind the case's
    * interventions, the same `requiredDocumentDetails`-then-`requiredDocuments`
    * preference, and the same `case_requirements` checklist as `Case`'s

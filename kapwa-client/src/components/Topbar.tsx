@@ -94,7 +94,7 @@ export const Topbar = memo(function Topbar({ onMenuToggle, onToggleSidebar, side
   const canChat = CHAT_ROLES.includes(user?.role ?? '');
 
   const roleLabel = user?.role
-    ? ({ admin: 'MSWDO Admin', social_worker: 'MSWDO Social Worker', coordinator: 'Brgy Coordinator', claimant: 'Claimant' } as Record<string, string>)[user.role] || user.role.replace(/_/g, ' ')
+    ? ({ admin: 'MSWDO Admin', social_worker: 'MSWDO Social Worker', coordinator: 'Barangay Coordinator', claimant: 'Claimant' } as Record<string, string>)[user.role] || user.role.replace(/_/g, ' ')
     : '';
   const canIntake = isAdmin || isSocialWorker;
   const canApprove = isAdmin || isSocialWorker;
