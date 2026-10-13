@@ -132,7 +132,9 @@ describe('CasesPage', () => {
     );
     // Values present in the loaded rows stay filterable even when outside the canonical list.
     expect(await optionTexts('Barangay')).toContain('Barangay 1');
-  });
+    // ~25 Radix open/read/close cycles: comfortably over the 5s default once
+    // v8 coverage instrumentation is on (the CI client-coverage job).
+  }, 30000);
 
   it('snapshot: CasesPage rendered DOM with table layout + status badges + filter controls', async () => {
     const { container } = renderWithSWR(<CasesPage />);
