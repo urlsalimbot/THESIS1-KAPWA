@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
+import React, { useState, useEffect, useCallback, useSyncExternalStore, memo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/lib/theme-context';
@@ -38,6 +38,9 @@ import { cn } from '@/lib/utils';
 
 export interface TopbarProps {
   onMenuToggle?: () => void;
+  /** Toggles the desktop sidebar; the KAPWA mark is the control. */
+  onToggleSidebar?: () => void;
+  sidebarCollapsed?: boolean;
 }
 
 function BreadcrumbNav({ pathname }: { pathname: string }) {
@@ -67,7 +70,7 @@ function BreadcrumbNav({ pathname }: { pathname: string }) {
   );
 }
 
-export function Topbar({ onMenuToggle }: TopbarProps) {
+export const Topbar = memo(function Topbar({ onMenuToggle, onToggleSidebar, sidebarCollapsed }: TopbarProps) {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
   const { theme, setTheme, resolvedTheme } = useTheme();
@@ -116,10 +119,24 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
             <Menu size={20} />
           </Button>
 
-          <Link to="/" className="touch-sm flex items-center gap-3 no-underline group shrink-0">
-            <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center shrink-0 transition-all duration-200 group-hover:shadow-md">
-              <HandHeart size={20} className="text-primary-foreground" />
+          {/* The KAPWA mark is the sidebar control where the sidebar exists
+              (lg+); below lg there is no sidebar, so it stays the home link. */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggleSidebar}
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="touch-sm hidden h-9 w-9 rounded-full bg-primary p-0 hover:bg-primary/90 lg:flex"
+          >
+            <HandHeart size={20} className="text-primary-foreground" aria-hidden="true" />
+          </Button>
+          <Link to="/" aria-label={t('topbar.homeAria', 'KAPWA — home')} className="touch-sm flex items-center gap-3 no-underline group shrink-0 lg:hidden">
+            <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center shrink-0">
+              <HandHeart size={20} className="text-primary-foreground" aria-hidden="true" />
             </div>
+          </Link>
+          <Link to="/" aria-label={t('topbar.homeAria', 'KAPWA — home')} className="flex items-center no-underline shrink-0">
             <div className="hidden sm:block">
               <span className="font-heading font-bold text-sm tracking-tight text-primary">KAPWA</span>
               <span className="text-xs text-muted-foreground ml-1.5">Norzagaray MSWDO</span>
@@ -290,4 +307,4 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
       </AlertDialog>
     </TooltipProvider>
   );
-}
+});

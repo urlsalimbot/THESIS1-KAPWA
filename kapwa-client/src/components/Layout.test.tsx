@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { axe } from 'vitest-axe';
 import { Layout } from './Layout';
@@ -60,6 +61,23 @@ describe('Layout', () => {
     } finally {
       Object.defineProperty(navigator, 'onLine', { value: originalOnLine, configurable: true });
     }
+  });
+
+  it('toggles the sidebar from the Topbar mark and persists the choice', async () => {
+    renderLayout();
+    // The KAPWA mark in the Topbar is the collapse control.
+    const toggle = await screen.findByRole('button', { name: /collapse sidebar/i });
+    await userEvent.click(toggle);
+
+    expect(localStorage.getItem('kapwa:sidebar-collapsed')).toBe('1');
+    expect(screen.getByRole('button', { name: /expand sidebar/i })).toBeTruthy();
+  });
+
+  it('restores a persisted collapsed sidebar on mount', () => {
+    localStorage.setItem('kapwa:sidebar-collapsed', '1');
+    renderLayout();
+    expect(screen.getByRole('button', { name: /expand sidebar/i })).toBeTruthy();
+    localStorage.removeItem('kapwa:sidebar-collapsed');
   });
 
   it('has no axe violations', async () => {

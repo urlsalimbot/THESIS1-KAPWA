@@ -6,6 +6,7 @@ import { NAV_GROUPS } from '@/lib/nav-config';
 import { cn } from '@/lib/utils';
 import { Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { memo } from 'react';
 
 interface Tab {
   path: string;
@@ -26,7 +27,7 @@ function quickActionLabel(t: (key: string, defaultValue: string) => string, path
   return t('shell.quickAction', 'Quick Action');
 }
 
-export function BottomNav() {
+export const BottomNav = memo(function BottomNav() {
   const isMobile = useMediaQuery('(max-width: 767px)');
   const { t } = useTranslation();
   const location = useLocation();
@@ -76,4 +77,4 @@ export function BottomNav() {
       </div>
     </nav>
   );
-}
+});

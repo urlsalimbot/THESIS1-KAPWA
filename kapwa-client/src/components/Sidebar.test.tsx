@@ -89,24 +89,11 @@ describe('Sidebar', () => {
     expect(screen.queryByRole('link', { name: /client deduplication/i })).toBeNull();
   });
 
-  it('collapses to an icon rail and persists the choice', async () => {
+  it('renders the icon rail when collapsed (labels hidden, links navigable)', () => {
     mockRole.current = 'social_worker';
-    renderWithRouter(<Sidebar />);
-    expect(screen.getByText('Core')).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: /collapse sidebar/i }));
-    expect(localStorage.getItem('kapwa:sidebar-collapsed')).toBe('1');
+    renderWithRouter(<Sidebar collapsed />);
     expect(screen.queryByText('Core')).toBeNull();
-    expect(screen.getByRole('button', { name: /expand sidebar/i })).toBeTruthy();
     expect(screen.getByRole('link', { name: /dashboard/i })).toBeTruthy(); // icons stay navigable
-  });
-
-  it('restores the collapsed state on mount from storage', () => {
-    mockRole.current = 'social_worker';
-    localStorage.setItem('kapwa:sidebar-collapsed', '1');
-    renderWithRouter(<Sidebar />);
-    expect(screen.queryByText('Core')).toBeNull();
-    expect(screen.getByRole('button', { name: /expand sidebar/i })).toBeTruthy();
-    localStorage.removeItem('kapwa:sidebar-collapsed');
   });
 
   it('has no axe violations', async () => {

@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/auth-context';
 import { loadQueue } from '@/lib/offline-queue';
-import { Sidebar } from './Sidebar';
+import { Sidebar, SIDEBAR_STATE_KEY } from './Sidebar';
 import { Topbar } from './Topbar';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { SidebarNavContent } from './Sidebar';
@@ -30,6 +30,20 @@ export function Layout({ children }: { children?: React.ReactNode }) {
   const [pendingCount, setPendingCount] = useState(0);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
+  // Sidebar collapse lives here, not in Sidebar: the Topbar's KAPWA mark is the
+  // control now, so the two siblings need one source of truth.
+  const handleMenuToggle = useCallback(() => setSheetOpen(o => !o), []);
+  const handleToggleSidebar = useCallback(() => setSidebarCollapsed(c => !c), []);
+  const handleOpenQueue = useCallback(() => setQueueOpen(true), []);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem(SIDEBAR_STATE_KEY) === '1'; } catch { return false; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem(SIDEBAR_STATE_KEY, sidebarCollapsed ? '1' : '0'); } catch {
+      // Private mode or storage blocked — collapse still works for the session.
+    }
+  }, [sidebarCollapsed]);
 
   useEffect(() => {
     setPendingCount(computePendingCount());
@@ -69,18 +83,22 @@ export function Layout({ children }: { children?: React.ReactNode }) {
       <SyncStatusBanner
         pendingCount={pendingCount}
         isOnline={isOnline}
-        onOpenQueue={() => setQueueOpen(true)}
+        onOpenQueue={handleOpenQueue}
       />
 
       <AccessDeniedBanner routeKey={location.pathname} />
 
       <div className="no-print shrink-0">
-        <Topbar onMenuToggle={() => setSheetOpen(s => !s)} />
+        <Topbar
+          onMenuToggle={handleMenuToggle}
+          onToggleSidebar={handleToggleSidebar}
+          sidebarCollapsed={sidebarCollapsed}
+        />
       </div>
 
       <div className="flex flex-1 min-h-0">
         <div className="no-print shrink-0">
-          <Sidebar />
+          <Sidebar collapsed={sidebarCollapsed} />
         </div>
 
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>

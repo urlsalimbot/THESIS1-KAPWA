@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 
@@ -7,7 +8,7 @@ interface SyncStatusBannerProps {
   onOpenQueue: () => void;
 }
 
-export function SyncStatusBanner({ pendingCount, isOnline, onOpenQueue }: SyncStatusBannerProps) {
+export const SyncStatusBanner = memo(function SyncStatusBanner({ pendingCount, isOnline, onOpenQueue }: SyncStatusBannerProps) {
   const { t } = useTranslation();
   // When online and no pending items, hidden
   if (isOnline && pendingCount === 0) return null;
@@ -33,4 +34,4 @@ export function SyncStatusBanner({ pendingCount, isOnline, onOpenQueue }: SyncSt
       {bannerText}
     </Button>
   );
-}
+});

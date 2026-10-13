@@ -1,14 +1,12 @@
-import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { NAV_GROUPS } from '@/lib/nav-config';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-const SIDEBAR_STATE_KEY = 'kapwa:sidebar-collapsed';
+export const SIDEBAR_STATE_KEY = 'kapwa:sidebar-collapsed';
 
 export interface SidebarNavContentProps {
   onNavClick?: () => void;
@@ -77,21 +75,11 @@ export function SidebarNavContent({ onNavClick, collapsed = false }: SidebarNavC
 
 export interface SidebarProps {
   className?: string;
+  /** Controlled by Layout: the Topbar's KAPWA mark is the collapse control. */
+  collapsed?: boolean;
 }
 
-export function Sidebar({ className }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(
-    () => typeof localStorage !== 'undefined' && localStorage.getItem(SIDEBAR_STATE_KEY) === '1',
-  );
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(SIDEBAR_STATE_KEY, collapsed ? '1' : '0');
-    } catch {
-      // Private mode or storage blocked — collapse still works for the session.
-    }
-  }, [collapsed]);
-
+export const Sidebar = memo(function Sidebar({ className, collapsed = false }: SidebarProps) {
   return (
     <aside
       className={cn(
@@ -105,19 +93,7 @@ export function Sidebar({ className }: SidebarProps) {
         <ScrollArea className="flex-1">
           <SidebarNavContent collapsed={collapsed} />
         </ScrollArea>
-        <div className="flex items-center justify-center border-t py-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setCollapsed(c => !c)}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className="h-8 w-8"
-          >
-            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-          </Button>
-        </div>
       </div>
     </aside>
   );
-}
+});
