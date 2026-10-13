@@ -38,3 +38,35 @@ SEX        | Financial                        |    | Legal          | Technical 
            | Financial Assistance             |PWD | Referral       | Birth \nDiscrepancy|Travel \nAssessment|Case Study \nReport|Counselling|PhilHealth|Child \nCustody|Home \nVisit|Balik \nProbinsya|Others|TOTAL|
 ----|------|----------------------------------|    |----------------|                    |                   |                   |           |          |               |            |                 |      |     |
 Male|Female|Burial|Medical|Assistive \nDevices|    |LEGAL/PAO|OTHERS|                    |                   |                   |           |          |               |            |                 |      |     | 
+
+
+
+
+Mag focus lang sa SOP bangitin yung cases sa background ng paper kahit short nag Katanga gawin sa process ng mswdo.
+/ Batch uploaded ng file sa Excel ng different services or program ng MSWDO
+/ Duplication detection functionality sa pag upload sa system pag ka uploaded ng files
+/ Delete and de priorities functionality decided by worker or Head chair
+/ Alphabetical sa categories of services sa admin, worker and brgy coord
+Tracking number control sa cases or services na I ni rerequest ng client/benifiarise
+*TO DO* GIS should be filled up first before printing the file note: pag may * ay it is mandatory be fill up first
+Drop Down ng categories and cases sa brgy portal
+/ Ipakita kung pano notify ng system yung mga client/ benifiarise page na approved na yung request services nila.
+Indeginoues people ano yung mga needed file na I present note: sa system to
+/ Unlock and lock dapat submit nalang
+Uploading of id and certificate is decided by mswdo staff to retain info of clients/ benifiarise for futures person matching even though it's walk-in?
+*TO DO* Assessment diagnostic tool of mswdo should be filled up.
+*TO DO* Uploading of different programs to locate duplication.
+Sa court hiring Dapat naka lagay agad yung Court
+Sa child abuse ba may na categories ba na services patungkol lang sa child abuse?
+
+Ipakita at ipaliwanag ng malinaw ang proceso ng mswdo sa pag bigay ng service
+Ipakita kung pano ito I approve ng mswdo
+Pano ko no contact ang nag request
+Wag pag sabay sabayin ang mga processo ipaliwanag at ipakita ito ng isa-isa kung pano ito na tapos
+
+Note: d mswdo ang nag bigay/ nag lalagay  ng amount municipal .
+Page local program ang hinahanap sa mga I.P ay brgy I.d or certi .Pero pag regional ang NCIP
+
+2-3 I.T expert testing
+ISO Dapat 9
+Redemo: October 22,2026
