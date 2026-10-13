@@ -226,7 +226,7 @@ export class CasesController {
     @Param('id') id: string,
     @Body(new ZodPipe(RequirementsSchema)) body: RequirementsInput,
   ) {
-    await this.stepLocks.assertUnsealed(id, 'interventions');
+    await this.stepLocks.assertRequirementsWritable(id);
     return this.casesService.updateRequirements(id, body);
   }
 

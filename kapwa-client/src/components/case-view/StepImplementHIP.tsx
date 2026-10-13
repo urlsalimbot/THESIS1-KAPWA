@@ -25,6 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface Intervention {
   id: string;
@@ -38,6 +39,9 @@ interface Intervention {
   fundSource?: string;
   notes?: string;
   deliveredBy?: string;
+  // The form obligation copied from the program matrix when the service was
+  // logged (null for legacy rows and for services that oblige none).
+  requiredForm?: string | null;
 }
 
 interface Program {
@@ -82,6 +86,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
   }>>(queryKeys.cases.enrollments(caseId));
 
   const [addOpen, setAddOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const EMPTY_FORM = {
     programId: '',
     interventionType: '',
@@ -389,9 +394,20 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
                             {intv.fundSource && <span>{intv.fundSource}</span>}
                           </div>
                           {intv.notes && <p className="text-sm text-muted-foreground/80 mt-1">{intv.notes}</p>}
+                          {/* The form obligation is recorded on the row (copied
+                              from the program matrix at logging time), so it
+                              renders on the saved card too — it used to exist
+                              only inside the Add dialog (audit 3.2.4). */}
+                          {intv.requiredForm && (
+                            <p className="mt-1 text-xs font-medium text-primary">
+                              {t('caseView.implement.requiredFormHint', 'Must accomplish: {{form}}', {
+                                form: interventionFormLabel(intv.requiredForm, t),
+                              })}
+                            </p>
+                          )}
                         </div>
                         {!readOnly && (
-                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDelete(intv.id)} aria-label={t('caseView.implement.deleteIntervention', 'Delete intervention')}>
+                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteTarget(intv.id)} aria-label={t('caseView.implement.deleteIntervention', 'Delete intervention')}>
                             <Trash2 size={14} />
                           </Button>
                         )}
@@ -647,6 +663,24 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
           <p className="text-xs text-muted-foreground">{t('caseView.implement.submitForReviewHint', 'Submit for admin review to activate the case.')}</p>
         </div>
       )}
+      {/* Destructive removal needs the confirm — an intervention row is a
+          delivered service on record. */}
+      <AlertDialog open={deleteTarget != null} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('caseView.implement.deleteTitle', 'Delete this intervention?')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('caseView.implement.deleteHint', 'The intervention and its documentary requirements will be removed from this case. This cannot be undone.')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteTarget && handleDelete(deleteTarget)} className="bg-destructive text-white hover:bg-destructive/90">
+              {t('common.remove', 'Remove')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

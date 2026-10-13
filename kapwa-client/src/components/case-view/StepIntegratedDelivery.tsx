@@ -8,7 +8,8 @@ import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Lock, FileText, Plus, Ban, CheckCircle2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Lock, FileText, Plus, Ban, CheckCircle2, Trash2 } from 'lucide-react';
 import { api, downloadEndorsementLetter, downloadEndorsementLetterById } from '@/lib/api';
 import { Agency } from '@/components/referrals/referral-utils';
 import { StepLockBar, type StepLock } from './StepLockBar';
@@ -102,7 +103,13 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
       await mutate(queryKeys.cases.detail(caseId));
       toastSaved(t('caseView.integrated.issued', 'Endorsement letter issued'));
     } catch (err: any) {
-      toast.error(t('caseView.integrated.issueFailed', 'Could not issue the endorsement letter'), { description: humanizeError(err) });
+      // The referral row commits BEFORE the PDF builds — a failed download may
+      // still have recorded the referral, so revalidate and say so instead of
+      // implying nothing happened (audit: the old copy + missing revalidate
+      // made the next press duplicate the referral).
+      await revalidate();
+      await mutate(queryKeys.cases.detail(caseId));
+      toast.error(t('caseView.integrated.issueFailedPartial', 'The endorsement letter may have been recorded — could not download the PDF'), { description: humanizeError(err) });
     } finally {
       setIssuing(false);
     }
@@ -120,6 +127,23 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
     }
   }
 
+  // Revocation is per-row with a confirmation: a referral row is a recorded
+  // fact (and what the endorsement letter was made of), so it must not vanish
+  // on one click (audit: destructive deletes need the confirm pattern).
+  const [revokingId, setRevokingId] = useState<string | null>(null);
+
+  async function revoke(referralId: string) {
+    try {
+      await api.del(`/inter-agency-referrals/${referralId}`);
+      setRevokingId(null);
+      await revalidate();
+      await mutate(queryKeys.cases.detail(caseId));
+      toastSaved(t('caseView.integrated.referralRevoked', 'Referral revoked'));
+    } catch (err: any) {
+      toast.error(t('caseView.integrated.revokeFailed', 'Could not revoke the referral'), { description: humanizeError(err) });
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="rounded-lg border bg-card">
@@ -134,10 +158,9 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
             )}
             {readOnly && <Lock size={14} className="text-muted-foreground" />}
           </div>
-          {/* Once a referral is on record the only remaining action is
-              re-downloading the letter, which the body below owns — a second
-              "Add Referral" would silently orphan the first referral. */}
-          {!readOnly && !(hasReferrals && !referralNotNeeded) && (
+          {/* More than one referral may be on record (the server allows many); the
+              list below owns re-downloading each letter and revoking rows. */}
+          {!readOnly && (
             <div className="flex flex-wrap gap-2">
               {referralNotNeeded ? (
                 <Button variant="outline" size="sm" disabled={savingDecision} onClick={() => saveDecision(false)}>
@@ -151,7 +174,7 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
                   {/* Mutually exclusive with a live referral: the activation gate
                       rejects a case that is flagged referral-only *and* already
                       carries one. */}
-                  {canDecide && (
+                  {canDecide && !hasReferrals && (
                     <Button variant="secondary" size="sm" disabled={savingDecision} onClick={() => saveDecision(true)}>
                       <Ban size={14} className="mr-1" /> {t('caseView.integrated.markReferralNotNeeded', 'No Referrals issued')}
                     </Button>
@@ -175,6 +198,29 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
                           office: r.toAgency?.name || t('caseView.integrated.receivingAgency', 'the receiving agency'),
                         })}
                       </p>
+                      {!readOnly && (
+                        <AlertDialog open={revokingId === r.id} onOpenChange={(open) => setRevokingId(open ? r.id : null)}>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-destructive" aria-label={t('caseView.integrated.revokeReferral', 'Revoke referral')}>
+                              <Trash2 size={14} />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>{t('caseView.integrated.revokeTitle', 'Revoke this referral?')}</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                {t('caseView.integrated.revokeHint', 'The endorsement letter was already issued for this referral. This cannot be undone.')}
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => revoke(r.id)} className="bg-destructive text-white hover:bg-destructive/90">
+                                {t('caseView.integrated.revokeConfirm', 'Revoke')}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
                     </div>
                     {r.reason && (
                       <p className="mt-1 text-xs text-muted-foreground">

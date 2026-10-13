@@ -182,6 +182,11 @@ export function CaseViewPage() {
   // Generated documents are served behind the Bearer token, so "View" cannot
   // open the raw API URL in a new tab (no token there → 401). Download through
   // the authenticated helper instead and let the browser show the PDF.
+  // Export buttons were fire-and-forget — a failed GIS/CSR export left nothing
+  // on screen (audit 3.3.6); everything routes through this reported runner.
+  const runDownload = (p: Promise<unknown>) => {
+    p.catch((e) => toast.error(t('cases.downloadFailed', 'Download failed'), { description: humanizeError(e) }));
+  };
   async function viewGeneratedDoc(url: string, fallbackName: string) {
     const docId = filingDocIdFromUrl(url);
     if (!docId) {
@@ -607,6 +612,7 @@ export function CaseViewPage() {
             lockReadOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)} />;
         case 'enrollments':
           return <StepEnrollments key={stepLockKey(id!, key)} {...common} userRole={user?.role}
+            enrollmentRequirementsMet={enrollmentRequirementsMet}
             readOnly={bodyReadOnly(caseClosed, key)} lockReadOnly={caseClosed} />;
         case 'interventions':
           return <StepImplementHIP key={stepLockKey(id!, key)} {...common} userRole={user?.role}
@@ -639,7 +645,10 @@ export function CaseViewPage() {
         // keeping `stepDone.evaluate` out of its `readOnly`.
         case 'closure':
           return <StepClosure key={stepLockKey(id!, key)} {...common}
-            readOnly={bodyReadOnly(stepDone.closure || caseClosed, key)}
+            // Sealed = frozen, closed = frozen, unlocked = editable. The old
+            // `stepDone.closure` base kept the outcome frozen AFTER an unlock —
+            // "Unlock it to make changes" was false here (audit #4).
+            readOnly={bodyReadOnly(caseClosed, key)}
             lockReadOnly={caseClosed} />;
         case 'discernment':
           return <StepDiscernment key={stepLockKey(id!, key)} {...common}
@@ -779,10 +788,10 @@ export function CaseViewPage() {
                   <DropdownMenuContent align="end">
                     {/* Two GIS variations: the national DSWD sheet and the
                         MSWDO municipal sheet the office uses day to day. */}
-                    <DropdownMenuItem onClick={() => downloadGisPdf(id!)}>
+                    <DropdownMenuItem onClick={() => runDownload(downloadGisPdf(id!))}>
                       {t('cases.gisNational', 'National (DSWD)')}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => downloadGisPdf(id!, 'municipal')}>
+                    <DropdownMenuItem onClick={() => runDownload(downloadGisPdf(id!, 'municipal'))}>
                       {t('cases.gisMunicipal', 'Municipal (MSWDO)')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -810,7 +819,7 @@ export function CaseViewPage() {
                     {caseData.status === 'closed' && (
                       <>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => downloadCsrPdf(id!)}>
+                        <DropdownMenuItem onSelect={() => runDownload(downloadCsrPdf(id!))}>
                           <FileText size={14} className="mr-2" aria-hidden="true" /> {t('cases.caseStudyReport', 'Case Study Report')}
                         </DropdownMenuItem>
                       </>

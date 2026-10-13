@@ -33,6 +33,7 @@ describe('CasesController step-lock routes', () => {
     unlock: jest.fn(),
     listForCase: jest.fn(),
     assertUnsealed: jest.fn(),
+    assertRequirementsWritable: jest.fn(),
   };
   const req = { user: { id: 'u1' } } as unknown as AuthenticatedRequest;
 
@@ -126,11 +127,11 @@ describe('CasesController step-lock routes', () => {
   describe('sealed-step refusals on the step-field writes', () => {
     beforeEach(() => {
       stepLocks.assertUnsealed.mockResolvedValue(undefined);
+      stepLocks.assertRequirementsWritable.mockResolvedValue(undefined);
     });
 
     const CASES: Array<[string, string, () => Promise<unknown>]> = [
       ['assessment', 'assessment', () => ctrl.updateAssessment('c1', {} as any, req)],
-      ['requirements', 'interventions', () => ctrl.updateRequirements('c1', {} as any)],
       ['intervention-decision', 'interventions', () => ctrl.updateInterventionDecision('c1', { notNeeded: true })],
       ['referral-decision', 'referrals', () => ctrl.updateReferralDecision('c1', { notNeeded: true })],
       ['enrollments-decision', 'enrollments', () => ctrl.updateEnrollmentsDecision('c1', { notNeeded: true })],
@@ -169,12 +170,30 @@ describe('CasesController step-lock routes', () => {
       expect(cases.updateTransitionPlan).toHaveBeenCalledWith('c1', body, req.user?.id);
     });
 
+    // The requirements checklist is shared by two steps, so it gets the
+    // either-step guard rather than one step's seal (audit 3.2.3).
+    it('guards the requirements route with the shared either-step check', async () => {
+      const order: string[] = [];
+      stepLocks.assertRequirementsWritable.mockImplementation(async () => { order.push('assert'); });
+      cases.updateRequirements.mockImplementation(async () => { order.push('write'); return {}; });
+
+      await ctrl.updateRequirements('c1', {} as any);
+
+      expect(stepLocks.assertRequirementsWritable).toHaveBeenCalledWith('c1');
+      expect(order[0]).toBe('assert');
+    });
+
+    it('does not write requirements when the shared guard refuses', async () => {
+      stepLocks.assertRequirementsWritable.mockRejectedValue(new ConflictException('sealed'));
+      await expect(ctrl.updateRequirements('c1', {} as any)).rejects.toBeInstanceOf(ConflictException);
+      expect(cases.updateRequirements).not.toHaveBeenCalled();
+    });
+
     // The other step-field routes must NOT start forwarding bodies: they carry
     // nothing but their own step's data, and a guard that took a body there would
     // be a guard whose rule nobody could state.
     it.each([
       ['assessment', () => ctrl.updateAssessment('c1', { problemsPresented: 'p' } as any, req)],
-      ['requirements', () => ctrl.updateRequirements('c1', {} as any)],
       ['intervention-decision', () => ctrl.updateInterventionDecision('c1', { notNeeded: true })],
       ['referral-decision', () => ctrl.updateReferralDecision('c1', { notNeeded: true })],
       ['closure', () => ctrl.updateClosure('c1', {} as any, req)],

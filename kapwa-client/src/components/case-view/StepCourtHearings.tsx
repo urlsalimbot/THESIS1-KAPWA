@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Gavel, Lock, Plus, Trash2, Ban, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { StepLockBar, type StepLock } from './StepLockBar';
 import { toast } from 'sonner';
 
@@ -53,6 +54,7 @@ export function StepCourtHearings({ caseId, caseData, userRole, readOnly, lockRe
   );
 
   const [adding, setAdding] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     eventDate: new Date().toISOString().slice(0, 10),
@@ -219,7 +221,7 @@ export function StepCourtHearings({ caseId, caseData, userRole, readOnly, lockRe
                     <Button size="sm" variant="ghost" onClick={() => setStatus(ev.id, 'cancelled')} disabled={saving}>
                       {t('caseView.hearings.cancel', 'Cancel Hearing')}
                     </Button>
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => remove(ev.id)} aria-label={t('caseView.hearings.delete', 'Delete')}>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setDeleteTarget(ev.id)} aria-label={t('caseView.hearings.delete', 'Delete')}>
                       <Trash2 size={14} aria-hidden="true" />
                     </Button>
                   </div>
@@ -282,6 +284,24 @@ export function StepCourtHearings({ caseId, caseData, userRole, readOnly, lockRe
           onChanged={async () => mutate(queryKeys.cases.detail(caseId))}
         />
       </section>
+
+      {/* Destructive removal needs the confirm. */}
+      <AlertDialog open={deleteTarget != null} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('caseView.hearings.deleteTitle', 'Delete this hearing?')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('caseView.hearings.deleteHint', 'The hearing record will be removed from this case. This cannot be undone.')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteTarget && remove(deleteTarget)} className="bg-destructive text-white hover:bg-destructive/90">
+              {t('common.remove', 'Remove')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

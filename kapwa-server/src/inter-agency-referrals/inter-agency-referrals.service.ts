@@ -183,4 +183,18 @@ export class InterAgencyReferralsService {
       relations: ['fromAgency', 'toAgency', 'person', 'case'],
     });
   }
+
+  /** One referral by id, for the revocation route's seal check. */
+  async findById(referralId: string) {
+    const row = await this.repo.findOne({ where: { id: referralId } });
+    if (!row) throw new NotFoundException('Referral not found');
+    return row;
+  }
+
+  /** Revoke a referral. The controller guards the referrals step's seal first. */
+  async remove(referralId: string): Promise<{ deleted: boolean }> {
+    const row = await this.findById(referralId);
+    await this.repo.remove(row);
+    return { deleted: true };
+  }
 }

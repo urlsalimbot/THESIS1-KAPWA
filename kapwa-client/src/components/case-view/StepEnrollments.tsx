@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { CalendarClock, Lock, Plus, Trash2 } from 'lucide-react';
 import { StepLockBar, type StepLock } from './StepLockBar';
 import { CaseRequirements } from './CaseRequirements';
@@ -35,6 +36,11 @@ interface StepEnrollmentsProps {
   readOnly?: boolean;
   lockReadOnly?: boolean;
   stepLock?: StepLock | null;
+  // The enrolled programs' documentary minimum, computed page-side (the same
+  // value the header stepper reads). Passed through so THIS step's Lock agrees
+  // with the header — it used to default to `true` client-side and 400 against
+  // the server's enforced gate (audit 3.2.2).
+  enrollmentRequirementsMet?: boolean;
 }
 
 const ENROLL_STATUSES = ['active', 'completed', 'withdrawn'] as const;
@@ -44,8 +50,9 @@ const ENROLL_STATUSES = ['active', 'completed', 'withdrawn'] as const;
  * enrolled in — the treatment plan agreed after assessment. Interventions are
  * then services rendered under one of these enrollments.
  */
-export function StepEnrollments({ caseId, caseData, userRole, readOnly, lockReadOnly, stepLock }: StepEnrollmentsProps) {
+export function StepEnrollments({ caseId, caseData, userRole, readOnly, lockReadOnly, stepLock, enrollmentRequirementsMet }: StepEnrollmentsProps) {
   const { t } = useTranslation();
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const { mutate } = useSWRConfig();
   const { data: enrollments, mutate: mutateEnrollments, isLoading } = useSWR<ProgramEnrollmentView[]>(
     queryKeys.cases.enrollments(caseId),
@@ -195,7 +202,7 @@ export function StepEnrollments({ caseId, caseData, userRole, readOnly, lockRead
                     </SelectContent>
                   </Select>
                   {canEdit && (
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => removeEnrollment(enr.id)} aria-label={t('caseView.enrollments.remove', 'Remove enrollment')}>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setDeleteTarget(enr.id)} aria-label={t('caseView.enrollments.remove', 'Remove enrollment')}>
                       <Trash2 size={14} aria-hidden="true" />
                     </Button>
                   )}
@@ -261,12 +268,31 @@ export function StepEnrollments({ caseId, caseData, userRole, readOnly, lockRead
           caseData={caseData}
           interventionCount={0}
           enrollmentCount={rows.length}
-          opts={{ enrollmentsNotNeeded: notNeeded }}
+          opts={{ enrollmentsNotNeeded: notNeeded, enrollmentRequirementsMet }}
           locked={stepLock}
           readOnly={lockReadOnly}
           onChanged={async () => mutate(queryKeys.cases.detail(caseId))}
         />
       </section>
+
+      {/* Destructive removal needs the confirm — a one-click delete of an
+          enrollment row removes its documentary gate without a trace. */}
+      <AlertDialog open={deleteTarget != null} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('caseView.enrollments.removeTitle', 'Remove this enrollment?')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('caseView.enrollments.removeHint', 'The enrollment and its documentary requirements will be removed from this case. This cannot be undone.')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteTarget && removeEnrollment(deleteTarget)} className="bg-destructive text-white hover:bg-destructive/90">
+              {t('common.remove', 'Remove')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

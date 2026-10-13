@@ -27,6 +27,13 @@ export class CaseIntervention extends BaseEntity {
   @Column({ name: 'intervention_type', nullable: true })
   interventionType?: string;
 
+  // The form format this delivery obliges, copied from the program matrix row
+  // the intervention typed against (e.g. 'social_case_study_report'); NULL =
+  // none. Recorded here so the obligation survives matrix edits and renders on
+  // the saved card, not only inside the Add dialog (audit 3.2.4).
+  @Column({ name: 'required_form', type: 'text', nullable: true })
+  requiredForm?: string | null;
+
   // The program enrollment the service was delivered under (optional).
   @Column({ name: 'program_enrollment_id', type: 'uuid', nullable: true })
   programEnrollmentId?: string;

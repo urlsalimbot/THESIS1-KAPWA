@@ -130,10 +130,11 @@ describe('StepIntegratedDelivery — referral or an explicit no-referral decisio
     );
   });
 
-  it('withdraws both header actions once a live referral exists', async () => {
-    // Both channels open at once is what the activation gate rejects, and a
-    // second referral would silently orphan the first, so the header actions go
-    // away entirely and only the re-download of the letter remains.
+  it('keeps the referral actions open once a live referral exists', async () => {
+    // The server permits many referrals per case; hiding Add Referral after the
+    // first silently capped the step at one (audit: only one referral could
+    // ever be issued). The "No Referrals issued" decision stays mutually
+    // exclusive with a live referral, and each row gains a revocation control.
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('inter-agency-referrals')) {
@@ -145,8 +146,9 @@ describe('StepIntegratedDelivery — referral or an explicit no-referral decisio
     renderStep();
 
     expect(await screen.findByRole('button', { name: /Endorsement Letter/i })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Add Referral/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /Add Referral/i })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /No Referrals issued/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /Revoke referral/i })).toBeTruthy();
   });
 
   it('issues the letter from the dialog and downloads it', async () => {
@@ -181,8 +183,9 @@ describe('StepIntegratedDelivery — referral or an explicit no-referral decisio
     await user.click(screen.getByRole('button', { name: /^Issue$/i }));
 
     // The failure surfaces as a toast (sonner renders role="status"), not a
-    // silent no-op.
-    expect(await screen.findByText(/Could not issue the endorsement letter/i)).toBeTruthy();
+    // silent no-op — and because the row commits before the PDF, the copy says
+    // the referral may still have been recorded.
+    expect(await screen.findByText(/may have been recorded/i)).toBeTruthy();
   });
 
   it('re-downloads the issued letter when the case already has a referral', async () => {

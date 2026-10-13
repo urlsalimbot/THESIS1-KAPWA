@@ -31,6 +31,10 @@ const en = {
     "compliance": "Compliance",
   },
   "caseView": {
+    "enrollments": {
+    "removeTitle": "Remove this enrollment?",
+    "removeHint": "The enrollment and its documentary requirements will be removed from this case. This cannot be undone.",
+    },
     "action": {
       "approveActivate": "Approve & activate",
       "approveBody": "The case moves from In Review to Active. Your signature is recorded as the approver.",
@@ -150,6 +154,8 @@ const en = {
       "unverify": "Undo",
       "noInterventionRecorded": "No intervention needed — referral-only case",
       "total": "total",
+    "deleteTitle": "Delete this intervention?",
+    "deleteHint": "The intervention and its documentary requirements will be removed from this case. This cannot be undone.",
     },
     "approving": "Approving...",
     "assessment": {
@@ -269,7 +275,6 @@ const en = {
                                     "interAgencyReferrals": "Inter-Agency Referrals",
       "endorsementLetter": "Endorsement Letter",
 "issue": "Issue",
-      "issued": "Endorsement letter issued",
       "noReferralNeeded": "Recorded: no referral needed",
       "referralNeeded": "Referral required again",
 "issueDesc": "This records the inter-agency referral and generates the endorsement letter for the receiving agency.",
@@ -296,6 +301,14 @@ const en = {
       "markForGraduation": "→ Mark for Graduation",
                                                 "servicesDelivered": "Services delivered",
       "servicesDeliveredHint": "Mark case as transitioning to begin graduation process.",
+    "issued": "Endorsement letter issued",
+    "issueFailedPartial": "The endorsement letter may have been recorded — could not download the PDF",
+    "referralRevoked": "Referral revoked",
+    "revokeFailed": "Could not revoke the referral",
+    "revokeReferral": "Revoke referral",
+    "revokeTitle": "Revoke this referral?",
+    "revokeHint": "The endorsement letter was already issued for this referral. This cannot be undone.",
+    "revokeConfirm": "Revoke",
           },
     "lock": {
       "lock": "Lock",
@@ -339,6 +352,8 @@ const en = {
       "addFailed": "Could not record the hearing",
       "updateFailed": "Could not update the hearing",
       "deleteFailed": "Could not delete the hearing",
+    "deleteTitle": "Delete this hearing?",
+    "deleteHint": "The hearing record will be removed from this case. This cannot be undone.",
     },
     "processing": "Processing...",
     "saving": "Saving...",

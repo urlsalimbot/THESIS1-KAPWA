@@ -40,7 +40,7 @@ export class FilingController {
     // Only a requirement upload writes `case_requirements`; a photo or an
     // approval document changes no sealed data, so it is not refused.
     if (metadata.caseId && metadata.requirementKey) {
-      await this.stepLocks.assertUnsealed(metadata.caseId, 'interventions');
+      await this.stepLocks.assertRequirementsWritable(metadata.caseId);
     }
     return this.filingService.upload(file, {
       ...metadata,
@@ -98,7 +98,7 @@ export class FilingController {
     // nothing step 1's seal reads.
     const doc = await this.filingService.findOne(id);
     if (doc.caseId && doc.requirementKey) {
-      await this.stepLocks.assertUnsealed(doc.caseId, 'interventions');
+      await this.stepLocks.assertRequirementsWritable(doc.caseId);
     }
     return this.filingService.setVerified(id, body.verified, req.user?.id || req.user?.sub);
   }
@@ -153,7 +153,7 @@ export class FilingController {
       throw new ForbiddenException('You are not allowed to remove this document');
     }
     if (doc.caseId && doc.requirementKey) {
-      await this.stepLocks.assertUnsealed(doc.caseId, 'interventions');
+      await this.stepLocks.assertRequirementsWritable(doc.caseId);
     }
     return this.filingService.delete(id);
   }

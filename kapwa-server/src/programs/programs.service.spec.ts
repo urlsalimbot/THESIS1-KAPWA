@@ -22,8 +22,20 @@ describe('ProgramsService', () => {
     };
     interventionRepoMock = {
       delete: jest.fn().mockResolvedValue({}),
-      create: jest.fn((d: unknown) => d),
+      create: jest.fn((_entity: unknown, dto?: unknown) => dto ?? _entity),
       save: jest.fn((d: unknown) => Promise.resolve(d)),
+      manager: {
+        // The matrix rewrite is one transaction: a failed row must not leave a
+        // truncated matrix on disk (audit 3.2.5).
+        transaction: jest.fn(async (fn: (em: any) => Promise<void>) => {
+          const em = {
+            delete: interventionRepoMock.delete,
+            create: interventionRepoMock.create,
+            save: interventionRepoMock.save,
+          };
+          await fn(em);
+        }),
+      },
     };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -223,7 +235,7 @@ describe('ProgramsService', () => {
       } as any);
 
       expect(prog.interventionRows).toEqual([]);
-      expect(interventionRepoMock.delete).toHaveBeenCalledWith({ programId: 'p1' });
+      expect(interventionRepoMock.delete).toHaveBeenCalledWith(ProgramIntervention, { programId: 'p1' });
       expect(interventionRepoMock.save).toHaveBeenCalledWith(expect.objectContaining({
         programId: 'p1', interventionType: 'burial_assistance', requiredForm: null,
       }));

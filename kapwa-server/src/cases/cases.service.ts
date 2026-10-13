@@ -823,12 +823,16 @@ export class CasesService {
     const caseEntity = await this.caseRepo.findOne({ where: { id } });
     if (!caseEntity) throw new NotFoundException('Case not found');
     // Replace the checklist wholesale. Explicit delete+insert (not a collection
-    // reassignment) keeps the (case, requirement) uniqueness intact.
-    await this.caseRepo.manager.delete(CaseRequirement, { caseId: id });
-    const rows = Object.entries(data.requirementsChecklist).map(([requirementKey, met]) =>
-      this.caseRepo.manager.create(CaseRequirement, { caseId: id, requirementKey, met }),
-    );
-    if (rows.length > 0) await this.caseRepo.manager.save(CaseRequirement, rows);
+    // reassignment) keeps the (case, requirement) uniqueness intact; the two are
+    // one transaction so two workers marking different documents cannot clobber
+    // each other's half (audit 3.2.14).
+    await this.caseRepo.manager.transaction(async (em) => {
+      await em.delete(CaseRequirement, { caseId: id });
+      const rows = Object.entries(data.requirementsChecklist).map(([requirementKey, met]) =>
+        em.create(CaseRequirement, { caseId: id, requirementKey, met }),
+      );
+      if (rows.length > 0) await em.save(CaseRequirement, rows);
+    });
     return this.caseRepo.findOne({ where: { id }, relations: ['requirements'] });
   }
 

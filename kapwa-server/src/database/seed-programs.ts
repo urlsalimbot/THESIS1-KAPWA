@@ -436,7 +436,7 @@ export const PROGRAMS: ProgramSeed[] = [
     isActive: true,
     programType: 'legal_referral',
     interventions: ['referral_pao', 'legal_assistance', 'scsr_generated'],
-    requiredForms: { scsr_generated: 'social_case_study_report' },
+    requiredForms: { referral_pao: 'referral_form', scsr_generated: 'social_case_study_report' },
   },
 
   // ------------------------------------------------------------ 4Ps & feeding
@@ -592,6 +592,7 @@ export const PROGRAMS: ProgramSeed[] = [
     isActive: true,
     programType: 'legal_referral',
     interventions: ['referral_pao', 'legal_assistance'],
+    requiredForms: { referral_pao: 'referral_form' },
   },
   {
     id: uuidv7(),
@@ -603,6 +604,7 @@ export const PROGRAMS: ProgramSeed[] = [
     isActive: true,
     programType: 'legal_referral',
     interventions: ['referral_pao'],
+    requiredForms: { referral_pao: 'referral_form' }
   },
   {
     id: uuidv7(),

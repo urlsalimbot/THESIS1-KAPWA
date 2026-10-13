@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  NotFoundException,
   Param,
   ParseUUIDPipe,
   Post,
@@ -16,6 +18,7 @@ import { ZodPipe } from '../common/pipes/zod.pipe';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { CaseStepLocksService } from '../cases/case-step-locks.service';
 import { InterAgencyReferralsService } from './inter-agency-referrals.service';
 import {
   IssueEndorsementLetterInput,
@@ -44,7 +47,10 @@ import { AuthenticatedRequest } from '../auth/types';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class InterAgencyReferralsController {
-  constructor(private readonly svc: InterAgencyReferralsService) {}
+  constructor(
+    private readonly svc: InterAgencyReferralsService,
+    private readonly stepLocks: CaseStepLocksService,
+  ) {}
 
   @Post('case/:caseId/endorsement-letter')
   @Roles('admin', 'social_worker')
@@ -87,5 +93,17 @@ export class InterAgencyReferralsController {
     @Request() req: AuthenticatedRequest,
   ) {
     return this.svc.findForCase(caseId, req.user);
+  }
+
+  @Delete(':id')
+  @Roles('admin', 'social_worker')
+  @ApiOperation({ summary: 'Revoke a referral — refused while the referrals step is sealed' })
+  async remove(@Param('id', new ParseUUIDPipe()) id: string) {
+    const referral = await this.svc.findById(id);
+    if (!referral.caseId) throw new NotFoundException('Referral has no case to guard');
+    // A revoked row would falsify the referrals seal it satisfied, so a sealed
+    // step refuses the write — same rule as the hearings and the matrix.
+    await this.stepLocks.assertUnsealed(referral.caseId, 'referrals');
+    return this.svc.remove(id);
   }
 }

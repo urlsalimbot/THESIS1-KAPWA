@@ -1674,6 +1674,10 @@ const fil: EnLocale = {
     "verifyAndEnable": "I-verify at Paganahin"
   },
   "caseView": {
+    "enrollments": {
+    "removeTitle": "Alisin ang enrollment na ito?",
+    "removeHint": "Aalisin sa kasong ito ang enrollment at ang mga documentary requirement nito. Hindi ito maaaring i-undo.",
+    },
     "action": {
       "approveActivate": "Aprubahan at i-activate",
       "approveBody": "Lilipat ang kaso mula In Review patungong Active. Itatala ang iyong para bilang tagapag-apruba.",
@@ -1883,13 +1887,14 @@ const fil: EnLocale = {
       "noInterventionRecorded": "Walang interbensyon na kailangan — referral-only na kaso",
       "total": "kabuuan",
       "fundSourceLabel": "Pinagmulan ng Pondo",
-      "modeOfDeliveryLabel": "Paraan ng Paghahatid"
+      "modeOfDeliveryLabel": "Paraan ng Paghahatid",
+    "deleteTitle": "Burahin ang intervention na ito?",
+    "deleteHint": "Aalisin sa kasong ito ang intervention at ang mga documentary requirement nito. Hindi ito maaaring i-undo.",
     },
     "integrated": {
                                     "interAgencyReferrals": "Mga Inter-Agency Referral",
       "endorsementLetter": "Endorsement Letter",
 "issue": "Ilabas",
-      "issued": "Nailabas ang endorsement letter",
       "noReferralNeeded": "Naitala: walang kailangang referral",
       "referralNeeded": "Kailangan na muli ang referral",
 "issueDesc": "Ito ang nagtatala ng inter-agency referral at gumagawa ng endorsement letter para sa kaukulang ahensya.",
@@ -1916,6 +1921,14 @@ const fil: EnLocale = {
       "markForGraduation": "→ Markahan para sa Graduation",
                                                 "servicesDelivered": "Naihatid na serbisyo",
       "servicesDeliveredHint": "Markahan ang kaso bilang naglilipat upang simulan ang proseso ng graduation.",
+    "issued": "Nailabas ang endorsement letter",
+    "issueFailedPartial": "Maaaring nai-record na ang endorsement letter — hindi ma-download ang PDF",
+    "referralRevoked": "Nabawi ang referral",
+    "revokeFailed": "Hindi mabawi ang referral",
+    "revokeReferral": "Bawiin ang referral",
+    "revokeTitle": "Bawiin ang referral na ito?",
+    "revokeHint": "Nailabas na ang endorsement letter para sa referral na ito. Hindi ito maaaring i-undo.",
+    "revokeConfirm": "Bawiin",
           },
     "lock": {
       "lock": "I-seal",
@@ -1959,6 +1972,8 @@ const fil: EnLocale = {
       "addFailed": "Hindi naitala ang pagdinig",
       "updateFailed": "Hindi na-update ang pagdinig",
       "deleteFailed": "Hindi nabura ang pagdinig",
+    "deleteTitle": "Burahin ang hearing na ito?",
+    "deleteHint": "Aalisin sa kasong ito ang rekord ng hearing. Hindi ito maaaring i-undo.",
     },
     "processing": "Pinoproseso...",
     "saving": "Nagsi-save...",

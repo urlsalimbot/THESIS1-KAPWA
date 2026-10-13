@@ -37,7 +37,7 @@ const ENROLLMENT = {
 
 function renderStep(
   enrollments: unknown[] = [],
-  opts: { caseData?: Record<string, unknown>; readOnly?: boolean; lockReadOnly?: boolean; stepLock?: Seal; userRole?: string } = {},
+  opts: { caseData?: Record<string, unknown>; readOnly?: boolean; lockReadOnly?: boolean; stepLock?: Seal; userRole?: string; enrollmentRequirementsMet?: boolean } = {},
 ) {
   mockApiGet.mockImplementation((key: unknown) => {
     const k = JSON.stringify(key);
@@ -54,6 +54,7 @@ function renderStep(
         readOnly={opts.readOnly}
         lockReadOnly={opts.lockReadOnly}
         stepLock={opts.stepLock}
+        enrollmentRequirementsMet={opts.enrollmentRequirementsMet}
       />
     </SWRConfig>,
   );
@@ -187,5 +188,19 @@ describe('StepEnrollments — one self-titled card', () => {
     expect(cluster.parentElement?.querySelector('button')).toBeNull();
     // The padlock beside the title says why the fields are inert.
     expect(cluster.querySelectorAll('svg').length).toBe(2);
+  });
+});
+
+describe('StepEnrollments — the Lock honours the documentary gate', () => {
+  it('disables the Lock while an enrolled program has unmet documents', async () => {
+    // The server always weighs the enrolled programs' documents; the step's own
+    // Lock used to default the gate to true and only 400 on press (audit 3.2.2).
+    const enrollment = { id: 'e1', programId: 'p1', programName: 'Family Assistance Program', status: 'active', enrolledAt: '2026-10-01' };
+    renderStep([enrollment], { enrollmentRequirementsMet: false });
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /^lock$/i })).toBeDisabled());
+
+    renderStep([enrollment], { enrollmentRequirementsMet: true });
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /^lock$/i }).some((b) => !b.hasAttribute('disabled'))).toBe(true));
   });
 });

@@ -211,6 +211,25 @@ export class CaseStepLocksService {
   }
 
   /**
+   * The requirements checklist is shared by two steps (enrollments +
+   * interventions), so a write is refused only when BOTH are sealed. Guarding it
+   * by one step alone stranded the other's checklist — enroll a program after
+   * sealing Implement HIP and its documents could neither be uploaded nor
+   * marked, with a 409 naming a different step (audit 3.2.3 / 3.1.7).
+   */
+  async assertRequirementsWritable(caseId: string): Promise<void> {
+    const [enrollments, interventions] = await Promise.all([
+      this.repo.findOne({ where: { caseId, stepKey: 'enrollments' } }),
+      this.repo.findOne({ where: { caseId, stepKey: 'interventions' } }),
+    ]);
+    if (enrollments && interventions) {
+      throw new ConflictException(
+        'Both "Program Enrollments" and "Intervention & Requirements" are sealed — release one of them before changing the documentary requirements.',
+      );
+    }
+  }
+
+  /**
    * Release a seal. Deliberately does not re-check whether the step is still
    * done: undoing a seal is always allowed, and gating it would strand a case
    * whose data was later corrected.

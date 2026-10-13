@@ -968,4 +968,22 @@ describe('CaseStepLocksService', () => {
       await expect(service.lock('c1', 'interventions', swUser)).resolves.toBeDefined();
     });
   });
+describe('CaseStepLocksService — requirements are shared by two steps', () => {
+  it('lets a requirement write through while either owning step is open', async () => {
+    // Sealed interventions only: the enrollments step still owns the checklist.
+    lockRepo.findOne.mockImplementation(async ({ where }: any) =>
+      where?.stepKey === 'interventions' ? { caseId: 'c1', stepKey: 'interventions' } : null);
+    await expect(service.assertRequirementsWritable('c1')).resolves.toBeUndefined();
+
+    // Sealed enrollments only: the interventions step still owns it.
+    lockRepo.findOne.mockImplementation(async ({ where }: any) =>
+      where?.stepKey === 'enrollments' ? { caseId: 'c1', stepKey: 'enrollments' } : null);
+    await expect(service.assertRequirementsWritable('c1')).resolves.toBeUndefined();
+  });
+
+  it('refuses only when BOTH are sealed, and says to release one', async () => {
+    lockRepo.findOne.mockResolvedValue({ caseId: 'c1', stepKey: 'any' });
+    await expect(service.assertRequirementsWritable('c1')).rejects.toThrow(/release one/i);
+  });
+});
 });

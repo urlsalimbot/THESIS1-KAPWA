@@ -7,10 +7,13 @@ import { Agency } from '../agencies/agency.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { Case } from '../cases/case.entity';
 import { User } from '../auth/user.entity';
+import { CasesModule } from '../cases/cases.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([InterAgencyReferral, Agency, Beneficiary, Case, User]),
+    // The revocation route guards the referrals step's seal.
+    CasesModule,
   ],
   controllers: [InterAgencyReferralsController],
   providers: [InterAgencyReferralsService],

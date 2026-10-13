@@ -248,6 +248,9 @@ export async function migrate() {
   await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id)`);
   await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS intervention_type TEXT`);
   await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS program_enrollment_id UUID`);
+  // The matrix's required-form obligation rides the row (Mirrors
+  // AddRequiredFormToInterventions…0097).
+  await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS required_form TEXT`);
 
   // Mirrors CaseEventsAndReminders0000000000083: court hearings + scheduled
   // home visits, the reminder dedupe ledger, and reminder lead-time settings.

@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CaseIntervention } from './case-intervention.entity';
+import { ProgramIntervention } from '../programs/program-intervention.entity';
 import { CaseInterventionsService } from './case-interventions.service';
 import { CaseInterventionsController } from './case-interventions.controller';
 import { AccessCardsModule } from '../access-cards/access-cards.module';
@@ -13,8 +14,9 @@ import { CasesModule } from '../cases/cases.module';
   // module now requires the cases module to reach the locks service. Only
   // `CasesService` is exported from there, so the exposure is narrow — the
   // done-predicate behind `CaseStepLocksService` is still not reachable from out
-  // here, which is what that export boundary was for.
-  imports: [TypeOrmModule.forFeature([CaseIntervention]), forwardRef(() => AccessCardsModule), forwardRef(() => CasesModule)],
+  // here, which is what that export boundary was for. `ProgramIntervention` feeds
+  // the matrix-membership validation + the required-form obligation.
+  imports: [TypeOrmModule.forFeature([CaseIntervention, ProgramIntervention]), forwardRef(() => AccessCardsModule), forwardRef(() => CasesModule)],
   controllers: [CaseInterventionsController],
   providers: [CaseInterventionsService],
   exports: [CaseInterventionsService],

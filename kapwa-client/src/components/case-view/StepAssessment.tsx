@@ -3,6 +3,7 @@ import { api } from '@/lib/api';
 import { isOnline } from '@/lib/sync';
 import { queueFsmTransition } from '@/lib/offline-queue';
 import { toast } from 'sonner';
+import { humanizeError } from '@/lib/errors';
 import { queryKeys } from '@/lib/query-keys';
 import { useSWRConfig } from 'swr';
 import { Button } from '@/components/ui/button';
@@ -84,7 +85,9 @@ export function StepAssessment({
       }
       await mutate(queryKeys.cases.detail(caseId));
     } catch (e) {
-      console.error('Failed to complete assessment:', e);
+      // A refused/network-failed advance is the primary action of step 1 —
+      // a console line was the only trace (audit: silent failure).
+      toast.error(t('caseView.assessment.completeFailed', 'Could not complete the assessment'), { description: humanizeError(e) });
     } finally {
       setTransitioning(false);
     }

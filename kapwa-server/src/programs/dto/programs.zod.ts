@@ -13,6 +13,14 @@ export const ProgramInterventionInputSchema = z.object({
   requiredForm: z.string().nullish(), // key of the form format, e.g. 'social_case_study_report'
 });
 
+/**
+ * Duplicate matrix rows corrupt the rewrite (delete-then-insert fails mid-loop
+ * and a truncated matrix is left on disk) — refuse them at the schema edge so
+ * the 400 carries the reason instead of a 500 (audit 3.2.5).
+ */
+const uniqueMatrix = <T>(interventions: Array<{ interventionType: string }> | undefined): boolean =>
+  !interventions || new Set(interventions.map((i) => i.interventionType)).size === interventions.length;
+
 export const CreateProgramSchema = z.object({
   name: z.string().min(1, 'Program name is required'),
   category: z.string().optional(),
@@ -23,6 +31,9 @@ export const CreateProgramSchema = z.object({
   formTemplate: z.record(z.any()).optional(),
   interventions: z.array(ProgramInterventionInputSchema).optional(),
   isActive: z.boolean().optional(),
+}).refine((d) => uniqueMatrix(d.interventions), {
+  message: 'Each intervention may appear only once in the program matrix',
+  path: ['interventions'] as const,
 });
 
 export const UpdateProgramSchema = z.object({
@@ -35,6 +46,9 @@ export const UpdateProgramSchema = z.object({
   formTemplate: z.record(z.any()).optional(),
   interventions: z.array(ProgramInterventionInputSchema).optional(),
   isActive: z.boolean().optional(),
+}).refine((d) => uniqueMatrix(d.interventions), {
+  message: 'Each intervention may appear only once in the program matrix',
+  path: ['interventions'] as const,
 });
 
 export type CreateProgramInput = z.infer<typeof CreateProgramSchema>;

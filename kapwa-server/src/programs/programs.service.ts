@@ -73,22 +73,31 @@ export class ProgramsService {
       }
       // The Program → Services matrix: submitted rows replace the current set
       // (service rows not listed are dropped). requiredForm is upserted for the
-      // rows that stay.
+      // rows that stay. The rewrite is one transaction: a failed row must not
+      // leave a truncated matrix on disk (audit 3.2.5). Duplicates are refused
+      // by both the zod refine and this belt-and-braces check (the unique key
+      // would otherwise abort mid-loop).
       if (Array.isArray(data.interventions)) {
         // findById loaded the eager rows; the cascade save below would re-insert
         // these STALE rows on top of the fresh ones and die on the unique
         // (program_id, intervention_type) — clear them first.
         prog.interventionRows = [];
-        await this.interventionRepo.delete({ programId: id });
-        for (const { interventionType, requiredForm } of data.interventions) {
-          await this.interventionRepo.save(
-            this.interventionRepo.create({
-              programId: id,
-              interventionType,
-              requiredForm: requiredForm || null,
-            }),
-          );
+        const rows = data.interventions;
+        if (new Set(rows.map((r) => r.interventionType)).size !== rows.length) {
+          throw new BadRequestException('Each intervention may appear only once in the program matrix');
         }
+        await this.interventionRepo.manager.transaction(async (em) => {
+          await em.delete(ProgramIntervention, { programId: id });
+          for (const { interventionType, requiredForm } of rows) {
+            await em.save(
+              em.create(ProgramIntervention, {
+                programId: id,
+                interventionType,
+                requiredForm: requiredForm || null,
+              }),
+            );
+          }
+        });
       }
       await this.progRepo.save(prog);
     }
