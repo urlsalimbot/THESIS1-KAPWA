@@ -1961,6 +1961,13 @@ const fil: EnLocale = {
       "date": "Petsa",
       "time": "Oras",
       "venue": "Lugar / Korte",
+      "venuePlaceholder": "Piliin ang korte",
+      "courtGroup": {
+        "local": "Norzagaray",
+        "nearby": "Mga kalapit na munisipal na hukuman",
+        "rtc": "Mga panrehiyong hukuman ng paglilitis (RTC)",
+        "family": "Mga hukuman ng pamilya"
+      },
       "notes": "Mga Tala",
       "attending": "Dadaluhan ng opisina",
       "attendingBadge": "Dadaluhan",

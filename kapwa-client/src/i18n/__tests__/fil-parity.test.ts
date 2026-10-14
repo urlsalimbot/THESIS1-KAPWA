@@ -97,6 +97,8 @@ const ALLOWED_IDENTICAL = new Set([
   'caseView.implement.modeOfDelivery.cash',
   'caseView.implement.modeOfDelivery.inKind',
   'caseView.implement.req',
+  // Municipality as a proper noun (the court's own station name).
+  'caseView.hearings.courtGroup.local',
   'caseView.stepper.phaseIn',
   'caseView.stepper.phaseOut',
   'approvals.phaseIn',

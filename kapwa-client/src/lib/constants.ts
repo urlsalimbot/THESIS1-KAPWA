@@ -68,6 +68,62 @@ export function interventionFormLabel(key: string, t?: (k: string, fb: string) =
   return key;
 }
 
+/**
+ * Courts a Norzagaray MSWD worker attends, for the hearing-venue picker.
+ *
+ * The names and addresses are proper nouns, so they are data, not copy: only
+ * the group headings are translated (like program and agency names, which also
+ * live untranslated). Nothing outside this list is lost — the hearing form
+ * keeps its Notes field for anything else.
+ *
+ * Sources: Supreme Court court directory (sc.judiciary.gov.ph) and the OCA
+ * "Updated Territorial Jurisdiction as of November 27, 2024", which reassigned
+ * MTC Norzagaray from the San Jose del Monte RTC to the Malolos City RTC.
+ */
+export const COURT_GROUPS: ReadonlyArray<{
+  key: string;
+  fallback: string;
+  courts: ReadonlyArray<{ name: string; detail: string }>;
+}> = [
+  {
+    key: 'caseView.hearings.courtGroup.local',
+    fallback: 'Norzagaray',
+    courts: [
+      { name: 'MTC Norzagaray', detail: 'Municipal Compound (back of the Municipal Hall), Poblacion, Norzagaray' },
+    ],
+  },
+  {
+    key: 'caseView.hearings.courtGroup.nearby',
+    fallback: 'Nearby municipal trial courts',
+    courts: [
+      { name: 'MTC Angat', detail: 'Angat, Bulacan' },
+      { name: 'MTC Bustos', detail: 'Bustos, Bulacan' },
+      { name: 'MTC Doña Remedios Trinidad', detail: 'Doña Remedios Trinidad, Bulacan' },
+      { name: 'MTC Pandi', detail: 'Pandi, Bulacan' },
+      { name: 'MTC Sta. Maria', detail: 'M. De Leon St., Poblacion, Sta. Maria, Bulacan' },
+      { name: 'MTCC Malolos City', detail: 'Malolos City, Bulacan' },
+      { name: 'MTCC San Jose del Monte City', detail: 'San Jose del Monte City, Bulacan' },
+    ],
+  },
+  {
+    key: 'caseView.hearings.courtGroup.rtc',
+    fallback: 'Regional trial courts',
+    courts: [
+      { name: 'RTC Malolos City', detail: 'Malolos City, Bulacan (the station for this municipality)' },
+      { name: 'RTC San Jose del Monte City', detail: 'San Jose del Monte City, Bulacan' },
+    ],
+  },
+  {
+    key: 'caseView.hearings.courtGroup.family',
+    fallback: 'Family courts',
+    courts: [
+      { name: 'Family Court, Branch 4-FC', detail: 'Malolos City, Bulacan' },
+      { name: 'Family Court, Branch 5-FC', detail: 'San Jose del Monte City, Bulacan' },
+      { name: 'Family Court, Branch 6', detail: 'Gov. Fortunato Halili Ave., Sta. Maria, Bulacan' },
+    ],
+  },
+];
+
 /** Typed programs applicable per statutory case category (catalog Appendix B). */
 export const PROGRAM_TYPES_BY_CASE_CATEGORY: Record<string, readonly string[]> = {
   'Children in Conflict with the Law (CICL)': [

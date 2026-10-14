@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { StepCourtHearings } from './StepCourtHearings';
@@ -80,6 +80,30 @@ describe('StepCourtHearings', () => {
     await waitFor(() => expect(mockApiPost).toHaveBeenCalledWith(
       '/cases/c1/events',
       expect.objectContaining({ eventType: 'court_hearing', eventDate: '2026-11-02' }),
+    ));
+  });
+
+  it('picks the hearing venue from the court list, MTC Norzagaray first', async () => {
+    const user = userEvent.setup();
+    renderStep([]);
+    await user.click(await screen.findByRole('button', { name: /Add Hearing/ }));
+    fireEvent.change(await screen.findByLabelText(/Date/), { target: { value: '2026-11-02' } });
+
+    await user.click(await screen.findByRole('combobox'));
+    // Radix also renders a hidden native <select> whose <option>s match by role,
+    // so the visible listbox is the scope to assert and click within.
+    const list = await screen.findByRole('listbox');
+    // The local court leads the list, at the municipal compound.
+    const mtc = within(list).getByRole('option', { name: /MTC Norzagaray/ });
+    expect(mtc.textContent).toMatch(/Municipal Compound/);
+    // Family courts ride the same picker: CICL and VAWC hearings land there.
+    expect(within(list).getByRole('option', { name: /Family Court, Branch 6/ })).toBeTruthy();
+    await user.click(mtc);
+
+    await user.click(screen.getByRole('button', { name: /Save Hearing/ }));
+    await waitFor(() => expect(mockApiPost).toHaveBeenCalledWith(
+      '/cases/c1/events',
+      expect.objectContaining({ venue: 'MTC Norzagaray' }),
     ));
   });
 

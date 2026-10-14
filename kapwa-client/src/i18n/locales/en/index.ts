@@ -340,6 +340,13 @@ const en = {
       "date": "Date",
       "time": "Time",
       "venue": "Venue / Court",
+      "venuePlaceholder": "Select the court",
+      "courtGroup": {
+        "local": "Norzagaray",
+        "nearby": "Nearby municipal trial courts",
+        "rtc": "Regional trial courts",
+        "family": "Family courts"
+      },
       "notes": "Notes",
       "attending": "Office will attend",
       "attendingBadge": "Attending",

@@ -9,6 +9,10 @@ import { toastSaved } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
+import {
+  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { COURT_GROUPS } from '@/lib/constants';
 import { Gavel, Lock, Plus, Trash2, Ban, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -249,7 +253,33 @@ export function StepCourtHearings({ caseId, caseData, userRole, readOnly, lockRe
                   </label>
                   <label className="space-y-1.5 min-w-48 flex-1">
                     <span className="text-xs font-medium text-muted-foreground">{t('caseView.hearings.venue', 'Venue / Court')}</span>
-                    <Input value={form.venue} onChange={(e) => setForm((f) => ({ ...f, venue: e.target.value }))} />
+                    {/* A picker, not free text: the office attends a known set of
+                        courts, and a typed venue drifted ("RTC Bulacan",
+                        "Malolos RTC", "RTC Malolos") across the same hearing.
+                        Anything outside the list goes in Notes. */}
+                    <Select
+                      value={form.venue || undefined}
+                      onValueChange={(v) => setForm((f) => ({ ...f, venue: v }))}
+                    >
+                      <SelectTrigger aria-label={t('caseView.hearings.venue', 'Venue / Court')}>
+                        <SelectValue placeholder={t('caseView.hearings.venuePlaceholder', 'Select the court')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COURT_GROUPS.map((group) => (
+                          <SelectGroup key={group.key}>
+                            <SelectLabel>{t(group.key, group.fallback)}</SelectLabel>
+                            {group.courts.map((court) => (
+                              <SelectItem key={court.name} value={court.name}>
+                                <span className="flex flex-col items-start">
+                                  <span>{court.name}</span>
+                                  <span className="text-xs text-muted-foreground">{court.detail}</span>
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </label>
                   <label className="space-y-1.5 min-w-48 flex-1">
                     <span className="text-xs font-medium text-muted-foreground">{t('caseView.hearings.notes', 'Notes')}</span>
