@@ -312,9 +312,15 @@ export function CaseViewPage() {
   // The enrollments step's documentary gate: the enrolled programs' documents.
   // Enrollments carry programId (the program-as-assigned snapshot), the same
   // field the interventions weigh program-documents on.
-  const enrollmentProgramIds = useMemo(
-    () => [...new Set((enrollments as any[]).map((e: any) => e?.programId).filter(Boolean))],
+  // Withdrawn enrollments are history: they neither weigh their documents nor
+  // satisfy the step (audit 3.2.7 — the server's gates filter the same way).
+  const liveEnrollments = useMemo(
+    () => (enrollments as any[]).filter((e: any) => e?.status !== 'withdrawn'),
     [enrollments],
+  );
+  const enrollmentProgramIds = useMemo(
+    () => [...new Set(liveEnrollments.map((e: any) => e?.programId).filter(Boolean))],
+    [liveEnrollments],
   );
   const enrollmentRequirementsMet = useMemo(
     () => enrollmentProgramRequirementsMet(enrollmentProgramIds, programs || [], caseData?.requirementsChecklist),
@@ -882,7 +888,7 @@ export function CaseViewPage() {
             {/* `requirementsMet` only: the stepper applies the case-row fallback
                 for the two "not needed" decisions itself, so naming them here
                 would restate a rule that lives in one place. */}
-            <CaseStepper currentStep={currentStep} onStepClick={selectStep} caseData={caseData} interventionCount={interventions.length} enrollmentCount={enrollments.length} requirementsMet={requirementsMet} enrollmentRequirementsMet={enrollmentRequirementsMet} interAgencyReferralCount={interAgencyReferralCount} courtHearingCount={courtHearingCount} />
+            <CaseStepper currentStep={currentStep} onStepClick={selectStep} caseData={caseData} interventionCount={interventions.length} enrollmentCount={liveEnrollments.length} requirementsMet={requirementsMet} enrollmentRequirementsMet={enrollmentRequirementsMet} interAgencyReferralCount={interAgencyReferralCount} courtHearingCount={courtHearingCount} />
           </div>
 
           {/* Active Step Content */}

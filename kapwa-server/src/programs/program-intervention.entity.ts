@@ -28,6 +28,14 @@ export class ProgramIntervention extends BaseEntity {
   @Column({ name: 'required_form', type: 'text', nullable: true })
   requiredForm?: string | null;
 
+  /**
+   * Display order within the program's matrix. The admin editor's row order is
+   * the office's, not the database's: without this the list rendered in
+   * whatever order the rows happened to come back (audit 3.2.13).
+   */
+  @Column({ name: 'sort_order', type: 'int', default: 0 })
+  sortOrder!: number;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 

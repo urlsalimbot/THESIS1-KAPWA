@@ -33,8 +33,12 @@ export class ProgramsService {
               ? requiredDocuments.map(d => this.progRepo.manager.create(ProgramRequiredDocument, { documentKey: d, mandatory: true }))
               : undefined,
             interventionRows: Array.isArray(interventions)
-              ? interventions.map(({ interventionType, requiredForm }) =>
-                  this.progRepo.manager.create(ProgramIntervention, { interventionType, requiredForm: requiredForm || null }),
+              ? interventions.map(({ interventionType, requiredForm }, index) =>
+                  this.progRepo.manager.create(ProgramIntervention, {
+                    interventionType,
+                    requiredForm: requiredForm || null,
+                    sortOrder: index,
+                  }),
                 )
               : undefined,
           }
@@ -59,47 +63,45 @@ export class ProgramsService {
     if (data.approvalWorkflow) {
       this.validateWorkflow(data.approvalWorkflow);
     }
-    // Upsert child rows (orphanedRowAction:'delete' removes rows dropped from the array).
+    // Child collections are replaced with explicit writes inside one
+    // transaction. The parent cascade save this used to ride on is gone: with
+    // the collection cleared for orphan handling, `save(prog)` reloaded the
+    // relation from the database, saw the rows the transaction had just
+    // inserted as orphans, and tried to null their `program_id` — a NOT NULL
+    // violation that aborted the whole write (found live while replacing a
+    // matrix). Explicit delete + insert has no graph state to get wrong.
     if (Array.isArray(data.fundSources) || Array.isArray(data.requiredDocuments) || Array.isArray(data.interventions)) {
-      if (Array.isArray(data.fundSources)) {
-        prog.fundSourceRows = data.fundSources.map(f =>
-          this.progRepo.manager.create(ProgramFundSource, { programId: id, name: f }),
-        );
+      const rows = data.interventions ?? [];
+      if (Array.isArray(data.interventions)
+        && new Set(rows.map((r) => r.interventionType)).size !== rows.length) {
+        throw new BadRequestException('Each intervention may appear only once in the program matrix');
       }
-      if (Array.isArray(data.requiredDocuments)) {
-        prog.requiredDocumentRows = data.requiredDocuments.map(d =>
-          this.progRepo.manager.create(ProgramRequiredDocument, { programId: id, documentKey: d, mandatory: true }),
-        );
-      }
-      // The Program → Services matrix: submitted rows replace the current set
-      // (service rows not listed are dropped). requiredForm is upserted for the
-      // rows that stay. The rewrite is one transaction: a failed row must not
-      // leave a truncated matrix on disk (audit 3.2.5). Duplicates are refused
-      // by both the zod refine and this belt-and-braces check (the unique key
-      // would otherwise abort mid-loop).
-      if (Array.isArray(data.interventions)) {
-        // findById loaded the eager rows; the cascade save below would re-insert
-        // these STALE rows on top of the fresh ones and die on the unique
-        // (program_id, intervention_type) — clear them first.
-        prog.interventionRows = [];
-        const rows = data.interventions;
-        if (new Set(rows.map((r) => r.interventionType)).size !== rows.length) {
-          throw new BadRequestException('Each intervention may appear only once in the program matrix');
-        }
-        await this.interventionRepo.manager.transaction(async (em) => {
-          await em.delete(ProgramIntervention, { programId: id });
-          for (const { interventionType, requiredForm } of rows) {
-            await em.save(
-              em.create(ProgramIntervention, {
-                programId: id,
-                interventionType,
-                requiredForm: requiredForm || null,
-              }),
-            );
+      await this.progRepo.manager.transaction(async (em) => {
+        if (Array.isArray(data.fundSources)) {
+          await em.delete(ProgramFundSource, { programId: id });
+          for (const name of data.fundSources) {
+            await em.insert(ProgramFundSource, { programId: id, name });
           }
-        });
-      }
-      await this.progRepo.save(prog);
+        }
+        if (Array.isArray(data.requiredDocuments)) {
+          await em.delete(ProgramRequiredDocument, { programId: id });
+          for (const documentKey of data.requiredDocuments) {
+            await em.insert(ProgramRequiredDocument, { programId: id, documentKey, mandatory: true });
+          }
+        }
+        if (Array.isArray(data.interventions)) {
+          await em.delete(ProgramIntervention, { programId: id });
+          // The submitted row order IS the display order (audit 3.2.13).
+          for (const [index, row] of rows.entries()) {
+            await em.insert(ProgramIntervention, {
+              programId: id,
+              interventionType: row.interventionType,
+              requiredForm: row.requiredForm || null,
+              sortOrder: index,
+            });
+          }
+        }
+      });
     }
     const { fundSources, requiredDocuments, interventions, ...rest } = data;
     const changed = 'formTemplate' in data && JSON.stringify(data.formTemplate) !== JSON.stringify(prog.formTemplate);

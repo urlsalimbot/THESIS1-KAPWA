@@ -50,7 +50,11 @@ export function ProgramsPage() {
   async function load(signal?: AbortSignal) {
     setLoading(true);
     try {
-      const data = await api.get<ProgramRecord[]>('/programs');
+      // `activeOnly=false`: the status filter and the Inactive stat are this
+      // page's own, so the list must actually contain deactivated programs —
+      // without them the filter matched nothing and the remediation path for a
+      // wrongly deactivated program was unreachable (audit 3.2.11).
+      const data = await api.get<ProgramRecord[]>(['programs', { activeOnly: false }], { signal });
       setRecords(data || []);
     } catch { setRecords([]); }
     setLoading(false);

@@ -251,6 +251,29 @@ export async function migrate() {
   // The matrix's required-form obligation rides the row (Mirrors
   // AddRequiredFormToInterventions…0097).
   await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS required_form TEXT`);
+  // Program-matrix display order + the enrollment FK (Mirrors
+  // ProgramMatrixOrderAndEnrollmentFk…0098).
+  await q.query(`ALTER TABLE program_interventions ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0`);
+  await q.query(`
+    UPDATE program_interventions pi
+       SET sort_order = ordered.rn
+      FROM (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY program_id ORDER BY created_at, intervention_type) - 1 AS rn
+          FROM program_interventions
+      ) AS ordered
+     WHERE pi.id = ordered.id AND pi.sort_order = 0
+  `);
+  await q.query(`
+    UPDATE case_interventions ci
+       SET program_enrollment_id = NULL
+     WHERE ci.program_enrollment_id IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM program_enrollments pe WHERE pe.id = ci.program_enrollment_id)
+  `);
+  await q.query(`DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='fk_case_interventions_enrollment') THEN
+      ALTER TABLE case_interventions ADD CONSTRAINT fk_case_interventions_enrollment FOREIGN KEY (program_enrollment_id) REFERENCES program_enrollments(id) ON DELETE SET NULL;
+    END IF;
+  END $$`);
 
   // Mirrors CaseEventsAndReminders0000000000083: court hearings + scheduled
   // home visits, the reminder dedupe ledger, and reminder lead-time settings.

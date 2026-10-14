@@ -43,6 +43,15 @@ export function isFinancialIntervention(code: string | null | undefined): boolea
   return !!code && FINANCIAL_INTERVENTION_TYPES.includes(code);
 }
 
+/** The form formats an intervention row may oblige (mirrors the client's INTERVENTION_FORM_FORMATS). */
+export const INTERVENTION_FORM_FORMATS = [
+  'social_case_study_report',
+  'incident_report_form',
+  'medical_certificate',
+  'death_certificate',
+  'referral_form',
+] as const;
+
 /**
  * Which typed programs apply to which statutory case category (spec Appendix B:
  * a CICL case enrolls in diversion, a VAWC case in women's welfare — never a

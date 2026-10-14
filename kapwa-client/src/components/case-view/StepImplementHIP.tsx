@@ -82,7 +82,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
   // service rendered under one of these enrollments, so the dialog's program
   // select is scoped to them instead of re-listing the whole catalog.
   const { data: enrollments = [] } = useSWR<Array<{
-    id: string; programId: string; programName: string; services?: string[];
+    id: string; programId: string; programName: string; services?: string[]; status?: string;
   }>>(queryKeys.cases.enrollments(caseId));
 
   const [addOpen, setAddOpen] = useState(false);
@@ -481,9 +481,14 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
                     case (the treatment plan): the select lists the case's
                     enrollments — A–Z by program name — and nothing else, no
                     re-picking from the whole catalog, no ad-hoc service. */}
-                {[...enrollments].sort((a, b) => a.programName.localeCompare(b.programName)).map(e => (
-                  <SelectItem key={e.id} value={`enr:${e.id}`}>{e.programName}</SelectItem>
-                ))}
+                {enrollments
+                  // Only a live enrollment can take a new service: a completed
+                  // or withdrawn program is history (audit 3.2.7).
+                  .filter((e) => (e.status ?? 'active') === 'active')
+                  .sort((a, b) => a.programName.localeCompare(b.programName))
+                  .map(e => (
+                    <SelectItem key={e.id} value={`enr:${e.id}`}>{e.programName}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {/* The checklist in the card behind this dialog lists the same

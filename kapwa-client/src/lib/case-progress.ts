@@ -18,12 +18,24 @@ export function isAssessmentStepDone(caseData: any): boolean {
 }
 
 /**
- * Every documentary need of a program. All intervention documents are required,
- * so the legacy `mandatory` flag is deliberately ignored: a conditional document
- * ("... (if applicable)") counts exactly like any other and must be satisfied
- * before the case can activate.
+ * Every documentary need of a program that actually BLOCKS the seal.
+ *
+ * `mandatory: false` marks a conditional document ("… (if applicable)"): it is
+ * still listed on the checklist for completeness, but it never holds a step
+ * back — which is the worker's N/A path for a document the client cannot
+ * produce (audit 3.2.12). The server's `requiredDocumentKeys` mirrors this
+ * rule, and `case-step-done-fixture.json` keeps the two equal.
  */
 export function requiredDocumentKeys(program: any): string[] {
+  const details = program?.requiredDocumentDetails;
+  if (Array.isArray(details) && details.length > 0) {
+    return details.filter((d: any) => d?.mandatory !== false).map((d: any) => d?.key).filter(Boolean);
+  }
+  return Array.isArray(program?.requiredDocuments) ? program.requiredDocuments : [];
+}
+
+/** Every document a program lists, optional ones included — what the checklist shows. */
+export function listedDocumentKeys(program: any): string[] {
   const details = program?.requiredDocumentDetails;
   if (Array.isArray(details) && details.length > 0) {
     return details.map((d: any) => d?.key).filter(Boolean);

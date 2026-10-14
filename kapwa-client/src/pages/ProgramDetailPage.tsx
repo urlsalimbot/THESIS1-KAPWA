@@ -16,7 +16,16 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  CheckCircle, FileText, Power, Trash2, XCircle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { PROGRAM_TYPES } from '@/lib/constants';
+import {
+  CheckCircle, FileText, Pencil, Power, Trash2, XCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDate } from '../lib/format';
@@ -33,6 +42,8 @@ interface ProgramDetail {
   id: string;
   name: string;
   category?: string;
+  /** Catalog program type (see PROGRAM_TYPES); absent on custom programs. */
+  programType?: string;
   legalBasis?: string;
   requiredDocuments?: string[];
   fundSources?: string[];
@@ -65,6 +76,26 @@ export function ProgramDetailPage() {
   );
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Program details are editable after creation (audit 3.2.9): the schemas and
+  // the service always supported it, only the UI rendered them read-only, so a
+  // typo in the name or a missing document needed SQL.
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [savingDetails, setSavingDetails] = useState(false);
+  const [details, setDetails] = useState({
+    name: '', category: '', legalBasis: '', programType: '',
+    requiredDocuments: '', fundSources: '',
+  });
+  useEffect(() => {
+    if (!program) return;
+    setDetails({
+      name: program.name ?? '',
+      category: program.category ?? '',
+      legalBasis: program.legalBasis ?? '',
+      programType: program.programType ?? '',
+      requiredDocuments: (program.requiredDocuments ?? []).join('\n'),
+      fundSources: (program.fundSources ?? []).join('\n'),
+    });
+  }, [program]);
   // Editable Program → Interventions matrix (with per-intervention form
   // formats). Loaded once the program detail arrives; dirty only after edit.
   const [interventionRows, setInterventionRows] = useState<InterventionRowInput[]>([]);
@@ -112,6 +143,34 @@ export function ProgramDetailPage() {
       toast.error(t('programs.updateFailed', 'Could not update program'), { description: humanizeError(err) });
     } finally {
       setSavingMatrix(false);
+    }
+  }
+
+  /** One line per entry; blanks dropped, order kept. */
+  function linesToList(text: string): string[] {
+    return text.split('\n').map((l) => l.trim()).filter(Boolean);
+  }
+
+  async function saveDetails() {
+    if (!id || savingDetails) return;
+    setSavingDetails(true);
+    try {
+      await api.patch(`/programs/${id}`, {
+        name: details.name.trim(),
+        category: details.category.trim() || undefined,
+        legalBasis: details.legalBasis.trim() || undefined,
+        programType: details.programType || undefined,
+        requiredDocuments: linesToList(details.requiredDocuments),
+        fundSources: linesToList(details.fundSources),
+      });
+      await mutate();
+      await globalMutate(queryKeys.programs.list());
+      setDetailsOpen(false);
+      toast.success(t('programs.detailsSaved', 'Program details saved'));
+    } catch (err) {
+      toast.error(t('programs.updateFailed', 'Could not update program'), { description: humanizeError(err) });
+    } finally {
+      setSavingDetails(false);
     }
   }
 
@@ -163,6 +222,10 @@ export function ProgramDetailPage() {
           <Badge variant={program.isActive ? 'default' : 'secondary'} className={cn(program.isActive && 'bg-success')}>
             {program.isActive ? t('programs.active', 'Active') : t('programs.inactive', 'Inactive')}
           </Badge>
+          <Button variant="outline" size="sm" onClick={() => setDetailsOpen(true)} disabled={busy} className="gap-1.5">
+            <Pencil size={14} aria-hidden="true" />
+            {t('programs.editDetails', 'Edit Details')}
+          </Button>
           <Button variant="outline" size="sm" onClick={toggleActive} disabled={busy} className="gap-1.5">
             <Power size={14} aria-hidden="true" />
             {program.isActive ? t('programs.deactivate', 'Deactivate') : t('programs.activate', 'Activate')}
@@ -330,6 +393,62 @@ export function ProgramDetailPage() {
           </section>
         </div>
       </div>
+
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('programs.editDetails', 'Edit Details')}</DialogTitle>
+            <DialogDescription>
+              {t('programs.editDetailsHint', 'Name, catalog type, legal basis and the document / fund-source lists. One entry per line.')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <label className="space-y-1.5 block">
+              <span className="text-sm font-medium">{t('programs.name', 'Name *')}</span>
+              <Input value={details.name} onChange={(e) => setDetails((d) => ({ ...d, name: e.target.value }))} />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="space-y-1.5 block">
+                <span className="text-sm font-medium">{t('programs.category', 'Category')}</span>
+                <Input value={details.category} onChange={(e) => setDetails((d) => ({ ...d, category: e.target.value }))} />
+              </label>
+              <div className="space-y-1.5">
+                <span className="text-sm font-medium">{t('programs.programType', 'Catalog type')}</span>
+                <Select
+                  value={details.programType || '__none'}
+                  onValueChange={(v) => setDetails((d) => ({ ...d, programType: v === '__none' ? '' : v }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">{t('programs.programTypeNone', 'Custom (no catalog type)')}</SelectItem>
+                    {PROGRAM_TYPES.map((pt) => (
+                      <SelectItem key={pt} value={pt}>{t(`programType.${pt}`, pt)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <label className="space-y-1.5 block">
+              <span className="text-sm font-medium">{t('programs.legalBasis', 'Legal basis')}</span>
+              <Input value={details.legalBasis} onChange={(e) => setDetails((d) => ({ ...d, legalBasis: e.target.value }))} />
+            </label>
+            <label className="space-y-1.5 block">
+              <span className="text-sm font-medium">{t('programs.requiredDocuments', 'Required Documents')}</span>
+              <Textarea rows={4} value={details.requiredDocuments} onChange={(e) => setDetails((d) => ({ ...d, requiredDocuments: e.target.value }))} />
+            </label>
+            <label className="space-y-1.5 block">
+              <span className="text-sm font-medium">{t('programs.fundSources', 'Fund Sources')}</span>
+              <Textarea rows={3} value={details.fundSources} onChange={(e) => setDetails((d) => ({ ...d, fundSources: e.target.value }))} />
+            </label>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDetailsOpen(false)}>{t('common.cancel', 'Cancel')}</Button>
+            <Button onClick={saveDetails} disabled={savingDetails || !details.name.trim()}>
+              {savingDetails ? t('programs.saving', 'Saving...') : t('common.save', 'Save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>

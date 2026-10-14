@@ -267,7 +267,7 @@ export function StepEnrollments({ caseId, caseData, userRole, readOnly, lockRead
           stepKey="enrollments"
           caseData={caseData}
           interventionCount={0}
-          enrollmentCount={rows.length}
+          enrollmentCount={rows.filter((r) => r.status !== 'withdrawn').length}
           opts={{ enrollmentsNotNeeded: notNeeded, enrollmentRequirementsMet }}
           locked={stepLock}
           readOnly={lockReadOnly}

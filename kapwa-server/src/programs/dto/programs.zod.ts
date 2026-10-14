@@ -1,4 +1,10 @@
 import { z } from 'zod';
+import { INTERVENTION_FORM_FORMATS, PROGRAM_TYPES } from '../../common/case-catalog';
+
+// The catalog vocabularies, as zod enums: the UI cannot invent a program type
+// or a form format the rest of the system does not know (audit 3.2.9).
+const ProgramTypeSchema = z.enum(PROGRAM_TYPES as unknown as [string, ...string[]]);
+const FormFormatSchema = z.enum(INTERVENTION_FORM_FORMATS as unknown as [string, ...string[]]);
 
 export const ApprovalStepSchema = z.object({
   stepName: z.string().min(1, 'Step name required'),
@@ -10,7 +16,7 @@ export const ApprovalStepSchema = z.object({
 /** One row of the Program → Interventions matrix: an intervention the program renders, with an optional form format it obliges. */
 export const ProgramInterventionInputSchema = z.object({
   interventionType: z.string().min(1, 'Intervention is required'),
-  requiredForm: z.string().nullish(), // key of the form format, e.g. 'social_case_study_report'
+  requiredForm: FormFormatSchema.nullish(), // one of INTERVENTION_FORM_FORMATS
 });
 
 /**
@@ -23,6 +29,7 @@ const uniqueMatrix = <T>(interventions: Array<{ interventionType: string }> | un
 
 export const CreateProgramSchema = z.object({
   name: z.string().min(1, 'Program name is required'),
+  programType: ProgramTypeSchema.optional(),
   category: z.string().optional(),
   requiredDocuments: z.array(z.string()).optional(),
   fundSources: z.array(z.string()).optional(),
@@ -38,6 +45,7 @@ export const CreateProgramSchema = z.object({
 
 export const UpdateProgramSchema = z.object({
   name: z.string().min(1).optional(),
+  programType: ProgramTypeSchema.optional(),
   category: z.string().optional(),
   requiredDocuments: z.array(z.string()).optional(),
   fundSources: z.array(z.string()).optional(),

@@ -18,10 +18,21 @@ describe('ProgramsService', () => {
       findOne: jest.fn(),
       update: jest.fn(),
       query: jest.fn(),
-      manager: { create: jest.fn((_entity: any, dto: any) => dto) },
+      manager: {
+        create: jest.fn((_entity: any, dto: any) => dto),
+        // The child rewrites run in one transaction on the program repo's manager.
+        transaction: jest.fn(async (fn: (em: any) => Promise<void>) => {
+          const em = {
+            delete: interventionRepoMock.delete,
+            insert: interventionRepoMock.insert,
+          };
+          await fn(em);
+        }),
+      },
     };
     interventionRepoMock = {
       delete: jest.fn().mockResolvedValue({}),
+      insert: jest.fn().mockResolvedValue({}),
       create: jest.fn((_entity: unknown, dto?: unknown) => dto ?? _entity),
       save: jest.fn((d: unknown) => Promise.resolve(d)),
       manager: {
@@ -30,8 +41,7 @@ describe('ProgramsService', () => {
         transaction: jest.fn(async (fn: (em: any) => Promise<void>) => {
           const em = {
             delete: interventionRepoMock.delete,
-            create: interventionRepoMock.create,
-            save: interventionRepoMock.save,
+            insert: interventionRepoMock.insert,
           };
           await fn(em);
         }),
@@ -209,10 +219,10 @@ describe('ProgramsService', () => {
       } as any);
 
       expect(repoMock.manager.create).toHaveBeenCalledWith(ProgramIntervention, {
-        interventionType: 'financial_grant', requiredForm: null,
+        interventionType: 'financial_grant', requiredForm: null, sortOrder: 0,
       });
       expect(repoMock.manager.create).toHaveBeenCalledWith(ProgramIntervention, {
-        interventionType: 'scsr_generated', requiredForm: 'social_case_study_report',
+        interventionType: 'scsr_generated', requiredForm: 'social_case_study_report', sortOrder: 1,
       });
       expect(repoMock.save).toHaveBeenCalled();
       expect(created.id).toBe('p1');
@@ -234,17 +244,19 @@ describe('ProgramsService', () => {
         ],
       } as any);
 
-      expect(prog.interventionRows).toEqual([]);
+      // The parent entity's eager collection is untouched — nothing cascades
+      // from it any more (that cascade is what nulled the fresh rows' FK).
       expect(interventionRepoMock.delete).toHaveBeenCalledWith(ProgramIntervention, { programId: 'p1' });
-      expect(interventionRepoMock.save).toHaveBeenCalledWith(expect.objectContaining({
-        programId: 'p1', interventionType: 'burial_assistance', requiredForm: null,
+      // Plain inserts (not `save`): the rewrite is a replace, and save()'s
+      // subject machinery emitted an UPDATE that nulled program_id.
+      expect(interventionRepoMock.insert).toHaveBeenCalledWith(ProgramIntervention, expect.objectContaining({
+        programId: 'p1', interventionType: 'burial_assistance', requiredForm: null, sortOrder: 0,
       }));
-      expect(interventionRepoMock.save).toHaveBeenCalledWith(expect.objectContaining({
-        programId: 'p1', interventionType: 'scsr_generated', requiredForm: 'social_case_study_report',
+      expect(interventionRepoMock.insert).toHaveBeenCalledWith(ProgramIntervention, expect.objectContaining({
+        programId: 'p1', interventionType: 'scsr_generated', requiredForm: 'social_case_study_report', sortOrder: 1,
       }));
-      // The program save (cascade) receives the cleared relation, so no stale
-      // row is re-inserted.
-      expect(repoMock.save).toHaveBeenCalledWith(prog);
+      // No parent cascade save at all for child rewrites.
+      expect(repoMock.save).not.toHaveBeenCalled();
     });
   });
 });

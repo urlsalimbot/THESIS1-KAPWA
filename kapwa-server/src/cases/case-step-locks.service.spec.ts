@@ -738,11 +738,11 @@ describe('CaseStepLocksService', () => {
       await expect(service.lock('c1', 'interventions', swUser)).resolves.toBeDefined();
     });
 
-    // `mandatory` is display-only: a conditional document ("… if applicable")
-    // counts exactly like any other. The client states this explicitly, so a
-    // server that relaxed on the flag would disagree with it on every program
-    // that carries one.
-    it('requires a document the program flags as non-mandatory', async () => {
+    // `mandatory: false` marks a conditional document ("… if applicable"): it
+    // is listed for completeness but never blocks the seal — that is the
+    // worker's N/A path (audit 3.2.12). The client's case-progress.ts and the
+    // shared fixture carry the same rule.
+    it('treats a document the program flags as non-mandatory as optional', async () => {
       findById.mockResolvedValue(stepInterventionsCase({ 'Valid ID': true }));
       interventionQuery.mockResolvedValue([{ program_id: 'p1' }]);
       programFind.mockResolvedValue([
@@ -752,7 +752,7 @@ describe('CaseStepLocksService', () => {
         ]),
       ]);
 
-      await expect(service.lock('c1', 'interventions', swUser)).rejects.toThrow(/not complete/i);
+      await expect(service.lock('c1', 'interventions', swUser)).resolves.toBeDefined();
     });
 
     // Only the programs behind *this* case's interventions count, and the keys
@@ -815,7 +815,10 @@ describe('CaseStepLocksService', () => {
       enrollmentCount.mockResolvedValue(1);
 
       await expect(service.lock('c1', 'enrollments', swUser)).resolves.toBeDefined();
-      expect(enrollmentCount).toHaveBeenCalledWith({ where: { caseId: 'c1' } });
+      // Withdrawn enrollments are history and drop out of the step (audit 3.2.7).
+      expect(enrollmentCount).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ caseId: 'c1' }),
+      }));
     });
   });
 

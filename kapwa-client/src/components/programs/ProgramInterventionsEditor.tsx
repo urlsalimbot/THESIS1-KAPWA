@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Plus, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
@@ -30,6 +30,15 @@ export function ProgramInterventionsEditor({
     onChange(value.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
   }
 
+  /** Swap a row with its neighbour — the list order IS the display order. */
+  function move(i: number, delta: -1 | 1) {
+    const j = i + delta;
+    if (j < 0 || j >= value.length) return;
+    const next = [...value];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  }
+
   return (
     <div className="space-y-2">
       <div className="space-y-2">
@@ -52,7 +61,16 @@ export function ProgramInterventionsEditor({
                   <SelectGroup key={group.key}>
                     <SelectLabel>{t(group.key, group.fallback)}</SelectLabel>
                     {group.codes.map((code) => (
-                      <SelectItem key={code} value={code}>{t(`interventionType.${code}`, code)}</SelectItem>
+                      <SelectItem
+                        key={code}
+                        value={code}
+                        // A code another row already holds is not offerable: the
+                        // matrix is one row per (program, type) and the server
+                        // refuses duplicates (audit 3.2.5).
+                        disabled={value.some((row, idx) => idx !== i && row.interventionType === code)}
+                      >
+                        {t(`interventionType.${code}`, code)}
+                      </SelectItem>
                     ))}
                   </SelectGroup>
                 ))}
@@ -74,16 +92,36 @@ export function ProgramInterventionsEditor({
                 ))}
               </SelectContent>
             </Select>
-            {value.length > 1 && (
+            <div className="flex items-center shrink-0">
               <Button variant="ghost"
                 type="button"
-                onClick={() => onChange(value.filter((_, idx) => idx !== i))}
-                aria-label={t('programs.removeIntervention', 'Remove intervention {{n}}', { n: i + 1 })}
-                className="shrink-0 text-muted-foreground hover:text-destructive"
+                disabled={i === 0}
+                onClick={() => move(i, -1)}
+                aria-label={t('programs.moveUp', 'Move intervention {{n}} up', { n: i + 1 })}
+                className="h-8 w-8 text-muted-foreground"
               >
-                <X size={16} />
+                <ArrowUp size={15} />
               </Button>
-            )}
+              <Button variant="ghost"
+                type="button"
+                disabled={i === value.length - 1}
+                onClick={() => move(i, 1)}
+                aria-label={t('programs.moveDown', 'Move intervention {{n}} down', { n: i + 1 })}
+                className="h-8 w-8 text-muted-foreground"
+              >
+                <ArrowDown size={15} />
+              </Button>
+              {value.length > 1 && (
+                <Button variant="ghost"
+                  type="button"
+                  onClick={() => onChange(value.filter((_, idx) => idx !== i))}
+                  aria-label={t('programs.removeIntervention', 'Remove intervention {{n}}', { n: i + 1 })}
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                >
+                  <X size={16} />
+                </Button>
+              )}
+            </div>
           </div>
         ))}
       </div>

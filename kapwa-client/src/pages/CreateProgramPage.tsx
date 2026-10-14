@@ -8,10 +8,11 @@ import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import { PROGRAM_TYPES } from '@/lib/constants';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { humanizeError } from '@/lib/errors';
 import {
@@ -54,6 +55,9 @@ export function CreateProgramPage() {
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [legalBasis, setLegalBasis] = useState('');
+  // Catalog type: which case categories may enroll (PROGRAM_TYPES). Optional —
+  // a custom PPA stays untyped and is offerable everywhere (audit 3.2.9).
+  const [programType, setProgramType] = useState('');
   const [fundSources, setFundSources] = useState<string[]>(['']);
   const [requiredDocuments, setRequiredDocuments] = useState<string[]>(['']);
   const [interventions, setInterventions] = useState<InterventionRowInput[]>([{ interventionType: '', requiredForm: null }]);
@@ -84,6 +88,7 @@ export function CreateProgramPage() {
         name: name.trim(),
         category: category.trim() || undefined,
         legalBasis: legalBasis.trim() || undefined,
+        programType: programType || undefined,
         fundSources: fundSources.map(s => s.trim()).filter(Boolean),
         requiredDocuments: requiredDocuments.map(s => s.trim()).filter(Boolean),
         interventions: interventions
@@ -141,6 +146,16 @@ export function CreateProgramPage() {
               <Input id="program-category" required value={category} onChange={e => setCategory(e.target.value)} placeholder={t('programs.categoryPlaceholder', 'e.g. Medical, Livelihood, Child Welfare')} className="h-9" />
             </div>
             <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground" htmlFor="program-type">{t('programs.programType', 'Catalog type')}</label>
+              <Select value={programType || '__none'} onValueChange={(v) => setProgramType(v === '__none' ? '' : v)}>
+                <SelectTrigger id="program-type" className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">{t('programs.programTypeNone', 'Custom (no catalog type)')}</SelectItem>
+                  {PROGRAM_TYPES.map((pt) => (
+                    <SelectItem key={pt} value={pt}>{t(`programType.${pt}`, pt)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="space-y-1">

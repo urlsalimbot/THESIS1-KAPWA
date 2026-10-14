@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { FileCheck, CheckCircle2, Circle, FileText, ShieldCheck, Clock } from 'lucide-react';
 import { RequirementFileUpload } from './RequirementFileUpload';
-import { requiredDocumentKeys } from '@/lib/case-progress';
+import { requiredDocumentKeys, listedDocumentKeys } from '@/lib/case-progress';
 
 interface Program {
   id: string;
@@ -96,9 +96,15 @@ export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, 
           .map((d: any) => d.documentKey),
       )]
     : [];
+  // Blocking keys decide the seal; the checklist still LISTS the optional ones
+  // (marked below) so the office can record them when the client brings them.
+  const blockingKeys = new Set([
+    ...relevantPrograms.flatMap((p) => requiredDocumentKeys(p)),
+    ...interventionDocKeys,
+  ]);
   const allRequirements = [
     ...new Set([
-      ...relevantPrograms.flatMap((p) => requiredDocumentKeys(p)),
+      ...relevantPrograms.flatMap((p) => listedDocumentKeys(p)),
       ...interventionDocKeys,
     ]),
   ];
@@ -198,6 +204,14 @@ export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, 
                     : <Circle size={18} className="text-muted-foreground shrink-0" />
                   }
                   <span className={`text-sm ${done ? 'text-muted-foreground' : ''}`}>{req}</span>
+                  {/* A conditional document is listed, never blocking: the
+                      badge is what tells a worker it cannot hold the step back
+                      (audit 3.2.12). */}
+                  {!blockingKeys.has(req) && (
+                    <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                      {t('caseView.implement.optionalDoc', 'Optional')}
+                    </Badge>
+                  )}
                 </div>
                 {uploadedDocs.length > 0 && (
                   <Badge variant="outline" className="text-xs gap-1">

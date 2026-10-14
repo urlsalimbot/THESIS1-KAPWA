@@ -77,11 +77,19 @@ export class CaseInterventionsService {
     // case: the enrollment is mandatory, and it has to be this case's row for
     // this program — otherwise the service rows under the wrong program.
     const enrollmentRows = await this.interventionRepo.manager.query(
-      `SELECT program_id FROM program_enrollments WHERE id = $1 AND case_id = $2`,
+      `SELECT program_id, status FROM program_enrollments WHERE id = $1 AND case_id = $2`,
       [data.programEnrollmentId, caseId],
     );
     if (enrollmentRows.length === 0) {
       throw new NotFoundException('Program enrollment not found on this case');
+    }
+    // New services need a LIVE enrollment: a completed or withdrawn program is
+    // history, and logging against it would weigh a closed program's documents
+    // (audit 3.2.7). An absent status reads as active (legacy rows default).
+    if ((enrollmentRows[0].status ?? 'active') !== 'active') {
+      throw new BadRequestException(
+        'This program enrollment is no longer active — new interventions require an active enrollment.',
+      );
     }
     if (data.programId && enrollmentRows[0].program_id !== data.programId) {
       throw new ForbiddenException(

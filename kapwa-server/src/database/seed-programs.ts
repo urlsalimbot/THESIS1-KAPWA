@@ -79,6 +79,7 @@ export const PROGRAMS: ProgramSeed[] = [
       'transport_assistance', 'food_pack', 'educational_assistance',
       'scsr_generated', 'crisis_counseling',
     ],
+    requiredForms: { medical_assistance: 'medical_certificate', burial_assistance: 'death_certificate' },
   },
   {
     id: uuidv7(),
@@ -97,7 +98,7 @@ export const PROGRAMS: ProgramSeed[] = [
     isActive: true,
     programType: null,
     interventions: ['medical_assistance', 'financial_grant', 'scsr_generated'],
-    requiredForms: { scsr_generated: 'social_case_study_report' },
+    requiredForms: { scsr_generated: 'social_case_study_report', medical_assistance: 'medical_certificate' },
   },
   {
     id: uuidv7(),
@@ -115,6 +116,7 @@ export const PROGRAMS: ProgramSeed[] = [
     isActive: true,
     programType: null,
     interventions: ['burial_assistance'],
+    requiredForms: { burial_assistance: 'death_certificate' },
   },
   {
     id: uuidv7(),
@@ -252,6 +254,7 @@ export const PROGRAMS: ProgramSeed[] = [
       'crisis_counseling', 'psychosocial_support', 'legal_assistance',
       'medico_legal_assistance', 'protection_order_issued', 'shelter_assistance', 'referral_pao',
     ],
+    requiredForms: { medico_legal_assistance: 'medical_certificate' },
   },
 
   // ---------------------------------------------------------------- Sectoral
@@ -288,7 +291,7 @@ export const PROGRAMS: ProgramSeed[] = [
     isActive: true,
     programType: 'disability_aid',
     interventions: ['medical_assistance', 'financial_grant', 'health_checkup', 'scsr_generated'],
-    requiredForms: { scsr_generated: 'social_case_study_report' },
+    requiredForms: { scsr_generated: 'social_case_study_report', medical_assistance: 'medical_certificate' },
   },
 
   // --------------------------------------------------------------- Children
@@ -311,6 +314,7 @@ export const PROGRAMS: ProgramSeed[] = [
       'financial_grant', 'crisis_counseling', 'legal_assistance',
       'medico_legal_assistance', 'educational_assistance', 'protective_custody', 'shelter_assistance',
     ],
+    requiredForms: { medico_legal_assistance: 'medical_certificate' },
   },
   {
     id: uuidv7(),
@@ -507,7 +511,7 @@ export const PROGRAMS: ProgramSeed[] = [
     isActive: true,
     programType: 'medical',
     interventions: ['medical_assistance', 'scsr_generated'],
-    requiredForms: { scsr_generated: 'social_case_study_report' },
+    requiredForms: { scsr_generated: 'social_case_study_report', medical_assistance: 'medical_certificate' },
   },
 
   // ------------------------------------------- National CDD / economic programs
@@ -580,7 +584,7 @@ export const PROGRAMS: ProgramSeed[] = [
     isActive: true,
     programType: 'disability_aid',
     interventions: ['medical_assistance', 'scsr_generated'],
-    requiredForms: { scsr_generated: 'social_case_study_report' },
+    requiredForms: { scsr_generated: 'social_case_study_report', medical_assistance: 'medical_certificate' },
   },
   {
     id: uuidv7(),
@@ -659,6 +663,7 @@ export const PROGRAMS: ProgramSeed[] = [
     isActive: true,
     programType: 'medical',
     interventions: ['medical_assistance', 'health_checkup'],
+    requiredForms: { medical_assistance: 'medical_certificate' },
   },
   {
     id: uuidv7(),

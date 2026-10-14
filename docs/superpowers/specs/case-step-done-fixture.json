@@ -543,15 +543,13 @@
     "expected": false
   },
   {
-    "name": "interventions not done: a document the program flags non-mandatory is still required",
+    "name": "interventions done: a document the program flags non-mandatory is optional",
     "step": "interventions",
     "caseData": {
       "status": "enrolled"
     },
     "interventionCount": 1,
-    "opts": {
-      "requirementsMet": false
-    },
+    "opts": {},
     "requirements": {
       "interventionProgramIds": [
         "p1"
@@ -575,7 +573,7 @@
         "Valid ID": true
       }
     },
-    "expected": false
+    "expected": true
   },
   {
     "name": "interventions done: interventions that name no program impose nothing",

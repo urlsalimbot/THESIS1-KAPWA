@@ -79,7 +79,10 @@ describe('interventionRequirementsMet', () => {
     expect(interventionRequirementsMet([{ id: 'i1', programId: 'p1' }], [], {})).toBe(true);
   });
 
-  it('requires every program document, including ones flagged non-mandatory', () => {
+  it('does not let a non-mandatory document block the step', () => {
+    // `mandatory: false` = conditional ("… if applicable"): listed, never
+    // blocking — the worker's N/A path (audit 3.2.12). The server's
+    // requiredDocumentKeys mirrors this; the shared fixture keeps them equal.
     const interventions = [{ id: 'i1', programId: 'p1' }];
     const programs = [{
       id: 'p1',
@@ -89,11 +92,8 @@ describe('interventionRequirementsMet', () => {
         { key: 'Death certificate (if applicable)', mandatory: false },
       ],
     }];
-    expect(interventionRequirementsMet(interventions, programs, { 'Valid ID': true })).toBe(false);
-    expect(interventionRequirementsMet(interventions, programs, {
-      'Valid ID': true,
-      'Death certificate (if applicable)': true,
-    })).toBe(true);
+    expect(interventionRequirementsMet(interventions, programs, { 'Valid ID': true })).toBe(true);
+    expect(interventionRequirementsMet(interventions, programs, {})).toBe(false);
   });
 
   describe('crisis-mode intervention documents', () => {

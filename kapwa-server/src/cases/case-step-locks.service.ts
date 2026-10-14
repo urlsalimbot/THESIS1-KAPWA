@@ -360,7 +360,9 @@ export class CaseStepLocksService {
     // the same shape as the referral count below, for the same reason: a count
     // read on every seal would be a query the other steps cannot use.
     const enrollmentCount =
-      stepKey === 'enrollments' ? await this.enrollments.count({ where: { caseId } }) : 0;
+      // Withdrawn enrollments are history: they neither satisfy the step nor
+      // weigh their documents (audit 3.2.7).
+      stepKey === 'enrollments' ? await this.enrollments.count({ where: { caseId, status: Not('withdrawn') } }) : 0;
     // The enrollments step weighs the enrolled programs' documents, the
     // interventions step the programs behind the interventions PLUS the
     // intervention-anchored documents of every recorded intervention — two
@@ -635,8 +637,11 @@ private async requirementsMet(
    */
   private async requiredProgramIds(caseId: string, source: 'interventions' | 'enrollments'): Promise<string[]> {
     const table = source === 'enrollments' ? 'program_enrollments' : 'case_interventions';
+    // Withdrawn enrollments keep their row for the record but drop out of the
+    // documentary minimum (audit 3.2.7).
+    const withdrawnFilter = source === 'enrollments' ? " AND status <> 'withdrawn'" : '';
     const rows = await this.interventions.query(
-      `SELECT DISTINCT program_id FROM ${table} WHERE case_id = $1 AND program_id IS NOT NULL`,
+      `SELECT DISTINCT program_id FROM ${table} WHERE case_id = $1 AND program_id IS NOT NULL${withdrawnFilter}`,
       [caseId],
     );
     return (rows as Array<{ program_id?: string | null }>).map((r) => r.program_id).filter(Boolean) as string[];
@@ -666,7 +671,12 @@ private async requirementsMet(
   private requiredDocumentKeys(program: Program): string[] {
     const details = program.requiredDocumentDetails;
     if (Array.isArray(details) && details.length > 0) {
-      return details.map((d) => d?.key).filter(Boolean);
+      // `mandatory: false` marks a conditional ("… if applicable") document:
+      // listed for completeness, never a seal blocker. The flag used to be
+      // display-only while the gate weighed every key, which left a worker with
+      // no N/A path for a document the client could not produce (audit 3.2.12).
+      // The client's case-progress.ts mirrors this rule.
+      return details.filter((d) => d?.mandatory !== false).map((d) => d?.key).filter(Boolean);
     }
     return Array.isArray(program.requiredDocuments) ? program.requiredDocuments : [];
   }
