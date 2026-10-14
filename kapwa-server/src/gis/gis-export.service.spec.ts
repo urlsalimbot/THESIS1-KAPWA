@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { CaseStatus } from '../cases/case.entity';
 import { GisExportService } from './gis-export.service';
 
@@ -52,6 +52,14 @@ describe('GisExportService', () => {
   it('throws NotFoundException for a missing case', async () => {
     caseRepoMock.findOne.mockResolvedValue(null);
     await expect(service.generateGisPdf('missing')).rejects.toThrow(NotFoundException);
+  });
+
+  it('refuses to print the sheet until the case is active', async () => {
+    // The General Intake Sheet prints an approved case; it used to be
+    // downloadable from intake onward.
+    caseRepoMock.findOne.mockResolvedValue({ ...baseCase, status: CaseStatus.IN_REVIEW });
+    await expect(service.generateGisPdf('c1')).rejects.toThrow(ConflictException);
+    await expect(service.generateGisPdf('c1', 'municipal')).rejects.toThrow(ConflictException);
   });
 
   it('returns the case controlNo for export filenames', async () => {

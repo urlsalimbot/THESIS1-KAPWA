@@ -800,9 +800,21 @@ export function CaseViewPage() {
                     <FileText size={14} aria-hidden="true" /> {issuing === 'pcv' ? t('cases.issuing', 'Issuing…') : t('cases.issuePcv', 'Issue PCV')}
                   </Button>
                 )}
+                {/* The General Intake Sheet prints an approved case, so it stays
+                    locked until the case is active. Kept visible and disabled
+                    rather than hidden: the title says why, and a worker who
+                    expects the sheet can see it is a matter of status. */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      disabled={caseData.status !== 'active'}
+                      title={caseData.status !== 'active'
+                        ? t('cases.gisLocked', 'Available once the case is active (currently {{status}})', { status: caseData.status })
+                        : undefined}
+                    >
                       <Download size={14} aria-hidden="true" /> {t('cases.gisPdf', 'GIS (PDF)')}
                     </Button>
                   </DropdownMenuTrigger>

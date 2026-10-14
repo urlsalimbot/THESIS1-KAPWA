@@ -170,6 +170,38 @@ describe('CaseViewPage — government ID photo', () => {
     expect(screen.queryByText('Submit for Review →')).toBeNull();
   });
 
+  it('locks the GIS download until the case is active', async () => {
+    // The General Intake Sheet prints an approved case. The control stays
+    // visible while the case is under review — disabled, with the reason in its
+    // title — instead of disappearing without explanation.
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
+      if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('caseId')) return Promise.resolve([]);
+      if (k.includes('cases')) return Promise.resolve({ ...mockCase, status: 'in_review' });
+      return Promise.resolve(null);
+    });
+    renderWithSWR(<CaseViewPage />);
+    await screen.findByText('Juan Dela Cruz');
+
+    const gis = screen.getByRole('button', { name: /GIS \(PDF\)/i });
+    expect(gis).toBeDisabled();
+    expect(gis).toHaveAttribute('title', expect.stringContaining('in_review'));
+  });
+
+  it('offers the GIS download once the case is active', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
+    renderWithSWR(<CaseViewPage />);
+    await screen.findByText('Juan Dela Cruz');
+
+    expect(screen.getByRole('button', { name: /GIS \(PDF\)/i })).not.toBeDisabled();
+  });
+
   it('mutates the case-detail key when the action bar reports a transition', async () => {
     // The regression the old "revalidates the case detail" test caught, carried
     // over to the component that now owns the transition. Passing the key in

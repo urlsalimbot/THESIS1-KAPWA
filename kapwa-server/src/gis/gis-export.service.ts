@@ -1,7 +1,7 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Case } from '../cases/case.entity';
+import { Case, CaseStatus } from '../cases/case.entity';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
 import { OrgService } from '../common/org.service';
@@ -24,6 +24,17 @@ export class GisExportService {
   ) {}
 
   async generateGisPdf(caseId: string, form: GisForm = 'national'): Promise<Buffer> {
+    // The General Intake Sheet is the print of an APPROVED case: its header
+    // carries the case number and the service plan the office signed off on, yet
+    // it was downloadable from intake onward. Gated here rather than only in the
+    // UI, so a direct link or a stale tab cannot print a case still under review.
+    const c = await this.caseRepo.findOne({ where: { id: caseId }, select: ['id', 'status'] });
+    if (!c) throw new NotFoundException('Case not found');
+    if (c.status !== CaseStatus.ACTIVE) {
+      throw new ConflictException(
+        `The General Intake Sheet can only be printed once the case is active (this case is ${c.status}).`,
+      );
+    }
     const data = await loadGisData(
       { caseRepo: this.caseRepo, claimantRepo: this.claimantRepo, interventionRepo: this.interventionRepo },
       caseId,

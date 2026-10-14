@@ -1280,6 +1280,7 @@ const en = {
     "caseHistory": "Case History",
     "caseStudyReport": "Case Study Report",
     "gisPdf": "GIS (PDF)",
+    "gisLocked": "Available once the case is active (currently {{status}})",
     "gisNational": "National (DSWD)",
     "gisMunicipal": "Municipal (MSWDO)",
     "caseTitle": "Case {{controlNo}}",
