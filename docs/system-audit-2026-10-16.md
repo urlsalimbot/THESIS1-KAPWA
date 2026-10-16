@@ -17,6 +17,10 @@
 | 4.6 | Restore unproven | `infra/backup/restore.sh` (drill mode), proven end-to-end: dump restored into a scratch DB, 5 cases verified. |
 | 4.2 | Stale worktrees | Both pruned (branches merged into main; branches kept). |
 | 4.5 | Audits invisible to git | `.gitignore` re-includes `docs/*-audit*.md`; the audits are now tracked. |
+| 3.2 | First-load payload | **Done.** Filipino is a lazily-fetched chunk (`changeLang` fetches before switching, so no screen ever renders in a language whose strings have not arrived and no async bootstrap was needed). Measured: the i18n chunk went **273 KB → 151 KB (84 → 48 KB gzip)** — 36 KB gzip off every first load. |
+| 3.3 | No browser-level tests | **Done.** `kapwa-client/e2e/smoke.spec.ts`: boot + admin sign-in, signed-in shell with the admin-only nav, and a worker kept out of `/admin/programs`. Runs against the production bundle behind `vite preview` with a real API, database and seeded accounts; new CI job (non-blocking until it has a green record). Writing it found two setup bugs: `vite preview` does not inherit `server.proxy` (the built SPA had no `/api` route locally), and a production build has no `VITE_API_URL`, so it fell back to an absolute cross-origin `localhost:3000`. |
+| 3.1 | No monitoring | **Half done.** `.github/workflows/uptime.yml` probes `/health/ready` (which checks the database) and the SPA every 30 minutes and notifies on failure — no AWS credentials needed, driven by two repository variables. The AWS half remains: a CloudWatch alarm on 5xx sees errors *within* a healthy process, which an external probe cannot. |
+| 4.4 | `console.log` in server code | **Verified, no change needed.** Every one is in a bootstrap/CLI file (seeds, `init-buckets`) or is the JSON log formatter itself in `main.ts`; no service, controller or guard logs to the console. |
 
 **Found while fixing (not in the original report):**
 
@@ -25,7 +29,7 @@
 - **P2 — CSR sequences only existed for 2026**: the service derives `csr_seq_<year>` while the schema seeds only `csr_seq_2026`, so the first CSR of 2027 would fail. Sequences are now created on demand (`database/sequences.ts`).
 - **P2 — chain lagged the bootstrap** on `document_vault.irf_id` / `announcement_id` (mapped by `filing.entity.ts`): an installation upgraded through the migration chain would fail on every filing query → catch-up migration added.
 
-**Still open** (unchanged by this pass): e2e/browser suite (§3.3), monitoring/alerting (§3.1), first-load payload (§3.2 — the i18n split needs an async bootstrap, deliberately not rushed), the 12 moderate advisories, and the 58 baselined schema differences (`kapwa-server/scripts/schema-parity.baseline.txt`, each one a real backlog item: decomposed columns the bootstrap still creates, hash-chain columns and FKs the bootstrap lacks, `households.access_card_code` type).
+**Still open:** the AWS-side half of monitoring (a CloudWatch 5xx alarm), the 12 moderate advisories (dev tooling and transitive ranges), the second half of the payload work (PSGC's 68 KB gzip is genuinely needed to resolve addresses, so deferring it needs an async render path — not worth the risk today), and the **58 baselined schema differences** in `kapwa-server/scripts/schema-parity.baseline.txt`: decomposed columns the bootstrap still creates (`cases.amount_assistance`, `referrals.surname`, …), hash-chain columns and eleven foreign keys the bootstrap lacks, and `households.access_card_code`'s type. Closing them means touching data (drops with backfills, FK validation against existing rows), so they are recorded and ratcheted rather than rushed — any NEW divergence already fails CI.
 
 ---
 

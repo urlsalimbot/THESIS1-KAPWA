@@ -1,0 +1,72 @@
+name: Uptime
+
+# The audit's §3.1: nothing watched production. The API has /health/live and
+# /health/ready (the latter checks the database), but no alarm was attached, so
+# the first person to learn about an outage was a user.
+#
+# This is the cheapest useful half: GitHub runs the probe on a schedule and
+# notifies the repository owner when it fails. It needs no AWS credentials — set
+# two repository variables once (Settings → Secrets and variables → Actions →
+# Variables) and it starts working:
+#
+#   PROD_API_URL   e.g. https://api.kapwa.software/api/v1   (the health route's base)
+#   PROD_APP_URL   e.g. https://kapwa.software              (the SPA origin)
+#
+# The other half belongs in AWS and complements this: a CloudWatch alarm on the
+# ALB/EC2 5xx metric — an alarm sees errors *within* a healthy process, which an
+# external probe cannot. Wire that from the console when convenient; until then
+# this catches "the office cannot use the system at all", which is the failure
+# that matters most and the one nobody would notice at 03:00.
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: API readiness
+        env:
+          API_URL: ${{ vars.PROD_API_URL }}
+        run: |
+          if [ -z "${API_URL}" ]; then
+            echo "::notice::PROD_API_URL is not set — skipping. See the header of .github/workflows/uptime.yml."
+            exit 0
+          fi
+          # Two retries: a single blip (deploy, cold start, one bad minute)
+          # should not page anyone.
+          for attempt in 1 2 3; do
+            code=$(curl -s -o /tmp/health.json -w '%{http_code}' --max-time 15 "${API_URL}/health/ready" || echo 000)
+            if [ "${code}" = "200" ]; then
+              echo "API ready: $(cat /tmp/health.json)"
+              exit 0
+            fi
+            echo "attempt ${attempt}: ${code}"
+            sleep 20
+          done
+          echo "::error::API not ready — ${API_URL}/health/ready answered ${code}"
+          cat /tmp/health.json 2>/dev/null || true
+          exit 1
+
+      - name: SPA reachable
+        env:
+          APP_URL: ${{ vars.PROD_APP_URL }}
+        run: |
+          if [ -z "${APP_URL}" ]; then
+            echo "::notice::PROD_APP_URL is not set — skipping."
+            exit 0
+          fi
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "${APP_URL}/" || echo 000)
+          # The SPA is a static bundle behind a CDN: anything but 200 means the
+          # office is looking at an error page, not a slow one.
+          if [ "${code}" != "200" ]; then
+            echo "::error::SPA root answered ${code}"
+            exit 1
+          fi
+          echo "SPA reachable (${code})."
