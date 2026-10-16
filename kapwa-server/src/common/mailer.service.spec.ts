@@ -1,4 +1,4 @@
-import { MailerService } from './mailer.service';
+import { MailerService, maskEmail } from './mailer.service';
 import type { ConfigService } from '@nestjs/config';
 
 function makeService(env: Record<string, string> = {}) {
@@ -12,6 +12,24 @@ describe('MailerService', () => {
     // No transporter: the reply is written to the log and treated as accepted,
     // so a deployment without SMTP still functions.
     await expect(service.sendMail('a@b.com', 'Subject', 'Body')).resolves.toBe(true);
+  });
+
+  it('never writes the message body to the log in degraded mode', async () => {
+    // The body carries reset/setup links, i.e. working single-use tokens.
+    const service = makeService();
+    const warn = jest.spyOn((service as any).logger, 'warn').mockImplementation(() => undefined);
+    const error = jest.spyOn((service as any).logger, 'error').mockImplementation(() => undefined);
+    const body = 'Reset your password: https://app.example/reset?token=SUPER-SECRET-TOKEN';
+
+    await service.sendMail('juan.delacruz@example.com', 'Reset', body);
+
+    const logged = [...warn.mock.calls, ...error.mock.calls].flat().join(' ');
+    expect(logged).not.toContain('SUPER-SECRET-TOKEN');
+    expect(logged).not.toContain(body);
+    expect(logged).not.toContain('juan.delacruz@example.com');
+    expect(logged).toContain('j***@example.com');
+    // The shape is still traceable.
+    expect(logged).toContain(`${body.length} chars`);
   });
 
   it('reports a real failure only when SMTP is configured and the send throws', async () => {
@@ -33,5 +51,11 @@ describe('MailerService', () => {
     (service as any).transporter = { sendMail: jest.fn().mockResolvedValue({ messageId: 'm1' }) };
 
     await expect(service.sendMail('a@b.com', 'Subject', 'Body')).resolves.toBe(true);
+  });
+
+  it('masks addresses down to one character of the local part', () => {
+    expect(maskEmail('juan.delacruz@example.com')).toBe('j***@example.com');
+    expect(maskEmail('@example.com')).toBe('***@example.com');
+    expect(maskEmail('not-an-address')).toBe('***');
   });
 });

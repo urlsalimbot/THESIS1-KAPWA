@@ -45,15 +45,35 @@ export class MailerService {
    */
   async sendMail(to: string, subject: string, text: string): Promise<boolean> {
     if (!this.transporter) {
-      this.logger.log(`[email:logged] to=${to} subject="${subject}"\n${text}`);
+      // Degraded mode (no SMTP). The body is deliberately NOT logged: reset and
+      // account-setup links carry single-use tokens, so a logged body would put
+      // working credentials into whatever collects these logs. Log the shape
+      // only — and at error level in production, so a mail misconfiguration is
+      // alarmable instead of silent.
+      const summary =
+        `[email:not-sent] SMTP is not configured — dropped for ${maskEmail(to)} ` +
+        `(subject="${subject}", ${text.length} chars of body). ` +
+        'Set EMAIL_HOST/EMAIL_USER/EMAIL_PASS/EMAIL_FROM to deliver mail.';
+      if (process.env.NODE_ENV === 'production') this.logger.error(summary);
+      else this.logger.warn(summary);
       return true;
     }
     try {
       await this.transporter.sendMail({ from: this.from, to, subject, text });
       return true;
     } catch (err) {
-      this.logger.error(`Failed to send email to ${to}: ${err instanceof Error ? err.message : err}`);
+      this.logger.error(`Failed to send email to ${maskEmail(to)}: ${err instanceof Error ? err.message : err}`);
       return false;
     }
   }
+}
+
+/**
+ * `juan.dela.cruz@example.com` → `j***@example.com`.
+ * Enough to trace a delivery in the log, not enough to harvest an address.
+ */
+export function maskEmail(address: string): string {
+  const [local = '', domain] = String(address ?? '').split('@');
+  if (!domain) return '***';
+  return `${local.slice(0, 1)}***@${domain}`;
 }

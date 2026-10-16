@@ -5,9 +5,19 @@ import { AuthService, REFRESH_COOKIE, REFRESH_COOKIE_MAX_AGE_MS } from './auth.s
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
+import { Throttle } from '@nestjs/throttler';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { UserCreateSchema, LoginSchema, MfaEnableSchema, MfaDisableSchema, MfaVerifySchema, MfaResendSchema, OtpVerifySchema, UserCreateInput, ChangePasswordSchema, ChangeEmailSchema, ChangePasswordInput, ChangeEmailInput, VerifyEmailSchema, ResendVerificationSchema, ForgotPasswordSchema, ResetPasswordSchema, ConfirmEmailChangeSchema, UpdatePhoneSchema, UpdatePhoneInput, PersonLinkRequestSchema, PersonLinkVerifySchema, IssuePasswordResetSchema, IssuePasswordResetInput } from './dto/auth.zod';
 import { AuthenticatedRequest } from './types';
+
+/**
+ * Credential-guessing budgets, tighter than the global bucket (60 req/min per
+ * IP from app.module). Guessing a password, an OTP or a reset token deserves
+ * far fewer attempts than browsing an API: `AUTH` covers verification steps,
+ * `SENSITIVE` the endpoints that also send mail or mint a token.
+ */
+const AUTH_LIMIT = { default: { limit: 10, ttl: 60_000 } } as const;
+const SENSITIVE_LIMIT = { default: { limit: 5, ttl: 60_000 } } as const;
 
 @Controller('auth')
 export class AuthController {
@@ -34,11 +44,13 @@ export class AuthController {
   }
 
   @Post('register')
+  @Throttle(SENSITIVE_LIMIT)
   async register(@Body(new ZodPipe(UserCreateSchema)) body: UserCreateInput) {
     return this.authService.register(body);
   }
 
   @Post('login')
+  @Throttle(AUTH_LIMIT)
   @HttpCode(HttpStatus.OK)
   async login(
     @Body(new ZodPipe(LoginSchema)) body: { email: string; password: string },
@@ -100,6 +112,7 @@ export class AuthController {
   }
 
   @Post('mfa/verify')
+  @Throttle(AUTH_LIMIT)
   @HttpCode(HttpStatus.OK)
   async verifyMfa(
     @Body(new ZodPipe(MfaVerifySchema)) body: { tempToken: string; code: string },
@@ -121,12 +134,14 @@ export class AuthController {
   }
 
   @Post('mfa/email/resend')
+  @Throttle(SENSITIVE_LIMIT)
   @HttpCode(HttpStatus.OK)
   async resendEmailMfa(@Body(new ZodPipe(MfaResendSchema)) body: { tempToken: string }) {
     return this.authService.resendEmailMfa(body.tempToken);
   }
 
   @Post('mfa/email/verify')
+  @Throttle(AUTH_LIMIT)
   @HttpCode(HttpStatus.OK)
   async verifyEmailMfa(
     @Body(new ZodPipe(MfaVerifySchema)) body: { tempToken: string; code: string },
@@ -136,6 +151,7 @@ export class AuthController {
   }
 
   @Post('login/otp-verify')
+  @Throttle(AUTH_LIMIT)
   @HttpCode(HttpStatus.OK)
   async verifyLoginOtp(
     @Body(new ZodPipe(OtpVerifySchema)) body: { tempToken: string; otpCode: string },
@@ -154,24 +170,28 @@ export class AuthController {
   }
 
   @Post('verify-email')
+  @Throttle(AUTH_LIMIT)
   @HttpCode(HttpStatus.OK)
   async verifyEmail(@Body(new ZodPipe(VerifyEmailSchema)) body: { token: string }) {
     return this.authService.verifyEmail(body.token);
   }
 
   @Post('resend-verification')
+  @Throttle(SENSITIVE_LIMIT)
   @HttpCode(HttpStatus.OK)
   async resendVerification(@Body(new ZodPipe(ResendVerificationSchema)) body: { email: string }) {
     return this.authService.resendVerificationEmail(body.email);
   }
 
   @Post('forgot-password')
+  @Throttle(SENSITIVE_LIMIT)
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body(new ZodPipe(ForgotPasswordSchema)) body: { email: string }) {
     return this.authService.forgotPassword(body.email);
   }
 
   @Post('reset-password')
+  @Throttle(AUTH_LIMIT)
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body(new ZodPipe(ResetPasswordSchema)) body: { token: string; password: string }) {
     return this.authService.resetPassword(body.token, body.password);
@@ -191,6 +211,7 @@ export class AuthController {
   }
 
   @Post('change-email')
+  @Throttle(SENSITIVE_LIMIT)
   @UseGuards(JwtAuthGuard)
   async changeEmail(
     @Request() req: AuthenticatedRequest,
@@ -200,12 +221,14 @@ export class AuthController {
   }
 
   @Post('confirm-email-change')
+  @Throttle(AUTH_LIMIT)
   @HttpCode(HttpStatus.OK)
   async confirmEmailChange(@Body(new ZodPipe(ConfirmEmailChangeSchema)) body: { token: string }) {
     return this.authService.confirmEmailChange(body.token);
   }
 
   @Post('update-phone')
+  @Throttle(SENSITIVE_LIMIT)
   @UseGuards(JwtAuthGuard)
   async updatePhone(
     @Request() req: AuthenticatedRequest,
@@ -228,12 +251,14 @@ export class AuthController {
   // creation, not vestigial. The client screen that calls them is still to be
   // built; retiring these would discard the whole flow.
   @Post('request-person-link')
+  @Throttle(SENSITIVE_LIMIT)
   @HttpCode(HttpStatus.OK)
   async requestPersonLink(@Body(new ZodPipe(PersonLinkRequestSchema)) body: { phone: string; dob: string; email: string }) {
     return this.authService.requestPersonLink(body.phone, body.dob, body.email);
   }
 
   @Post('verify-person-link')
+  @Throttle(AUTH_LIMIT)
   @HttpCode(HttpStatus.OK)
   async verifyPersonLink(@Body(new ZodPipe(PersonLinkVerifySchema)) body: { email: string; code: string }) {
     return this.authService.verifyPersonLink(body.email, body.code);

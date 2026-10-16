@@ -299,7 +299,9 @@ export class AuthService {
       // (logout, password/email change), so all sessions refresh independently.
       return this.issueTokens(user);
     } catch (e) {
-      this.logger.error('Refresh token validation error:', e);
+      // Message only: the error object can carry the presented token in its
+      // message, and this line is written for every invalid refresh attempt.
+      this.logger.error(`Refresh token validation error: ${(e as Error)?.message ?? e}`);
       if (e instanceof UnauthorizedException) throw e;
       throw new UnauthorizedException('Invalid refresh token');
     }

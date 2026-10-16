@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CsrRecord } from './csr.entity';
 import { OrgService } from '../common/org.service';
+import { nextSequenceValue } from '../database/sequences';
 
 const CSR_PAD_WIDTH = 4;
 @Injectable()
@@ -16,9 +17,7 @@ export class CsrService {
 
   async create(data: Partial<CsrRecord>, userId: string): Promise<CsrRecord> {
     const year = new Date().getFullYear();
-    const seqName = `csr_seq_${year}`;
-    const result = await this.csrRepo.query(`SELECT nextval('${seqName}') AS seq`);
-    const nextSeq = parseInt(result[0].seq, 10);
+    const nextSeq = await nextSequenceValue(this.csrRepo, `csr_seq_${year}`);
     const controlNo = `CSR-${year}-${String(nextSeq).padStart(CSR_PAD_WIDTH, '0')}`;
     const record = this.csrRepo.create({
       ...data,

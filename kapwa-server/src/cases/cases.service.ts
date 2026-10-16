@@ -1163,9 +1163,20 @@ export class CasesService {
   }
 
   private async getTrackerEntries(start: Date, end: Date, status?: string, barangay?: string) {
-    // Sanitize free-form barangay text before SQL interpolation (same pattern
-    // as the existing status interpolation).
-    const b = barangay ? barangay.replace(/'/g, "''") : null;
+    // Filter VALUES are bound, never interpolated: `status` and `barangay`
+    // arrive from the query string, and doubling quotes by hand is not a
+    // parameterization (a stray backslash or a multibyte quote walks past it).
+    const params: unknown[] = [start, end];
+    let statusClause = '';
+    if (status) {
+      params.push(status);
+      statusClause = `AND c.status = $${params.length}`;
+    }
+    let barangayClause = '';
+    if (barangay) {
+      params.push(`%${barangay}%`);
+      barangayClause = `AND EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE $${params.length} OR pa2.raw ILIKE $${params.length}))`;
+    }
     const rows = await this.caseRepo.query(
       `SELECT
         c.id,
@@ -1191,10 +1202,10 @@ export class CasesService {
       LEFT JOIN beneficiaries b ON b.id = c.beneficiary_id
       LEFT JOIN persons p ON p.id = b.person_id
       WHERE c.created_at >= $1 AND c.created_at <= $2 AND c.status <> 'closed'
-        ${status ? `AND c.status = '${status}'` : ''}
-        ${b ? `AND EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE '%${b}%' OR pa2.raw ILIKE '%${b}%'))` : ''}
+        ${statusClause}
+        ${barangayClause}
       ORDER BY c.created_at DESC, "dailySeqNum" ASC`,
-      [start, end],
+      params,
     );
     return rows.map((r: any) => ({
       id: r.id,
@@ -1222,17 +1233,18 @@ export class CasesService {
     monday.setDate(now.getDate() - diffToMonday);
     monday.setHours(0, 0, 0, 0);
 
-    const b = barangay ? barangay.replace(/'/g, "''") : null;
-    const scopeClause = b
-      ? ` AND EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = pp.id AND (pa2.barangay ILIKE '%${b}%' OR pa2.raw ILIKE '%${b}%'))`
+    // Same rule as the tracker list: the barangay filter is bound as $2.
+    const scopeClause = barangay
+      ? ' AND EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = pp.id AND (pa2.barangay ILIKE $2 OR pa2.raw ILIKE $2))'
       : '';
+    const scopeParams = barangay ? [`%${barangay}%`] : [];
 
     const weekResult = await this.caseRepo.query(
       `SELECT COUNT(*) AS count FROM cases c
         LEFT JOIN beneficiaries bb ON bb.id = c.beneficiary_id
         LEFT JOIN persons pp ON pp.id = bb.person_id
         WHERE c.created_at >= $1${scopeClause}`,
-      [monday],
+      [monday, ...scopeParams],
     );
     const thisWeekCases = parseInt(weekResult[0]?.count || '0', 10);
 
@@ -1243,7 +1255,7 @@ export class CasesService {
         LEFT JOIN beneficiaries bb ON bb.id = c.beneficiary_id
         LEFT JOIN persons pp ON pp.id = bb.person_id
         WHERE c.created_at >= $1${scopeClause}`,
-      [today],
+      [today, ...scopeParams],
     );
     const todayEntries = parseInt(todayResult[0]?.count || '0', 10);
 

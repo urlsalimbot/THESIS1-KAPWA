@@ -7,6 +7,7 @@ import { UserBarangayAssignment } from '../auth/user-barangay-assignment.entity'
 import { AccountProvisioningService } from '../accounts/account-provisioning.service';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import { maskEmail } from '../common/mailer.service';
 
 export interface CreateUserInput {
   email: string;
@@ -126,7 +127,9 @@ export class UsersService {
         role: saved.role,
       });
     } catch (e) {
-      this.logger.warn(`Setup link delivery failed for ${saved.email}: ${(e as Error)?.message ?? e}`);
+      // The address is masked: a failed setup link names the account, and
+      // these logs outlive the incident (audit 2.3).
+      this.logger.warn(`Setup link delivery failed for ${maskEmail(saved.email)}: ${(e as Error)?.message ?? e}`);
     }
 
     const { password, ...safe } = saved;
