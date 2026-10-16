@@ -25,6 +25,11 @@ jobs:
           cache: npm
           cache-dependency-path: kapwa-server/package-lock.json
       - run: npm ci --legacy-peer-deps
+      - name: Audit production dependencies
+        # Fails on a high or critical advisory in anything that ships. Dev
+        # tooling is excluded on purpose: its advisories are real but they do
+        # not reach a user, and gating on them would block unrelated work.
+        run: npm audit --omit=dev --audit-level=high
       - name: Lint
         # run without --fix so violations fail the build
         run: npx eslint "{src,test}/**/*.ts"
@@ -49,6 +54,11 @@ jobs:
           cache: npm
           cache-dependency-path: kapwa-client/package-lock.json
       - run: npm ci
+      - name: Audit production dependencies
+        # Fails on a high or critical advisory in anything that ships. Dev
+        # tooling is excluded on purpose: its advisories are real but they do
+        # not reach a user, and gating on them would block unrelated work.
+        run: npm audit --omit=dev --audit-level=high
       - name: Typecheck
         run: npm run typecheck
       - name: Test
@@ -87,3 +97,55 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Docker images
         run: docker compose -f kapwa-server/docker-compose.yml build
+
+  schema-parity:
+    # The fresh-boot bootstrap (migrate.js) and the TypeORM migration chain are
+    # two ways to build the same schema, and nothing compared them: a change
+    # landing in one and not the other stays invisible until someone installs
+    # fresh or upgrades. This job builds BOTH on empty databases and diffs the
+    # result against a recorded baseline, so a NEW divergence fails the build.
+    # Known differences: kapwa-server/scripts/schema-parity.baseline.txt
+    needs: server
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: kapwa-server
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: kapwa
+          POSTGRES_PASSWORD: kapwa
+          POSTGRES_DB: kapwa
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kapwa"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: kapwa-server/package-lock.json
+      - run: npm ci --legacy-peer-deps
+      - name: Build
+        run: npm run build
+      - name: Bootstrap vs migration chain
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: kapwa
+          DB_PASSWORD: kapwa
+        run: ./scripts/schema-parity.sh
+      - name: Upload the schema diff
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: schema-parity-diff
+          path: /tmp/schema-parity.diff
+          retention-days: 14

@@ -263,18 +263,6 @@ export async function migrate() {
       ) AS ordered
      WHERE pi.id = ordered.id AND pi.sort_order = 0
   `);
-  await q.query(`
-    UPDATE case_interventions ci
-       SET program_enrollment_id = NULL
-     WHERE ci.program_enrollment_id IS NOT NULL
-       AND NOT EXISTS (SELECT 1 FROM program_enrollments pe WHERE pe.id = ci.program_enrollment_id)
-  `);
-  await q.query(`DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='fk_case_interventions_enrollment') THEN
-      ALTER TABLE case_interventions ADD CONSTRAINT fk_case_interventions_enrollment FOREIGN KEY (program_enrollment_id) REFERENCES program_enrollments(id) ON DELETE SET NULL;
-    END IF;
-  END $$`);
-
   // Mirrors CaseEventsAndReminders0000000000083: court hearings + scheduled
   // home visits, the reminder dedupe ledger, and reminder lead-time settings.
   await q.query(`CREATE TABLE IF NOT EXISTS case_events (
@@ -375,6 +363,23 @@ export async function migrate() {
     CONSTRAINT uq_program_enrollments_case_program UNIQUE (case_id, program_id)
   )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_program_enrollments_case ON program_enrollments(case_id)`);
+  // The enrollment reference on an intervention, and the dangling rows it
+  // inherited. This MUST run after program_enrollments exists: on an empty
+  // database it did not, and Postgres rejects a statement naming a missing
+  // table even when no row would be touched — which aborted the whole
+  // bootstrap (found by scripts/schema-parity.sh; the silent exit below is
+  // why it went unnoticed).
+  await q.query(`
+    UPDATE case_interventions ci
+       SET program_enrollment_id = NULL
+     WHERE ci.program_enrollment_id IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM program_enrollments pe WHERE pe.id = ci.program_enrollment_id)
+  `);
+  await q.query(`DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='fk_case_interventions_enrollment') THEN
+      ALTER TABLE case_interventions ADD CONSTRAINT fk_case_interventions_enrollment FOREIGN KEY (program_enrollment_id) REFERENCES program_enrollments(id) ON DELETE SET NULL;
+    END IF;
+  END $$`);
 
   await q.query(`CREATE TABLE IF NOT EXISTS chat_messages ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), sender_id TEXT NOT NULL, recipient_id TEXT NOT NULL, content TEXT NOT NULL, conversation_id TEXT NOT NULL, is_read BOOLEAN DEFAULT FALSE, read_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW() )`);
 
@@ -580,6 +585,11 @@ export async function migrate() {
            c.source_of_fund, c.legislator_specify, c.financial_subsidies
     FROM cases c
     WHERE c.amount_assistance IS NOT NULL OR c.financial_subsidies IS NOT NULL`);
+
+  // The column was decomposed into case_assistances (migration 48) and the
+  // chain drops it; the bootstrap only re-added it so the backfill above could
+  // read legacy rows. Drop it again, so both paths end in the same schema.
+  await q.query(`ALTER TABLE cases DROP COLUMN IF EXISTS source_of_fund`);
   await q.query(`INSERT INTO case_assistances (case_id, assistance_type, details)
     SELECT c.id, 'other', jsonb_build_object(e.key, e.value)
     FROM cases c, jsonb_each(c.other_assistance) AS e
@@ -1421,6 +1431,34 @@ await q.query(`
     console.warn('case_history enum normalization skipped:', (e as Error).message);
   }
 
+  // Foreign-key indexes that had none (audit §4.1 / migration …0099).
+  // Kept at the END of the DDL on purpose: these columns belong to tables the
+  // bootstrap creates in several places, and Postgres rejects an index bound to
+  // a missing column even when the statement is otherwise a no-op — the same
+  // trap the enrollment block above fell into.
+  // Indexes for the foreign keys that had none (Mirrors
+  // IndexForeignKeyColumns…0099). Same list, same IF NOT EXISTS.
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_access_card_services_logged_by ON access_card_services (logged_by)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_analysis_runs_created_by ON analysis_runs (created_by)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_announcements_created_by ON announcements (created_by)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_beneficiary_roles_person_id ON beneficiary_roles (person_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_case_compliance_items_met_by ON case_compliance_items (met_by)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_case_events_created_by ON case_events (created_by)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_case_interventions_created_by ON case_interventions (created_by)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_case_interventions_program_enrollment_id ON case_interventions (program_enrollment_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_case_payouts_notified_by ON case_payouts (notified_by)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_case_referrals_created_by ON case_referrals (created_by)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_form_version_history_program_id ON form_version_history (program_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_households_primary_beneficiary_id ON households (primary_beneficiary_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_inter_agency_referrals_created_by ON inter_agency_referrals (created_by)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_irf_cases_case_id ON irf_cases (case_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_office_events_owner_id ON office_events (owner_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_program_enrollments_created_by ON program_enrollments (created_by)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_referrals_case_id ON referrals (case_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_reminder_settings_updated_by ON reminder_settings (updated_by)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_team_schedule_blocks_created_by ON team_schedule_blocks (created_by)`);
+
+
   // -- Fresh-boot contract: migrate.js is the canonical bootstrap (the
   //    TypeORM chain is NOT fresh-boot-safe). Mark the chain as applied so
   //    run-migrations.js is a clean no-op on fresh deployments and only ever
@@ -1481,6 +1519,15 @@ await q.query(`
 }
 
 // Run when executed directly: `node dist/database/migrate.js`
+//
+// A failed bootstrap must not look like a successful one. Before this, any
+// error was logged and the process still exited 0 — a deploy could report
+// success with an empty database (the audit's schema-parity check found
+// exactly that, on a bootstrap that had been broken for a day).
 if (require.main === module) {
-  migrate().catch(console.error);
+  migrate().catch((err) => {
+    console.error('FATAL: fresh-boot bootstrap failed — no schema was applied:');
+    console.error(err instanceof Error ? err.message : err);
+    process.exit(1);
+  });
 }
