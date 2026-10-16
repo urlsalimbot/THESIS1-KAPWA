@@ -20,10 +20,20 @@ export const UserCreateSchema = z.object({
   permittedBarangays: z.array(z.enum(BARANGAY_NAMES)).optional()
 });
 
-export const LoginSchema = z.object({
-  email: z.string().email(),
-  password: z.string()
-});
+export const LoginSchema = z
+  .object({
+    // `identifier` is an email address or an office-issued claimant ID
+    // (`CLM-000123`). `email` is kept alongside it because a client already in
+    // the field sends that field name — the server accepts either, so a deploy
+    // does not have to be atomic with the app update.
+    identifier: z.string().min(1).optional(),
+    email: z.string().min(1).optional(),
+    password: z.string(),
+  })
+  .refine((v) => Boolean(v.identifier || v.email), {
+    message: 'Enter your email address or the claimant ID issued by the office',
+    path: ['identifier'],
+  });
 
 export const RefreshTokenSchema = z.object({
   refreshToken: z.string()

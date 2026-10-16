@@ -24,6 +24,7 @@ import { IntakeAddressBlock } from '@/components/IntakeAddressBlock';
 import type { AddressFields } from '@/components/IntakeAddressBlock';
 import { CIVIL_STATUSES, NAME_EXTENSIONS, FAMILY_MEMBER_STATUSES } from '../lib/constants';
 import { MatchProbeDialog } from '@/components/intake/MatchProbeDialog';
+import { ClaimantCredentialsDialog, type IssuedAccount } from '@/components/intake/ClaimantCredentialsDialog';
 import type { MatchCandidate } from '@/components/intake/MatchCardSections';
 import { buildPrefilledFamily } from '@/components/intake/prefillFamily';
 import { Check, UserCheck, User, Users, ShieldCheck, AlertCircle, Camera, Search } from 'lucide-react';
@@ -244,6 +245,15 @@ export function IntakePage() {
   const [family, setFamily] = useState<FamilyMember[]>([]);
   const [probeCandidates, setProbeCandidates] = useState<MatchCandidate[] | null>(null);
   const [confirmedHousehold, setConfirmedHousehold] = useState<MatchCandidate | null>(null);
+  /**
+   * Credentials the office issued because the claimant has neither email nor
+   * mobile number. Returned exactly once by the intake response, shown here to
+   * be written on the slip, and never readable again — the server stores only
+   * the hash.
+   */
+  const [issuedAccount, setIssuedAccount] = useState<IssuedAccount | null>(null);
+  /** The case the intake produced while the slip is on screen. */
+  const [pendingCaseId, setPendingCaseId] = useState<string | null>(null);
   /** The household currently being updated record-only (no new case). */
   const [confirmedUpdatingOnly, setConfirmedUpdatingOnly] = useState<string | null>(null);
   const [probing, setProbing] = useState(false);
@@ -477,9 +487,10 @@ export function IntakePage() {
       region: beneficiary.currentAddress.region,
       postalCode: beneficiary.currentAddress.postalCode,
     };
-    // Contact details only gate the probe when the beneficiary is the
-    // claimant — the probe still runs without them for someone else's claim.
-    return Object.keys(validatePerson(flat, beneficiaryIsClaimant)).length === 0;
+    // Contact details never gate the probe: it matches on name, sex and date of
+    // birth, and a household with no phone is exactly the one worth checking for
+    // a duplicate record.
+    return Object.keys(validatePerson(flat)).length === 0;
   }, [beneficiary, beneficiaryIsClaimant]);
 
   function matchCheckPayload() {
@@ -722,7 +733,7 @@ export function IntakePage() {
     const benVals = toValidate(beneficiary);
     // The beneficiary's contacts are only mandatory for self-claims; a
     // separate claimant is the reachable person.
-    const rawBenErrs = validatePerson(benVals, beneficiaryIsClaimant);
+    const rawBenErrs = validatePerson(benVals);
     const benErrs: ValidationErrors = {};
     for (const [k, v] of Object.entries(rawBenErrs)) benErrs[`ben.${k}`] = v;
     setBenErrors(benErrs);
@@ -790,9 +801,21 @@ export function IntakePage() {
           }
         }
         clearDraft(userId);
-        const data = await api.post<{ caseId: string; controlNo: string }>('/intake', intakePayload);
-        completeIntake(data.caseId);
+        const data = await api.post<{
+          caseId: string;
+          controlNo: string;
+          claimantAccount?: { username: string; temporaryPassword?: string; note?: string };
+        }>('/intake', intakePayload);
         clearPendingIdPhoto();
+        if (data.claimantAccount) {
+          // Nothing is delivered to the claimant (no email, no handset): the
+          // credentials are on this screen and nowhere else, so the worker
+          // writes them on the slip before the case opens.
+          setIssuedAccount(data.claimantAccount);
+          setPendingCaseId(data.caseId);
+        } else {
+          completeIntake(data.caseId);
+        }
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('intake.submitFailed', 'Failed to submit intake'));
@@ -1123,6 +1146,18 @@ export function IntakePage() {
           </AlertDialog>
         </div>
       </form>
+      {issuedAccount && (
+        <ClaimantCredentialsDialog
+          account={issuedAccount}
+          onDone={() => {
+            const caseId = pendingCaseId;
+            setIssuedAccount(null);
+            setPendingCaseId(null);
+            if (caseId) completeIntake(caseId);
+          }}
+        />
+      )}
+
       {probeCandidates && probeCandidates.length > 0 && (
         <MatchProbeDialog
           candidates={probeCandidates}

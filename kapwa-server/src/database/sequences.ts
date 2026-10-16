@@ -14,8 +14,13 @@ import type { ObjectLiteral, Repository } from 'typeorm';
  * warning until 1 January (found while auditing the interpolated query).
  */
 
-/** Sequence names are `csr_seq_<4-digit year>`; anything else is a bug. */
-const SEQUENCE_NAME = /^[a-z_]+_[0-9]{4}$/;
+/**
+ * Sequence names are lower-case identifiers: `csr_seq_2026` (per-year, CSR
+ * control numbers) or `claimant_seq` (global, claimant IDs must not reset with
+ * the calendar). Anything with a character that could escape the identifier
+ * position is refused.
+ */
+const SEQUENCE_NAME = /^[a-z][a-z0-9_]*$/;
 
 function assertSequenceName(name: string): string {
   if (!SEQUENCE_NAME.test(name)) {

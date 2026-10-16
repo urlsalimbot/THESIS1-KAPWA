@@ -34,17 +34,26 @@ describe('PersonSchema (via IntakeInputSchema)', () => {
     expect(intake({}).success).toBe(true);
   });
 
-  it('rejects a self-claim without beneficiary contact details', () => {
+  it('accepts a self-claim without contact details (the office issues the account)', () => {
+    // The rule that rejected this was the reason a person with no phone and no
+    // email address could not be taken in at all. The intake now accepts it and
+    // AccountProvisioningService issues a printable claimant ID and password.
     const r = IntakeInputCheckedSchema.safeParse({
       beneficiary: { ...person, cellularNumber: '', email: '' },
       claimant: { ...person, cellularNumber: '', email: '', relationshipToBeneficiary: 'Self' },
       case: {},
     });
+    expect(r.success).toBe(true);
+  });
+
+  it('still rejects a malformed contact when one is given', () => {
+    // Optional does not mean unvalidated: a wrong number is worse than none.
+    const r = IntakeInputCheckedSchema.safeParse({
+      beneficiary: { ...person, cellularNumber: '12345', email: '' },
+      claimant: { ...person, relationshipToBeneficiary: 'Mother' },
+      case: {},
+    });
     expect(r.success).toBe(false);
-    if (!r.success) {
-      const msgs = r.error.issues.map(i => i.message);
-      expect(msgs).toContain('Contact details are required when the beneficiary is the claimant');
-    }
   });
 
   it('accepts a beneficiary without contact details when a separate claimant claims for them', () => {
@@ -59,7 +68,9 @@ describe('PersonSchema (via IntakeInputSchema)', () => {
     expect(r.success).toBe(true);
   });
 
-  it('rejects a claimant without contact details', () => {
+  it('accepts a claimant without contact details', () => {
+    // The person who signs for the beneficiary often has no handset either.
+    // Their account is issued at the counter instead of by email/SMS.
     const r = IntakeInputCheckedSchema.safeParse({
       beneficiary: { ...person, cellularNumber: '', email: '' },
       claimant: {
@@ -68,7 +79,7 @@ describe('PersonSchema (via IntakeInputSchema)', () => {
       },
       case: {},
     });
-    expect(r.success).toBe(false);
+    expect(r.success).toBe(true);
   });
 
   it('accepts an isIndigenous flag on the beneficiary', () => {

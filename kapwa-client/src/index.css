@@ -653,4 +653,20 @@ ol[data-sonner-toaster][data-sonner-theme='system'] {
   }
 }
 
-
+/* The claimant credential slip is the only thing worth printing from the intake
+   screen. Scoped with :has() so the rule is inert everywhere else — the case
+   view and the reports print exactly as before. */
+@media print {
+  body:has(#claimant-slip) * {
+    visibility: hidden;
+  }
+  body:has(#claimant-slip) #claimant-slip,
+  body:has(#claimant-slip) #claimant-slip * {
+    visibility: visible;
+  }
+  body:has(#claimant-slip) #claimant-slip {
+    position: absolute;
+    inset: 0;
+    border: 0;
+  }
+}

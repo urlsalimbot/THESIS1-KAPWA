@@ -53,10 +53,10 @@ export class AuthController {
   @Throttle(AUTH_LIMIT)
   @HttpCode(HttpStatus.OK)
   async login(
-    @Body(new ZodPipe(LoginSchema)) body: { email: string; password: string },
+    @Body(new ZodPipe(LoginSchema)) body: { identifier?: string; email?: string; password: string },
     @Res({ passthrough: true }) res: Response,
   ) {
-    const user = await this.authService.validateUser(body.email, body.password);
+    const user = await this.authService.validateUser(body.identifier ?? body.email ?? '', body.password);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }

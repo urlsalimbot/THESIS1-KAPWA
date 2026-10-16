@@ -43,33 +43,31 @@ const PersonBaseSchema = z.object({
   isIndigenous: z.boolean().optional(),
 });
 
-/** Contact details for a person who must be reachable — the claimant always is. */
-const PersonContactSchema = {
-  cellularNumber: z.string().regex(PHONE_REGEX, 'Must be a valid 11-digit PH mobile number starting with 09'),
-  email: z.string().email('Email is required').min(1, 'Email is required'),
-};
-
 /**
- * The beneficiary's own contact details are optional when someone else claims
- * for them — the claimant is the reachable person. Filled-in values still have
- * to be well-formed.
+ * Contact details are optional for every person on an intake: the household
+ * may simply have no phone and no email address, which is common in Norzagaray
+ * (walk-ins, elderly clients, one handset shared by a household). Filled-in
+ * values still have to be well-formed.
+ *
+ * The office's channel for such a household is the counter, and the system
+ * still gives the claimant a way in: when there is no email and no number,
+ * AccountProvisioningService issues a printable claimant ID and a temporary
+ * password instead of the one-time setup link.
  */
 const PersonOptionalContactSchema = PersonBaseSchema.extend({
-  cellularNumber: z.string().refine(v => v === '' || PHONE_REGEX.test(v), 'Must be a valid 11-digit PH mobile number starting with 09'),
-  email: z.string().refine(v => v === '' || EMAIL_REGEX.test(v), 'Enter a valid email address'),
+  // `.optional()` and not merely "empty string allowed": the key may be absent
+  // altogether. The web form always sends `''`, but an intake submitted on a
+  // device that simply has no such field was rejected with "Required" — which
+  // is the same dead end this whole change exists to remove.
+  cellularNumber: z
+    .string()
+    .refine(v => v === '' || PHONE_REGEX.test(v), 'Must be a valid 11-digit PH mobile number starting with 09')
+    .optional(),
+  email: z
+    .string()
+    .refine(v => v === '' || EMAIL_REGEX.test(v), 'Enter a valid email address')
+    .optional(),
 });
-
-export const PersonSchema = PersonBaseSchema.extend(PersonContactSchema);
-
-/** The client mirrors the beneficiary into the claimant slot for a self-claim. */
-function isSelfClaim(
-  b: { surname: string; firstName: string; middleName?: string; gender: string; dob: string },
-  c: { surname: string; firstName: string; middleName?: string; gender: string; dob: string },
-): boolean {
-  return b.surname === c.surname && b.firstName === c.firstName
-    && (b.middleName ?? '') === (c.middleName ?? '')
-    && b.gender === c.gender && b.dob === c.dob;
-}
 
 export const FamilyMemberSchema = z.object({
   surname: z.string().min(1, 'Surname is required'),
@@ -92,7 +90,7 @@ export const SourceReferralSchema = z.object({
 
 export const IntakeInputSchema = z.object({
   beneficiary: PersonOptionalContactSchema,
-  claimant: PersonSchema.extend({
+  claimant: PersonOptionalContactSchema.extend({
     relationshipToBeneficiary: z.string().min(1, 'Relationship to beneficiary is required'),
   }),
   familyMembers: z.array(FamilyMemberSchema).optional(),
@@ -108,20 +106,18 @@ export const IntakeInputSchema = z.object({
   }),
 });
 
-/** Self-claims mirror the beneficiary into the claimant slot; the beneficiary is then the reachable person, so their contact details become mandatory. */
-function requireSelfClaimContacts(data: z.infer<typeof IntakeInputSchema>, ctx: z.RefinementCtx): void {
-  if (isSelfClaim(data.beneficiary, data.claimant)) {
-    if (!data.beneficiary.cellularNumber) {
-      ctx.addIssue({ code: 'custom', path: ['beneficiary', 'cellularNumber'], message: 'Contact details are required when the beneficiary is the claimant' });
-    }
-    if (!data.beneficiary.email) {
-      ctx.addIssue({ code: 'custom', path: ['beneficiary', 'email'], message: 'Contact details are required when the beneficiary is the claimant' });
-    }
-  }
-}
-
-/** IntakeInputSchema + the self-claim contact rule; what the pipes actually parse with. */
-export const IntakeInputCheckedSchema = IntakeInputSchema.superRefine(requireSelfClaimContacts);
+/**
+ * What the pipes parse with.
+ *
+ * This used to add one rule: a self-claim (the beneficiary is also the
+ * claimant) had to carry contact details, because the beneficiary was the only
+ * reachable person. That rule is gone with the reason for it — an intake of a
+ * person with neither email nor mobile number is now valid, and the office
+ * issues the account (see the schema comment above). Kept as a named export
+ * because the client, the controller and several specs refer to it, and a
+ * future refinement belongs here.
+ */
+export const IntakeInputCheckedSchema = IntakeInputSchema;
 
 export type FamilyMemberInput = z.infer<typeof FamilyMemberSchema>;
 
@@ -206,7 +202,7 @@ export const ConfirmMatchInputSchema = IntakeInputSchema.extend({
   // double case. Defaults to the pre-existing behaviour (create, or reuse a
   // recent case).
   createCase: z.boolean().optional(),
-}).superRefine(requireSelfClaimContacts);
+});
 export type ConfirmMatchInput = z.infer<typeof ConfirmMatchInputSchema>;
 
 export interface ConfirmMatchResponse {

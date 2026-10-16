@@ -23,6 +23,15 @@ export class User extends BaseEntity {
   @Column({ name: 'email', unique: true })
   email!: string;
 
+  /**
+   * Office-issued login for people with no email or mobile number: a short
+   * printable claimant ID (`CLM-000123`). Login accepts it in the email field
+   * (see AuthService.validateUser) and it is unique when set — most accounts,
+   * every staff account included, have no username.
+   */
+  @Column({ name: 'username', nullable: true })
+  username?: string;
+
   @Exclude()
   @Column({ name: 'password' })
   password!: string;

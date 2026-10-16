@@ -159,6 +159,33 @@ describe('AuthService', () => {
       const result = await service.validateUser('a@a.com', 'pass');
       expect(result).toBeNull();
     });
+
+    it('looks up an office-issued claimant ID in the username column', async () => {
+      // The claimant has no address to type: the ID on the slip is the login.
+      const user = { id: '1', username: 'CLM-000123', email: 'claimant-clm-000123@claimant.kapwa.local', password: 'hashed' } as User;
+      (repoMock.findOne as jest.Mock).mockResolvedValue(user);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      const result = await service.validateUser('clm-000123', 'ABCD-EFGH');
+
+      // Normalised to the stored form, and never looked up as an email.
+      expect(repoMock.findOne).toHaveBeenCalledWith({ where: { username: 'CLM-000123' } });
+      expect(result).toEqual(user);
+    });
+
+    it('treats anything with an @ as an email address', async () => {
+      (repoMock.findOne as jest.Mock).mockResolvedValue(null);
+
+      await service.validateUser('Admin@MSWDO.test', 'pass');
+
+      expect(repoMock.findOne).toHaveBeenCalledWith({ where: { email: 'admin@mswdo.test' } });
+    });
+
+    it('returns null for an empty identifier instead of matching a blank username', async () => {
+      (repoMock.findOne as jest.Mock).mockResolvedValue(null);
+      expect(await service.validateUser('   ', 'pass')).toBeNull();
+      expect(repoMock.findOne).not.toHaveBeenCalled();
+    });
   });
 
   describe('changePassword', () => {

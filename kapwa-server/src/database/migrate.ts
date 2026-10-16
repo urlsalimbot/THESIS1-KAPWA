@@ -1495,6 +1495,11 @@ await q.query(`
     ALTER TABLE irf_cases ALTER COLUMN case_disposition SET NOT NULL;
   END $$`);
 
+  // Office-issued claimant logins (Mirrors ClaimantUsername…0101): a username
+  // for people who have neither an email address nor a mobile number.
+  await q.query(`ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS username TEXT`);
+  await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_users_username ON users (username) WHERE username IS NOT NULL`);
+
   // -- Catch-up: columns and foreign keys the migration chain has and the
   //    bootstrap was missing (audit §0, the parity baseline). Two silent causes:
   //      * `ALTER TABLE … ADD COLUMN IF NOT EXISTS x UUID REFERENCES y` skips the
@@ -1636,7 +1641,17 @@ await q.query(`
 if (require.main === module) {
   migrate().catch((err) => {
     console.error('FATAL: fresh-boot bootstrap failed — no schema was applied:');
-    console.error(err instanceof Error ? err.message : err);
+    if (err instanceof Error) {
+      // The message alone is sometimes empty (a wrapped driver error), and an
+      // empty failure line is useless to whoever is reading the deploy log.
+      console.error(err.message || `(no message — ${err.name})`);
+      const wrapped = (err as { driverError?: unknown; original?: unknown });
+      const cause = wrapped.driverError ?? wrapped.original;
+      if (cause) console.error('cause:', cause instanceof Error ? cause.message : cause);
+      if (err.stack) console.error(err.stack.split('\n').slice(0, 8).join('\n'));
+    } else {
+      console.error('unexpected error value:', JSON.stringify(err));
+    }
     process.exit(1);
   });
 }

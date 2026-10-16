@@ -50,14 +50,10 @@ describe('validatePerson', () => {
     expect(Object.values(errs)).not.toContain('Monthly income must be 0 or higher');
   });
 
-  it('requires contacts by default (claimant)', () => {
+  it('allows empty contacts by default — nobody on an intake must have them', () => {
+    // A household with no phone and no email address is taken in at the
+    // counter; the claimant's account is issued there instead of delivered.
     const errs = validatePerson({ ...validPerson, cellularNumber: '', email: '' });
-    expect(Object.values(errs)).toContain('Must be a valid 11-digit mobile number starting with 09');
-    expect(Object.values(errs)).toContain('Enter a valid email address');
-  });
-
-  it('allows empty contacts when not required (beneficiary claimed by another)', () => {
-    const errs = validatePerson({ ...validPerson, cellularNumber: '', email: '' }, false);
     expect(errs).toEqual({});
   });
 

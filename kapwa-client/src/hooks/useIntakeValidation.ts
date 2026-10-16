@@ -74,11 +74,13 @@ export interface PersonFormValues {
 export type ValidationErrors = Record<string, string>;
 
 /**
- * Validate a person form. Contact details are only mandatory when
- * `requireContact` is true (the claimant always, and the beneficiary when they
- * are the claimant); otherwise they may be left empty but must be well-formed.
+ * Validate a person form. `requireContact` is false by default: an intake is
+ * allowed to carry nobody's email address or mobile number (the household may
+ * have neither), and the office issues a claimant ID and a temporary password
+ * when that happens. Pass `true` only where a contact is genuinely needed —
+ * nothing in the intake does today.
  */
-export function validatePerson(values: PersonFormValues, requireContact = true): ValidationErrors {
+export function validatePerson(values: PersonFormValues, requireContact = false): ValidationErrors {
   const result = personSchema(requireContact).safeParse(values);
   if (result.success) return {};
   const errors: ValidationErrors = {};
@@ -89,7 +91,7 @@ export function validatePerson(values: PersonFormValues, requireContact = true):
   return errors;
 }
 
-export function validateField(values: PersonFormValues, field: string, requireContact = true): string {
+export function validateField(values: PersonFormValues, field: string, requireContact = false): string {
   const schema = personSchema(requireContact).shape[field as keyof ReturnType<typeof personSchema>['shape']];
   if (!schema) return '';
   const value = values[field as keyof PersonFormValues];

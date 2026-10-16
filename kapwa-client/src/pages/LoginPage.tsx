@@ -10,17 +10,26 @@ import type { TFunction } from 'i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { isOfficeIssuedId, normalizeLoginIdentifier } from '@/lib/identifiers';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, Smartphone, HandHeart, Eye, EyeOff } from 'lucide-react';
 import { AuthShell } from '@/components/public/AuthShell';
 
-const appendDomain = (v: string) => (v.includes('@') ? v : `${v}@mswdo.test`);
+const appendDomain = normalizeLoginIdentifier;
 type LoginValues = z.infer<ReturnType<typeof makeLoginSchema>>;
 
 const makeLoginSchema = (t: TFunction) => z.object({
-  email: z.string().transform(appendDomain).pipe(z.string().email(t('auth.emailInvalid', 'Please enter a valid email address.'))),
+  // A claimant has no address to type: the ID on their slip is accepted here
+  // and the server looks it up in `users.username` (see AuthService.validateUser).
+  email: z
+    .string()
+    .min(1, t('auth.identifierRequired', 'Enter your email address or the claimant ID issued by the office.'))
+    .transform(appendDomain)
+    .refine((v) => isOfficeIssuedId(v) || z.string().email().safeParse(v).success, {
+      message: t('auth.emailInvalid', 'Please enter a valid email address.'),
+    }),
   password: z.string().min(1, t('auth.passwordRequired', 'Please enter your password.')),
 });
 
@@ -269,9 +278,12 @@ export function LoginPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('auth.emailLabel', 'Email')}</FormLabel>
+                    {/* `type="email"` would block a claimant ID before the form
+                        ever sees it, and `autoComplete="email"` would offer the
+                        wrong suggestions. */}
+                    <FormLabel>{t('auth.identifierLabel', 'Email or claimant ID')}</FormLabel>
                     <FormControl>
-                      <Input type="email" autoComplete="email" placeholder={t('auth.emailPlaceholder', 'Enter your email')} className="h-11" autoFocus {...field} />
+                      <Input type="text" autoComplete="username" placeholder={t('auth.identifierPlaceholder', 'Enter your email or CLM-000000')} className="h-11" autoFocus {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

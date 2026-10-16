@@ -14,6 +14,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationCategory, NotificationType } from '../notifications/notification.entity';
 import { AuditLogService } from '../audit/audit-log.service';
 import { BCRYPT_SALT_ROUNDS } from '../common/constants';
+import { nextSequenceValue } from '../database/sequences';
 
 export interface ProvisionClaimantInput {
   claimantPersonId: string;
@@ -30,6 +31,15 @@ export interface ProvisionClaimantResult {
   userId?: string;
   emailDelivered: boolean;
   smsDelivered: boolean;
+  /**
+   * Set when the office issued the credentials because the claimant has neither
+   * an email address nor a mobile number. `username` + `temporaryPassword` are
+   * returned ONCE, to the intake caller, to be printed for the claimant; the
+   * password is stored only as a bcrypt hash and never logged.
+   */
+  officeIssued?: boolean;
+  username?: string;
+  temporaryPassword?: string;
 }
 
 const SETUP_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -38,6 +48,20 @@ const SETUP_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 // set-password link is consumed. Never sent to the user.
 function unusablePassword(): string {
   return crypto.randomBytes(32).toString('hex');
+}
+
+/**
+ * Characters a person can read off a printed slip and type on a phone keypad:
+ * no 0/O, no 1/I/L, no 5/S. Anything that survives being misheard across a
+ * counter is worth more here than the extra entropy a confusable character adds.
+ */
+const TEMP_PASSWORD_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+/** Eight characters in two groups — ~39 bits, and dictatable as "ABCD EFGH". */
+function generateTemporaryPassword(): string {
+  const bytes = crypto.randomBytes(8);
+  const chars = Array.from(bytes, (b) => TEMP_PASSWORD_ALPHABET[b % TEMP_PASSWORD_ALPHABET.length]);
+  return `${chars.slice(0, 4).join('')}-${chars.slice(4).join('')}`;
 }
 
 @Injectable()
@@ -64,7 +88,14 @@ export class AccountProvisioningService {
     const person = await this.personRepo.findOne({ where: { id: input.claimantPersonId } });
     const fullName = person ? `${person.firstName ?? ''} ${person.surname ?? ''}`.trim() : '';
 
-    const existing = await this.findExistingUser(email, phone);
+    // A person's account is reused whatever contact details they happen to
+    // have this time: without this lookup a claimant who was issued an ID on a
+    // first intake would get a SECOND account on the next one (a different
+    // generated username matches no email or phone).
+    const existingByPerson = await this.userRepo.findOne({
+      where: { personId: input.claimantPersonId, role: UserRole.CLAIMANT },
+    });
+    const existing = existingByPerson ?? (await this.findExistingUser(email, phone));
     if (existing) {
       // A claimant may represent up to 2 beneficiaries: reuse the account and
       // only confirm the new enrollment — never resend setup credentials.
@@ -83,10 +114,56 @@ export class AccountProvisioningService {
       return { created: false, userId: existing.id, ...delivered };
     }
 
-    // No login identity at all — cannot create an account.
+    // No email, no mobile number: the office issues the credentials. This used
+    // to be a dead end — the person at the counter had no account at all — but
+    // it is the common case in Norzagaray: claimants are often elderly, have no
+    // handset, or share one with the household. A short claimant ID plus a
+    // readable temporary password are handed over on paper, and
+    // mustChangePassword forces a change at first sign-in (the same mechanism
+    // staff-provisioned accounts already use).
     if (!email && !phone) {
-      await this.flagStaff(input, 'Claimant has no email or phone; account not created.');
-      return { created: false, emailDelivered: false, smsDelivered: false };
+      const sequence = await nextSequenceValue(this.userRepo, 'claimant_seq');
+      const username = `CLM-${String(sequence).padStart(6, '0')}`;
+      const temporaryPassword = generateTemporaryPassword();
+
+      const officeUser = this.userRepo.create({
+        // `email` is unique and NOT NULL: a synthetic, undeliverable address
+        // keeps both properties, exactly as the phone-only path does.
+        email: `claimant-${username.toLowerCase()}@claimant.kapwa.local`,
+        username,
+        password: await bcrypt.hash(temporaryPassword, BCRYPT_SALT_ROUNDS),
+        role: UserRole.CLAIMANT,
+        firstName: person?.firstName,
+        middleName: person?.middleName,
+        lastName: person?.surname,
+        personId: input.claimantPersonId,
+        isActive: true,
+        // The synthetic address can never be verified, and a claimant cannot be
+        // asked to verify it.
+        emailVerified: true,
+        mustChangePassword: true,
+      });
+      const savedOffice = await this.userRepo.save(officeUser);
+      await this.linkBeneficiary(input.beneficiaryId, savedOffice.id);
+
+      // The audit trail records that an account was issued and to whom — never
+      // the credential itself (the root cause of the log-leak fixed earlier).
+      await this.auditLog?.log('claimant.account_created', input.beneficiaryId, input.actorId, {
+        userId: savedOffice.id,
+        controlNo: input.controlNo,
+        officeIssued: true,
+        username,
+      });
+
+      return {
+        created: true,
+        userId: savedOffice.id,
+        emailDelivered: false,
+        smsDelivered: false,
+        officeIssued: true,
+        username,
+        temporaryPassword,
+      };
     }
 
     const user = this.userRepo.create({

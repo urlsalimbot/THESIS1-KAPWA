@@ -228,8 +228,19 @@ export class AuthService {
     return result;
   }
 
-  async validateUser(email: string, pass: string): Promise<User | null> {
-    const user = await this.userRepo.findOne({ where: { email } });
+  /**
+   * The identifier is either an email address or an office-issued claimant ID
+   * (`CLM-000123`, see AccountProvisioningService). A claimant who has neither
+   * email nor mobile number has no address to type, so the ID they were handed
+   * on paper is their login. The `@` decides which column to look in — no
+   * guessing, and each lookup uses exactly one index.
+   */
+  async validateUser(identifier: string, pass: string): Promise<User | null> {
+    const value = (identifier ?? '').trim();
+    if (!value) return null;
+    const user = value.includes('@')
+      ? await this.userRepo.findOne({ where: { email: value.toLowerCase() } })
+      : await this.userRepo.findOne({ where: { username: value.toUpperCase() } });
     if (user && (await bcrypt.compare(pass, user.password))) return user;
     return null;
   }

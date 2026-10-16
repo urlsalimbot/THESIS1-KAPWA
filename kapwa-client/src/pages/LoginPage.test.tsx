@@ -62,11 +62,12 @@ describe('LoginPage', () => {
 
   it('renders login form with email and password fields', () => {
     render(<BrowserRouter><LoginPage /></BrowserRouter>);
-    expect(screen.getByText('Email')).toBeTruthy();
+    expect(screen.getByText('Email or claimant ID')).toBeTruthy();
     expect(screen.getByText('Password')).toBeTruthy();
     // Credential managers only offer to save what autocomplete tells them is a
-    // username/password pair.
-    expect(screen.getByPlaceholderText('Enter your email')).toHaveAttribute('autocomplete', 'email');
+    // username/password pair — and the field now accepts a claimant ID, which
+    // `type="email"` would have refused to submit.
+    expect(screen.getByPlaceholderText('Enter your email or CLM-000000')).toHaveAttribute('autocomplete', 'username');
     expect(screen.getByPlaceholderText('Enter your password')).toHaveAttribute('autocomplete', 'current-password');
   });
 

@@ -13,7 +13,7 @@ import { CaseRequirement } from '../cases/case-requirement.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { CasesService } from '../cases/cases.service';
 import { AccessCardsService } from '../access-cards/access-cards.service';
-import { AccountProvisioningService } from '../accounts/account-provisioning.service';
+import { AccountProvisioningService, type ProvisionClaimantResult } from '../accounts/account-provisioning.service';
 import { Referral, ReferralStatus } from '../referrals/referral.entity';
 import { memberToPerson } from './member-person';
 import { assessMatchCandidate, soundex } from './match-scoring';
@@ -35,6 +35,24 @@ const FAMILY_HOUSEHOLD_RELATIONSHIPS = new Set(['spouse', 'child', 'parent', 'si
 function isFamilyHouseholdRelationship(relationship?: string | null): boolean {
   const normalized = (relationship ?? '').trim().toLowerCase();
   return normalized.length > 0 && FAMILY_HOUSEHOLD_RELATIONSHIPS.has(normalized);
+}
+
+/**
+ * The office-issued credentials, shaped for the response — and ONLY those.
+ * When the claimant has an email or a phone the account is set up through a
+ * one-time link and nothing secret travels in this payload; when the office
+ * issued a password it is returned exactly once, here, for the intake screen to
+ * print. It is never logged and never included in a later response.
+ */
+function officeIssuedAccount(result?: ProvisionClaimantResult) {
+  if (!result?.officeIssued || !result.username) return {};
+  return {
+    claimantAccount: {
+      username: result.username,
+      temporaryPassword: result.temporaryPassword,
+      note: 'Shown once. Print this slip for the claimant: the office cannot recover the password.',
+    },
+  };
 }
 
 @Injectable()
@@ -67,10 +85,10 @@ export class IntakeService {
     controlNo: string,
     data: IntakeInput,
     actorId?: string,
-  ): Promise<void> {
-    if (!claimantPersonId) return;
+  ): Promise<ProvisionClaimantResult | undefined> {
+    if (!claimantPersonId) return undefined;
     try {
-      await this.claimants.provision({
+      return await this.claimants.provision({
         claimantPersonId,
         beneficiaryId,
         beneficiaryName,
@@ -81,6 +99,7 @@ export class IntakeService {
       });
     } catch (e) {
       this.logger.warn(`Claimant provisioning failed for beneficiary ${beneficiaryId}: ${(e as Error)?.message ?? e}`);
+      return undefined;
     }
   }
 
@@ -479,7 +498,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
           }
           await this.linkSourceReferral(queryRunner.manager, data.sourceReferral, recentCase.id);
           await queryRunner.commitTransaction();
-          await this.provisionClaimant(
+          const claimantAccount = await this.provisionClaimant(
             claimPerson.id,
             existingBeneficiary.id,
             `${data.beneficiary.firstName} ${data.beneficiary.surname}`.trim(),
@@ -492,6 +511,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
             caseId: recentCase.id,
             controlNo: recentCase.controlNo,
             status: recentCase.status,
+            ...officeIssuedAccount(claimantAccount),
           };
         }
       }
@@ -626,7 +646,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
         this.logger.warn(`Access card auto-assign failed for beneficiary ${savedBeneficiary.id}: ${(e as Error)?.message ?? e}`);
       }
 
-      await this.provisionClaimant(
+      const claimantAccount = await this.provisionClaimant(
         claimPerson.id,
         savedBeneficiary.id,
         `${data.beneficiary.firstName} ${data.beneficiary.surname}`.trim(),
@@ -638,6 +658,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
       return {
         beneficiaryId: savedBeneficiary.id,
         caseId: savedCase.id,
+        ...officeIssuedAccount(claimantAccount),
         controlNo,
         status: CaseStatus.ENROLLED,
       };

@@ -84,16 +84,62 @@ describe('AccountProvisioningService', () => {
     expect(smsGateway.sendSms).toHaveBeenCalledWith('09171234567', expect.stringContaining('enrolled'));
   });
 
-  it('flags staff when the claimant has no email or phone', async () => {
-    const { svc, userRepo, notifications } = build();
+  it('issues office credentials when the claimant has no email or phone', async () => {
+    // The common case in Norzagaray: no handset, no address. The office hands
+    // over a printable claimant ID and a temporary password instead of the
+    // intake ending in "account not created".
+    const { svc, userRepo, notifications, auditLog } = build();
+    userRepo.query = jest
+      .fn()
+      .mockResolvedValueOnce([])                      // CREATE SEQUENCE
+      .mockResolvedValueOnce([{ seq: '123' }]);       // SELECT nextval
+
+    const result = await svc.provision({ ...input, email: undefined, phone: undefined });
+
+    expect(result.created).toBe(true);
+    expect(result.officeIssued).toBe(true);
+    expect(result.emailDelivered).toBe(false);
+    expect(result.smsDelivered).toBe(false);
+
+    // A short ID a person can read off paper, and a password they can type:
+    // eight characters in two groups, with no confusable 0/O, 1/I/L or 5/S.
+    expect(result.username).toBe('CLM-000123');
+    expect(result.temporaryPassword).toMatch(/^[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+
+    const saved = userRepo.save.mock.calls[0][0];
+    expect(saved.username).toBe('CLM-000123');
+    expect(saved.mustChangePassword).toBe(true);
+    expect(saved.emailVerified).toBe(true);
+    expect(saved.email).toBe('claimant-clm-000123@claimant.kapwa.local');
+    expect(saved.phone).toBeUndefined();
+    // Only the hash is stored, and it is not the password that was returned.
+    expect(saved.password).not.toBe(result.temporaryPassword);
+    expect(saved.password).toMatch(/^\$2[aby]\$/);
+
+    // No delivery is attempted — there is nowhere to deliver to.
+    expect(notifications.createMany).not.toHaveBeenCalled();
+
+    // The audit trail names the account, never the credential.
+    const auditEntry = auditLog.log.mock.calls.find((c) => c[0] === 'claimant.account_created');
+    expect(auditEntry).toBeTruthy();
+    expect(JSON.stringify(auditEntry)).toContain('CLM-000123');
+    expect(JSON.stringify(auditEntry)).not.toContain(result.temporaryPassword);
+  });
+
+  it('reuses the account of a claimant who was issued one before', async () => {
+    // Second intake for the same person: the generated username matches no
+    // email or phone, so without the person lookup they would be handed a
+    // second account — and a second password — for the same human being.
+    const { svc, userRepo } = build();
+    userRepo.findOne = jest.fn().mockResolvedValue({ id: 'u-existing', personId: 'person-1', email: 'claimant-clm-000123@claimant.kapwa.local' });
 
     const result = await svc.provision({ ...input, email: undefined, phone: undefined });
 
     expect(result.created).toBe(false);
+    expect(result.userId).toBe('u-existing');
+    expect(result.officeIssued).toBeUndefined();
+    expect(result.temporaryPassword).toBeUndefined();
     expect(userRepo.save).not.toHaveBeenCalled();
-    expect(notifications.createMany).toHaveBeenCalledWith([
-      expect.objectContaining({ recipientId: 'admin-1', title: 'Account needs attention' }),
-    ]);
   });
 
   it('flags staff when the setup link could not be delivered', async () => {
