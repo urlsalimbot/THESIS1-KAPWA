@@ -31,6 +31,12 @@ export PGUSER="${DB_USER:-kapwa}"
 export PGPASSWORD="${DB_PASSWORD:-kapwa}"
 export PGSSLMODE="${PGSSLMODE:-prefer}"
 
+# Everything below compares text: sort, diff and comm must agree on the ORDER,
+# and comm additionally re-checks it. Under a UTF-8 collation the byte-sorted
+# files it is handed read as "not in sorted order" and comm aborts — which is
+# how this job failed on its first CI run. Byte order everywhere.
+export LC_ALL=C
+
 psql_admin() { psql -d postgres -v ON_ERROR_STOP=1 "$@"; }
 
 echo "── recreating ${BOOT_DB} and ${CHAIN_DB} on ${PGHOST}:${PGPORT}"

@@ -1431,6 +1431,115 @@ await q.query(`
     console.warn('case_history enum normalization skipped:', (e as Error).message);
   }
 
+  // -- Indexes only the migration chain had: the persons search/trigram set
+  //    (the beneficiary search box scans by surname and first name), the
+  //    notification lookups, the household-membership dedupe key, the renewal
+  //    and history joins. Fresh installs went without them (audit §0 baseline).
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_persons_name_trgm ON persons USING gin (surname gin_trgm_ops, first_name gin_trgm_ops)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_persons_search ON persons USING gin (search_vector)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_persons_philsys ON persons USING btree (philsys_number)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_notifications_email ON notifications USING btree (email)`);
+  await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_notif_prefs_user_channel_category ON notification_preferences USING btree (user_id, channel, category)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_iar_person ON inter_agency_referrals USING btree (person_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_iar_from_to ON inter_agency_referrals USING btree (from_agency_id, to_agency_id)`);
+  await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS "UQ_household_memberships_person_household" ON household_memberships USING btree (person_id, household_id) WHERE (household_id IS NOT NULL)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_cases_renewal_of ON cases USING btree (renewal_of_case_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS "IDX_case_history_case_id" ON case_history USING btree (case_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_beneficiary_roles_person ON beneficiary_roles USING btree (person_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_announcements_status ON announcements USING btree (status)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_announcements_slug ON announcements USING btree (slug)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_announcements_pinned_published ON announcements USING btree (pinned, published_at)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_acs_agency ON access_card_services USING btree (agency_id)`);
+
+  // Three type/nullability alignments the chain has and the bootstrap did not
+  // (audit §0 baseline). Each is guarded by a check of the actual data, so a
+  // database that would not survive the change keeps working: the guard logs a
+  // warning and skips, and the parity baseline keeps recording the difference.
+  await q.query(`DO $$ DECLARE nulls BIGINT; BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'beneficiaries' AND column_name = 'person_id' AND is_nullable = 'NO') THEN RETURN; END IF;
+    SELECT count(*) FROM beneficiaries WHERE person_id IS NULL INTO nulls;
+    IF nulls > 0 THEN
+      RAISE WARNING 'schema catch-up: skipped beneficiaries.person_id NOT NULL — % row(s) without a person', nulls;
+      RETURN;
+    END IF;
+    ALTER TABLE beneficiaries ALTER COLUMN person_id SET NOT NULL;
+  END $$`);
+
+  await q.query(`DO $$ DECLARE longest INTEGER; BEGIN
+    IF (SELECT character_maximum_length FROM information_schema.columns
+         WHERE table_name = 'households' AND column_name = 'access_card_code') = 20 THEN RETURN; END IF;
+    SELECT coalesce(max(length(access_card_code)), 0) FROM households INTO longest;
+    IF longest > 20 THEN
+      RAISE WARNING 'schema catch-up: skipped households.access_card_code VARCHAR(20) — longest value is % characters', longest;
+      RETURN;
+    END IF;
+    ALTER TABLE households ALTER COLUMN access_card_code TYPE VARCHAR(20);
+  END $$`);
+
+  await q.query(`DO $$ DECLARE invalid BIGINT; BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'irf_disposition') THEN
+      CREATE TYPE irf_disposition AS ENUM ('Under Investigation', 'Referred to PNP', 'Referred to WCPD', 'Dismissed', 'Closed');
+    END IF;
+    IF (SELECT data_type FROM information_schema.columns
+         WHERE table_name = 'irf_cases' AND column_name = 'case_disposition') = 'USER-DEFINED' THEN RETURN; END IF;
+    SELECT count(*) FROM irf_cases WHERE case_disposition::text NOT IN
+      ('Under Investigation', 'Referred to PNP', 'Referred to WCPD', 'Dismissed', 'Closed') INTO invalid;
+    IF invalid > 0 THEN
+      RAISE WARNING 'schema catch-up: skipped the irf_disposition enum — % row(s) hold an unknown disposition', invalid;
+      RETURN;
+    END IF;
+    ALTER TABLE irf_cases ALTER COLUMN case_disposition DROP DEFAULT;
+    ALTER TABLE irf_cases ALTER COLUMN case_disposition TYPE irf_disposition USING case_disposition::text::irf_disposition;
+    ALTER TABLE irf_cases ALTER COLUMN case_disposition SET DEFAULT 'Under Investigation';
+    ALTER TABLE irf_cases ALTER COLUMN case_disposition SET NOT NULL;
+  END $$`);
+
+  // -- Catch-up: columns and foreign keys the migration chain has and the
+  //    bootstrap was missing (audit §0, the parity baseline). Two silent causes:
+  //      * `ALTER TABLE … ADD COLUMN IF NOT EXISTS x UUID REFERENCES y` skips the
+  //        WHOLE clause — the reference included — when the column already
+  //        exists, so fresh installs ended up with bare UUIDs where the chain
+  //        has real foreign keys (14 of them);
+  //      * persons.merged_into_id was added by a migration and never mirrored,
+  //        so beneficiaries-reconciliation.service's query fails on a fresh
+  //        installation ("column a.merged_into_id does not exist").
+  //    Nothing here drops or rewrites data. Each foreign key is guarded by an
+  //    orphan count: a database with dangling rows logs a warning and skips that
+  //    one constraint instead of aborting the whole bootstrap.
+  await q.query(`ALTER TABLE persons ADD COLUMN IF NOT EXISTS merged_into_id UUID`);
+  await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS hash TEXT`);
+  await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS prev_hash TEXT`);
+
+  for (const [table, column, refTable, onDelete] of [
+    ['persons', 'merged_into_id', 'persons', 'NO ACTION'],
+    ['beneficiaries', 'person_id', 'persons', 'NO ACTION'],
+    ['access_card_services', 'agency_id', 'agencies', 'CASCADE'],
+    ['agency_contacts', 'agency_id', 'agencies', 'CASCADE'],
+    ['case_assistances', 'case_id', 'cases', 'CASCADE'],
+    ['case_follow_up_visits', 'case_id', 'cases', 'CASCADE'],
+    ['case_referrals', 'case_id', 'cases', 'CASCADE'],
+    ['case_requirements', 'case_id', 'cases', 'CASCADE'],
+    ['person_addresses', 'person_id', 'persons', 'CASCADE'],
+    ['person_contacts', 'person_id', 'persons', 'CASCADE'],
+    ['program_fund_sources', 'program_id', 'programs', 'CASCADE'],
+    ['program_required_documents', 'program_id', 'programs', 'CASCADE'],
+    ['user_barangay_assignments', 'user_id', 'users', 'CASCADE'],
+    ['user_tokens', 'user_id', 'users', 'CASCADE'],
+  ] as const) {
+    await q.query(`DO $$ DECLARE orphans BIGINT; BEGIN
+      IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_${table}_${column}') THEN RETURN; END IF;
+      EXECUTE format('SELECT count(*) FROM %I t WHERE t.%I IS NOT NULL AND NOT EXISTS (SELECT 1 FROM %I r WHERE r.id = t.%I)',
+                     '${table}', '${column}', '${refTable}', '${column}') INTO orphans;
+      IF orphans > 0 THEN
+        RAISE WARNING 'schema catch-up: skipped fk_${table}_${column} — % orphan row(s)', orphans;
+        RETURN;
+      END IF;
+      ALTER TABLE ${table} ADD CONSTRAINT fk_${table}_${column}
+        FOREIGN KEY (${column}) REFERENCES ${refTable}(id) ON DELETE ${onDelete};
+    END $$`);
+  }
+
   // Foreign-key indexes that had none (audit §4.1 / migration …0099).
   // Kept at the END of the DDL on purpose: these columns belong to tables the
   // bootstrap creates in several places, and Postgres rejects an index bound to
@@ -1466,7 +1575,7 @@ await q.query(`
   await q.query(`CREATE TABLE IF NOT EXISTS migrations (
     id SERIAL PRIMARY KEY,
     "timestamp" BIGINT NOT NULL,
-    name VARCHAR(255) NOT NULL
+    name TEXT NOT NULL
   )`);
   if (wasFresh) {
     const { AppDataSource } = await import('./data-source');
