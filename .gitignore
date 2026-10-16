@@ -94,4 +94,6 @@ pdf/preview/
 /test-results
 /perf
 /.planning
-/docs
+/docs/*
+# …except the audits: they are the record of what was found and fixed.
+!/docs/*-audit*.md
