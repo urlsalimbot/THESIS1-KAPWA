@@ -188,6 +188,11 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          # Two apps, two lockfiles, none at the root: without this the npm
+          # cache step fails before a single test runs.
+          cache-dependency-path: |
+            kapwa-server/package-lock.json
+            kapwa-client/package-lock.json
       - name: Install the API
         working-directory: kapwa-server
         run: npm ci --legacy-peer-deps
