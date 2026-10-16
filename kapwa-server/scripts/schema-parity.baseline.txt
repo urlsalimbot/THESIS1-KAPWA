@@ -1,32 +1,10 @@
-- column|access_card_services|agency|text|YES|
 + column|beneficiaries|person_id|uuid|NO|
-- column|beneficiaries|person_id|uuid|YES|
 + column|case_interventions|hash|text|YES|
 + column|case_interventions|prev_hash|text|YES|
-- column|cases|amount_assistance|numeric|YES|
-- column|cases|assigned_worker_name|text|YES|
-- column|cases|financial_subsidies|jsonb|YES|
-- column|cases|follow_up_visits|jsonb|YES|
-- column|cases|legislator_specify|text|YES|
-- column|cases|mode_financial_assistance|text|YES|
-- column|cases|other_assistance|jsonb|YES|
-- column|cases|referrals|jsonb|YES|
-- column|cases|requirements_checklist|jsonb|YES|
 + column|households|access_card_code|character varying|YES|
-- column|households|access_card_code|text|YES|
-- column|irf_cases|case_disposition|text|YES|
 + column|irf_cases|case_disposition|USER-DEFINED|NO|'Under Investigation'::irf_disposition
-- column|migrations|name|character varying|NO|
 + column|migrations|name|text|NO|
 + column|persons|merged_into_id|uuid|YES|
-- column|referrals|address|jsonb|YES|
-- column|referrals|dob|date|YES|
-- column|referrals|extension|text|YES|
-- column|referrals|first_name|text|YES|
-- column|referrals|gender|text|YES|
-- column|referrals|middle_name|text|YES|
-- column|referrals|phone|text|YES|
-- column|referrals|surname|text|YES|
 + constraint|access_card_services|FOREIGN KEY|agency_id|1
 + constraint|agency_contacts|FOREIGN KEY|agency_id|1
 + constraint|beneficiaries|FOREIGN KEY|person_id|1
@@ -56,3 +34,25 @@
 + index|persons|CREATE INDEX ON persons USING btree (philsys_number)
 + index|persons|CREATE INDEX ON persons USING gin (search_vector)
 + index|persons|CREATE INDEX ON persons USING gin (surname gin_trgm_ops, first_name gin_trgm_ops)
+- column|access_card_services|agency|text|YES|
+- column|beneficiaries|person_id|uuid|YES|
+- column|cases|amount_assistance|numeric|YES|
+- column|cases|assigned_worker_name|text|YES|
+- column|cases|financial_subsidies|jsonb|YES|
+- column|cases|follow_up_visits|jsonb|YES|
+- column|cases|legislator_specify|text|YES|
+- column|cases|mode_financial_assistance|text|YES|
+- column|cases|other_assistance|jsonb|YES|
+- column|cases|referrals|jsonb|YES|
+- column|cases|requirements_checklist|jsonb|YES|
+- column|households|access_card_code|text|YES|
+- column|irf_cases|case_disposition|text|YES|
+- column|migrations|name|character varying|NO|
+- column|referrals|address|jsonb|YES|
+- column|referrals|dob|date|YES|
+- column|referrals|extension|text|YES|
+- column|referrals|first_name|text|YES|
+- column|referrals|gender|text|YES|
+- column|referrals|middle_name|text|YES|
+- column|referrals|phone|text|YES|
+- column|referrals|surname|text|YES|

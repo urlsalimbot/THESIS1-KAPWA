@@ -1,11 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import i18n from '../index';
-import { getInitialLang, LANG_STORAGE_KEY } from '../index';
+import i18n, { changeLang, getInitialLang, LANG_STORAGE_KEY } from '../index';
 
 describe('i18n init', () => {
   beforeEach(() => localStorage.clear());
-  afterEach(() => {
-    i18n.changeLanguage('en');
+  afterEach(async () => {
+    await changeLang('en');
     localStorage.removeItem(LANG_STORAGE_KEY);
     document.documentElement.lang = 'en';
   });
@@ -25,10 +24,9 @@ describe('i18n init', () => {
     expect(getInitialLang()).toBe('en');
   });
 
-  it('resolves scaffold keys for both locales', () => {
-    i18n.changeLanguage('en');
+  it('resolves scaffold keys for both locales', async () => {
     expect(i18n.t('nav.language')).toBe('Language');
-    i18n.changeLanguage('fil');
+    await changeLang('fil');
     expect(i18n.t('nav.language')).toBe('Wika');
   });
 });

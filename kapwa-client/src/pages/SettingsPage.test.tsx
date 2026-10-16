@@ -80,10 +80,12 @@ describe('SettingsPage', () => {
     renderWithProviders(<SettingsPage />);
     expect(await screen.findByText('Language Preference')).toBeTruthy();
     fireEvent.click(screen.getByLabelText('Filipino'));
-    expect(document.documentElement.lang).toBe('fil-PH');
+    // Switching fetches the Filipino chunk first (audit §3.2), so each switch is
+    // awaited: an in-flight one would flip the language during the NEXT test.
+    await vi.waitFor(() => expect(document.documentElement.lang).toBe('fil-PH'));
     expect(localStorage.getItem('kapwa-lang')).toBe('fil');
     fireEvent.click(screen.getByLabelText('English'));
-    expect(document.documentElement.lang).toBe('en');
+    await vi.waitFor(() => expect(document.documentElement.lang).toBe('en'));
   });
 
   it('updates the displayed Current phone from the save response', async () => {
@@ -109,8 +111,10 @@ describe('SettingsPage', () => {
     expect(await screen.findByText('Mga Setting')).toBeTruthy();
     expect(screen.getByRole('tab', { name: /seguridad/i })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /mga abiso/i })).toBeInTheDocument();
-    // switch back to English for isolation (i18n is a module singleton)
+    // switch back to English for isolation (i18n is a module singleton), and
+    // wait for it — the switch is asynchronous since the chunk split.
     fireEvent.click(screen.getByLabelText('English'));
+    await vi.waitFor(() => expect(document.documentElement.lang).toBe('en'));
   });
 
   it('hides the SMS preference column when the server reports SMS unconfigured', async () => {

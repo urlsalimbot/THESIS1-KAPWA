@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { axe } from 'vitest-axe';
@@ -134,12 +134,16 @@ describe('Topbar', () => {
     expect(screen.getByText('English')).toBeTruthy();
     expect(screen.getByText('Filipino')).toBeTruthy();
     await user.click(screen.getByText('Filipino'));
-    expect(document.documentElement.lang).toBe('fil-PH');
+    // The switch fetches the Filipino chunk before flipping (audit §3.2), so the
+    // effect is awaited rather than assumed — and the test must not end with the
+    // switch still in flight: a menu left opening over the next render locks the
+    // body and every later test in this file fails to find its elements.
+    await waitFor(() => expect(document.documentElement.lang).toBe('fil-PH'));
     expect(localStorage.getItem('kapwa-lang')).toBe('fil');
     // switch back for isolation
     await user.click(screen.getByRole('button', { name: /open user menu|buksan ang menu ng user/i }));
     await user.click(screen.getByText('English'));
-    expect(document.documentElement.lang).toBe('en');
+    await waitFor(() => expect(document.documentElement.lang).toBe('en'));
   });
 });
 

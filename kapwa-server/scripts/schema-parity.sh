@@ -78,7 +78,7 @@ fingerprint() {
         from pg_indexes
        where schemaname = 'public'
        order by tablename, 2"
-  } | sort
+  } | LC_ALL=C sort
 }
 
 BOOT_OUT="$(mktemp)"; CHAIN_OUT="$(mktemp)"; CURRENT="$(mktemp)"
@@ -92,7 +92,7 @@ echo "── facts compared: bootstrap ${BOOT_LINES}, chain ${CHAIN_LINES}"
 
 diff -u "$BOOT_OUT" "$CHAIN_OUT" > /tmp/schema-parity.diff || true
 # Only the changed facts, not the hunk headers of the unified diff.
-grep -E '^[+-][a-z]' /tmp/schema-parity.diff | sed 's/^\(.\)/\1 /' | sort -u > "$CURRENT"
+grep -E '^[+-][a-z]' /tmp/schema-parity.diff | sed 's/^\(.\)/\1 /' | LC_ALL=C sort -u > "$CURRENT"
 
 if [ "${1:-check}" = "update-baseline" ]; then
   cp "$CURRENT" "$BASELINE"
