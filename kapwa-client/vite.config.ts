@@ -79,6 +79,17 @@ export default {
       overlay: false,
     },
   },
+  // `vite preview` (what the e2e suite and any local production check runs)
+  // does NOT inherit `server.proxy`, so the SPA had no /api route and every
+  // login failed silently. Same targets as the dev server, spelled out.
+  preview: {
+    port: 4173,
+    headers: SECURITY_HEADERS,
+    proxy: {
+      '/api': 'http://localhost:3000',
+      '/socket.io': { target: 'http://localhost:3000', ws: true },
+    },
+  },
   build: { outDir: 'dist' },
   optimizeDeps: {
     include: ['react-dom', 'react-dom/client'],
