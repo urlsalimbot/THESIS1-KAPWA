@@ -154,9 +154,9 @@ jobs:
     # Browser smoke tests (audit §3.3). Thousands of unit tests mock the router,
     # the session and the API; these three drive the built SPA against a real API
     # and a real database, which is how every UI regression of the last month was
-    # actually found. `continue-on-error` until it has a green record on main —
-    # it should become blocking after that, not stay decorative.
-    continue-on-error: true
+    # actually found. Blocking since its green run on 2026-10-16 — it is the only
+    # job that exercises a production build end to end, so a failure here is
+    # worth stopping a deploy for.
     needs: server
     runs-on: ubuntu-latest
     timeout-minutes: 25
