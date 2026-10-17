@@ -11,19 +11,41 @@ const LEFT = M;
 const RIGHT = PAGE[0] - M;
 const WIDTH = RIGHT - LEFT;
 
-const CASE_COLS = [
+interface CaseListColumn {
+  key: string;
+  label: string;
+  w: number;
+  /** The span this column sits under in tier 1 (NAME, GENDER, CLIENT CATEGORY). */
+  span?: string;
+  /** Drawn as a tick, not as a value — the reference form marks gender and the
+   * client categories with a slash in the right column. */
+  tick?: boolean;
+  /** A second header line, drawn under the label (Intervention/Remarks). */
+  hint?: string;
+}
+
+// The case list mirrors the office's own form (pdf-samples/SummaryReportP3…):
+// a two-tier header — No. | Date | NAME | GENDER | CLIENT CATEGORY | Barangay |
+// Intervention — with gender as two tick columns (M, F) and the client
+// categories as seven more. `w` sums to 1 so the table spans the full width.
+const CASE_COLS: CaseListColumn[] = [
   { key: 'no', label: 'No.', w: 0.03 },
   { key: 'date', label: 'Date', w: 0.07 },
-  { key: 'surname', label: 'SURNAME', w: 0.12 },
-  { key: 'firstName', label: 'FIRST NAME', w: 0.12 },
-  { key: 'middleName', label: 'MIDDLE NAME', w: 0.11 },
-  { key: 'gender', label: 'GENDER', w: 0.06 },
-  { key: 'clientCategory', label: 'CLIENT CATEGORY', w: 0.27 },
+  { key: 'surname', label: 'SURNAME', w: 0.12, span: 'NAME' },
+  { key: 'firstName', label: 'FIRST NAME', w: 0.12, span: 'NAME' },
+  { key: 'middleName', label: 'MIDDLE NAME', w: 0.11, span: 'NAME' },
+  { key: 'genderM', label: 'M', w: 0.03, span: 'GENDER', tick: true },
+  { key: 'genderF', label: 'F', w: 0.03, span: 'GENDER', tick: true },
+  { key: 'cedc', label: 'CEDC', w: 0.0385, span: 'CLIENT CATEGORY', tick: true },
+  { key: 'wedc', label: 'WEDC', w: 0.0385, span: 'CLIENT CATEGORY', tick: true },
+  { key: 'pwd', label: 'PWD', w: 0.0385, span: 'CLIENT CATEGORY', tick: true },
+  { key: 'senior', label: 'SR. CITIZEN', w: 0.0385, span: 'CLIENT CATEGORY', tick: true },
+  { key: 'indigent', label: 'INDIGENT', w: 0.0385, span: 'CLIENT CATEGORY', tick: true },
+  { key: 'fourPs', label: '4Ps', w: 0.0385, span: 'CLIENT CATEGORY', tick: true },
+  { key: 'ip', label: 'IP', w: 0.0385, span: 'CLIENT CATEGORY', tick: true },
   { key: 'barangay', label: 'Barangay', w: 0.10 },
-  { key: 'intervention', label: 'Intervention/Remarks', w: 0.12 },
-] as const;
-
-const CLIENTS = ['CEDC', 'WEDC', 'PWD', 'SR. CITIZEN', 'INDIGENT', '4Ps', 'IP'] as const;
+  { key: 'intervention', label: 'Intervention/Remarks', w: 0.12, hint: '(FA/C/CSR/R/H/HV/ etc.)' },
+];
 
 export async function buildSummaryReportPdf(data: SummaryReportData): Promise<Buffer> {
   const PDFDocument = require('pdfkit');
@@ -324,28 +346,57 @@ function drawCaseList(doc: any, rows: CaseListRow[]) {
   for (const w of weights) { colX.push(x); x += (w / totalWeight) * WIDTH; }
   colX.push(RIGHT);
 
-  const headerH = 30;
+  const TIER1 = 11;
+  const TIER2 = 21;
+  const headerH = TIER1 + TIER2;
   const rowH = 15;
-  // Category labels live in the header band. They used to be redrawn on every
-  // data row, so a six-row list repeated them six times and the one tick mark a
-  // row was lost in the noise.
-  const catX = colX[6];
-  const catW = colX[7] - colX[6];
-  const step = catW / CLIENTS.length;
+
+  // Span centres, measured the same way the column X positions are: a span is
+  // the run of consecutive columns that share its name.
+  const spanRange = (name: string) => {
+    const idx = CASE_COLS.map((c, i) => (c.span === name ? i : -1)).filter((i) => i >= 0);
+    return [colX[idx[0]], colX[idx[idx.length - 1] + 1]] as const;
+  };
 
   const drawHeader = (top: number) => {
     doc.rect(LEFT, top, WIDTH, headerH).lineWidth(0.6).strokeColor('#111').stroke();
+    // Tier 1: the span captions, then the columns that have no sub-labels.
+    doc.moveTo(LEFT, top + TIER1).lineTo(RIGHT, top + TIER1).lineWidth(0.6).strokeColor('#111').stroke();
+    for (const span of ['NAME', 'GENDER', 'CLIENT CATEGORY']) {
+      const [x0, x1] = spanRange(span);
+      doc.font('Helvetica-Bold').fontSize(6.4).fillColor('#111')
+        .text(span, x0, top + 3.5, { width: x1 - x0, align: 'center' });
+      // Span columns have no vertical rule between them at tier 1, matching the
+      // merged cell on the office's form.
+    }
+    for (const span of ['NAME', 'GENDER', 'CLIENT CATEGORY']) {
+      const [x0, x1] = spanRange(span);
+      CASE_COLS.forEach((c, i) => {
+        if (c.span !== span || colX[i] === x0) return;
+        doc.moveTo(colX[i], top + TIER1).lineTo(colX[i], top + headerH).lineWidth(0.4).strokeColor('#444').stroke();
+      });
+      void x1;
+    }
+    // Tier 2: sub-labels, centred inside their own column so a long one
+    // ("SR. CITIZEN") wraps instead of sliding into the neighbour.
     CASE_COLS.forEach((c, i) => {
-      doc.font('Helvetica-Bold').fontSize(5.6).fillColor('#111')
-        .text(c.label, colX[i] + 1, top + 4, { width: colX[i + 1] - colX[i] - 2, align: 'center', lineBreak: false });
-    });
-    CLIENTS.forEach((label, i) => {
-      // `lineBreak: false` makes pdfkit ignore the width box and left-anchor the
-      // text, so the label never lined up with the tick below it. With the box
-      // on, align:center really centers — and a long label ("SR. CITIZEN")
-      // wraps instead of sliding into the next column.
+      if (!c.span && i >= 14) return; // Barangay / Intervention sit in tier 1
+      if (!c.span) return;
       doc.font('Helvetica-Bold').fontSize(4.8).fillColor('#111')
-        .text(label, catX + i * step + 1, top + 17, { width: step - 2, align: 'center' });
+        .text(c.label, colX[i] + 1, top + TIER1 + 3, { width: colX[i + 1] - colX[i] - 2, align: 'center' });
+    });
+    // Unspanned headers in tier 1, plus the reference's code hint under the
+    // last one.
+    CASE_COLS.forEach((c, i) => {
+      if (c.span) return;
+      // Unspanned headers read across the whole header, as on the form, rather
+      // than sitting in tier 1 with an empty band beneath them.
+      doc.font('Helvetica-Bold').fontSize(6).fillColor('#111')
+        .text(c.label, colX[i], top + headerH / 2 - 3, { width: colX[i + 1] - colX[i], align: 'center' });
+      if (c.hint) {
+        doc.font('Helvetica').fontSize(4.6).fillColor('#333')
+          .text(c.hint, colX[i] + 1, top + headerH - 7, { width: colX[i + 1] - colX[i] - 2, align: 'center' });
+      }
     });
   };
 
@@ -361,22 +412,37 @@ function drawCaseList(doc: any, rows: CaseListRow[]) {
       y = top + headerH;
     }
     doc.rect(LEFT, y, WIDTH, rowH).lineWidth(0.4).strokeColor('#444').stroke();
-    const cells = [
-      String(r.no), r.date, r.surname, r.firstName, r.middleName,
-      r.gender, '', r.barangay, r.intervention,
-    ];
-    cells.forEach((v, i) => {
-      if (i === 6) return; // client category drawn as ticks
+    const values: Record<string, string> = {
+      no: String(r.no),
+      date: r.date,
+      surname: r.surname,
+      firstName: r.firstName,
+      middleName: r.middleName,
+      barangay: r.barangay,
+      intervention: r.intervention,
+    };
+    // Gender and the client categories are marked with a tick in their own
+    // column, as on the office's form.
+    const ticks = new Set<string>();
+    if (r.gender === 'M') ticks.add('genderM');
+    if (r.gender === 'F') ticks.add('genderF');
+    const flags: Record<string, boolean> = {
+      cedc: r.categories.cedc, wedc: r.categories.wedc, pwd: r.categories.pwd,
+      senior: r.categories.senior, indigent: r.categories.indigent,
+      fourPs: r.categories.fourPs, ip: r.categories.ip,
+    };
+    for (const [k, on] of Object.entries(flags)) if (on) ticks.add(k);
+
+    CASE_COLS.forEach((c, i) => {
+      const cellW = colX[i + 1] - colX[i];
+      if (c.tick) {
+        if (!ticks.has(c.key)) return;
+        doc.font('Helvetica').fontSize(8).fillColor('#111')
+          .text('/', colX[i], y + 4, { width: cellW, align: 'center', lineBreak: false });
+        return;
+      }
       doc.font('Helvetica').fontSize(6.4).fillColor('#111')
-        .text(v, colX[i] + 2, y + 4, { width: colX[i + 1] - colX[i] - 4, lineBreak: false, ellipsis: true });
-    });
-    const flags = [r.categories.cedc, r.categories.wedc, r.categories.pwd, r.categories.senior, r.categories.indigent, r.categories.fourPs, r.categories.ip];
-    CLIENTS.forEach((_, i) => {
-      if (!flags[i]) return;
-      // Centred in its own category column: a fixed x offset drifted into the
-      // neighbouring column as soon as the block widened.
-      doc.font('Helvetica').fontSize(8).fillColor('#111')
-        .text('/', catX + i * step, y + 4, { width: step, align: 'center', lineBreak: false });
+        .text(values[c.key] ?? '', colX[i] + 2, y + 4, { width: cellW - 4, lineBreak: false, ellipsis: true });
     });
     y += rowH;
   }
