@@ -78,3 +78,44 @@ test('carousel cards stay on the page rhythm at rest and after snapping', async 
   // card lands on the scroll container's padding-box edge instead.
   expect(afterSnap!.cardX, snapMsg).toBe(afterSnap!.h1X);
 });
+
+/**
+ * The OTP / 2FA card header is a state a real session cannot reach, so a
+ * regression there (an icon tile stacked back above the heading) would go
+ * unnoticed. Forced here by stubbing the login response.
+ */
+test('the OTP header keeps its icon inline rather than in a tile above', async ({ page }) => {
+  await page.route('**/api/v1/auth/login', (route) =>
+    route.fulfill({ json: { mfaRequired: true, tempToken: 'stub', mfaMethod: 'totp' } }),
+  );
+
+  await page.goto('/login');
+  await page.fill('input[name="email"]', 'someone@example.com');
+  await page.fill('input[name="password"]', 'secret123');
+  await page.click('button[type="submit"]');
+
+  const heading = page.getByRole('heading', { level: 1 });
+  await expect(heading).toContainText('Two-Factor Authentication');
+
+  // one inline icon inside the heading, aria-hidden
+  await expect(heading.locator('svg[aria-hidden="true"]')).toHaveCount(1);
+
+  // nothing accent-tiled sits above the heading *inside the card* (the auth
+  // shell's own brand mark above the card is expected and excluded)
+  const tilesAbove = await page.evaluate(() => {
+    const h1 = document.querySelector('h1');
+    if (!h1) return ['no h1'];
+    const card = h1.closest('div.rounded-lg.border') || h1.parentElement;
+    if (!card) return ['no card'];
+    const top = h1.getBoundingClientRect().top;
+    return [...card.querySelectorAll('*')]
+      .filter(
+        (el) =>
+          String(el.className).includes('bg-accent/10') &&
+          el.getBoundingClientRect().height > 0 &&
+          el.getBoundingClientRect().bottom <= top + 1,
+      )
+      .map((el) => String(el.className).slice(0, 60));
+  });
+  expect(tilesAbove, `accent tile(s) stacked above the heading: ${tilesAbove.join(' | ')}`).toEqual([]);
+});
