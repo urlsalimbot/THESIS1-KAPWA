@@ -174,8 +174,19 @@ function drawGroupedTable(doc: any, table: SummaryTable, columns: ReportColumn[]
   doc.rect(LEFT, topOfTable, WIDTH, headerH).lineWidth(0.6).strokeColor('#111').stroke();
   doc.moveTo(LEFT, topOfTable + tierH[0]).lineTo(RIGHT, topOfTable + tierH[0]).lineWidth(0.6).strokeColor('#111').stroke();
   doc.moveTo(LEFT, topOfTable + tierH[0] + tierH[1]).lineTo(RIGHT, topOfTable + tierH[0] + tierH[1]).lineWidth(0.6).strokeColor('#111').stroke();
+  // Vertical rules are drawn per TIER, not full height. A merged header — SEX
+  // over Male/Female, FINANCIAL over Burial/Medical/Assistive — must not be cut
+  // by a rule, which is both what the reference GAD matrix does and what made
+  // the labels read as struck-through. Each tier splits only the cells that
+  // actually differ on that tier.
+  const r1Cell = (c: ReportColumn) => c.band ?? c.key;
+  const r2Cell = (c: ReportColumn) => c.subBand ?? (row3(c) ? c.band ?? c.key : c.key);
+  const rule = (x: number, y0: number, y1: number) =>
+    doc.moveTo(x, y0).lineTo(x, y1).lineWidth(0.6).strokeColor('#111').stroke();
   for (let k = 1; k < columns.length; k++) {
-    doc.moveTo(colX[k], topOfTable).lineTo(colX[k], headerBottom).lineWidth(0.6).strokeColor('#111').stroke();
+    if (r1Cell(columns[k]) !== r1Cell(columns[k - 1])) rule(colX[k], R1top, R2top);
+    if (r2Cell(columns[k]) !== r2Cell(columns[k - 1])) rule(colX[k], R2top, R3top);
+    rule(colX[k], R3top, headerBottom);
   }
 
   // R1: band captions, centred over the band's sub-band group when one exists
@@ -313,14 +324,28 @@ function drawCaseList(doc: any, rows: CaseListRow[]) {
   for (const w of weights) { colX.push(x); x += (w / totalWeight) * WIDTH; }
   colX.push(RIGHT);
 
-  const headerH = 26;
+  const headerH = 30;
   const rowH = 15;
+  // Category labels live in the header band. They used to be redrawn on every
+  // data row, so a six-row list repeated them six times and the one tick mark a
+  // row was lost in the noise.
+  const catX = colX[6];
+  const catW = colX[7] - colX[6];
+  const step = catW / CLIENTS.length;
 
   const drawHeader = (top: number) => {
     doc.rect(LEFT, top, WIDTH, headerH).lineWidth(0.6).strokeColor('#111').stroke();
     CASE_COLS.forEach((c, i) => {
       doc.font('Helvetica-Bold').fontSize(5.6).fillColor('#111')
         .text(c.label, colX[i] + 1, top + 4, { width: colX[i + 1] - colX[i] - 2, align: 'center', lineBreak: false });
+    });
+    CLIENTS.forEach((label, i) => {
+      // `lineBreak: false` makes pdfkit ignore the width box and left-anchor the
+      // text, so the label never lined up with the tick below it. With the box
+      // on, align:center really centers — and a long label ("SR. CITIZEN")
+      // wraps instead of sliding into the next column.
+      doc.font('Helvetica-Bold').fontSize(4.8).fillColor('#111')
+        .text(label, catX + i * step + 1, top + 17, { width: step - 2, align: 'center' });
     });
   };
 
@@ -346,16 +371,12 @@ function drawCaseList(doc: any, rows: CaseListRow[]) {
         .text(v, colX[i] + 2, y + 4, { width: colX[i + 1] - colX[i] - 4, lineBreak: false, ellipsis: true });
     });
     const flags = [r.categories.cedc, r.categories.wedc, r.categories.pwd, r.categories.senior, r.categories.indigent, r.categories.fourPs, r.categories.ip];
-    const catX = colX[6];
-    const catW = colX[7] - colX[6];
-    const step = catW / CLIENTS.length;
-    CLIENTS.forEach((label, i) => {
-      doc.font('Helvetica-Bold').fontSize(4.8).fillColor('#111')
-        .text(label, catX + i * step + 1, y + 2, { width: step - 2, align: 'center', lineBreak: false });
-      if (flags[i]) {
-        doc.font('Helvetica').fontSize(7).fillColor('#111')
-          .text('/', catX + i * step + step / 2 - 2, y + 7, { lineBreak: false });
-      }
+    CLIENTS.forEach((_, i) => {
+      if (!flags[i]) return;
+      // Centred in its own category column: a fixed x offset drifted into the
+      // neighbouring column as soon as the block widened.
+      doc.font('Helvetica').fontSize(8).fillColor('#111')
+        .text('/', catX + i * step, y + 4, { width: step, align: 'center', lineBreak: false });
     });
     y += rowH;
   }
