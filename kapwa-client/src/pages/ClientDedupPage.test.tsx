@@ -304,14 +304,30 @@ describe('ClientDedupPage', () => {
     expect(finalizeBtn.getAttribute('title')).toMatch(/disqualified row/);
   });
 
-  it('confirms, finalizes, shows the save summary and downloads the priority list', async () => {
+  it('confirms, queues the finalize, shows the saved summary and downloads the priority list', async () => {
     pendingCount = 0;
     disqualifiedCount = 0;
-    mockApiPost.mockImplementation((path: string) =>
-      path.endsWith('/finalize')
-        ? Promise.resolve({ created: 1, updated: 0, deprioritized: 1, barangayUpdates: 0 })
-        : Promise.resolve({}),
-    );
+    // The endpoint queues the batch (202) and the worker runs it; the page polls
+    // the operation and reads the summary the worker persisted.
+    let queued = false;
+    mockApiPost.mockImplementation((path: string) => {
+      if (path.endsWith('/finalize')) {
+        queued = true;
+        return Promise.resolve({ status: 'finalizing' });
+      }
+      return Promise.resolve({});
+    });
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = String(key);
+      if (k.includes('/client-dedup/operations?')) return Promise.resolve(OPERATIONS_RESPONSE);
+      if (k.includes('/rows') && k.includes('/matches')) return Promise.resolve(MATCH_EVIDENCE);
+      if (k.includes('/rows')) return Promise.resolve({ data: [], total: 0, page: 1, limit: 10 });
+      return Promise.resolve({
+        id: 'op1', source: 'Batch 1.xlsx', status: queued ? 'finalized' : 'reviewing',
+        pending: 0, disqualified: 0, totalRows: 2,
+        finalizeSummary: queued ? { created: 1, updated: 0, deprioritized: 1, barangayUpdates: 0 } : null,
+      });
+    });
     mockDownload.mockResolvedValue(undefined);
 
     await openReview();
@@ -328,6 +344,29 @@ describe('ClientDedupPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /download priority list/i }));
     await waitFor(() => expect(mockDownload).toHaveBeenCalledWith('op1'));
+  });
+
+  it('shows the batch running and blocks a second finalize while the worker works', async () => {
+    pendingCount = 0;
+    disqualifiedCount = 0;
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = String(key);
+      if (k.includes('/client-dedup/operations?')) return Promise.resolve(OPERATIONS_RESPONSE);
+      if (k.includes('/rows') && k.includes('/matches')) return Promise.resolve(MATCH_EVIDENCE);
+      if (k.includes('/rows')) return Promise.resolve({ data: [], total: 0, page: 1, limit: 10 });
+      return Promise.resolve({
+        id: 'op1', source: 'Batch 1.xlsx', status: 'finalizing',
+        pending: 0, disqualified: 0, totalRows: 2, finalizeSummary: null,
+      });
+    });
+
+    await openReview();
+
+    // The operator reloaded mid-job: it must read as running, not as "Reviewing",
+    // and the button must not queue a second batch.
+    expect(await screen.findByText(/running in the background/i)).toBeTruthy();
+    // Reloaded mid-job: the button keeps its normal label but must not queue again.
+    expect(screen.getByRole('button', { name: /finalize & save priority list/i })).toBeDisabled();
   });
 
   it('phases the review — duplicates in this list first, then KAPWA matches', async () => {

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Query, UseGuards, UseInterceptors, UploadedFile, Request, Res, NotFoundException, BadRequestException, StreamableFile, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Query, UseGuards, UseInterceptors, UploadedFile, Request, Res, NotFoundException, BadRequestException, StreamableFile, DefaultValuePipe, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
@@ -91,9 +91,12 @@ export class DedupController {
   }
 
   @Post('operations/:id/finalize')
-  @ApiOperation({ summary: 'Finalize — blocked while any match is pending' })
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'Queue the finalize (202) — blocked while any match is pending' })
   async finalize(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
-    return this.dedup.finalize(id, req.user?.id);
+    // Queued, not run here: the worker takes it (202). The review gates are
+    // still checked synchronously, so a blocked row fails this call, not the job.
+    return this.dedup.enqueueFinalize(id, req.user?.id);
   }
 
   @Get('operations/:id/output')

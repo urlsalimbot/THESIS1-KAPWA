@@ -11,6 +11,7 @@ import { RemarksController } from './remarks.controller';
 import { BeneficiaryRemarksService } from './beneficiary-remarks.service';
 import { PgTrgmAdapter } from './dedup-adapter';
 import { DedupOutputService } from './dedup-output.service';
+import { DedupFinalizeWorker } from './dedup-finalize.worker';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { DedupOutputService } from './dedup-output.service';
   controllers: [DedupController, RemarksController],
   providers: [
     DedupService,
+    DedupFinalizeWorker,
     BeneficiaryRemarksService,
     {
       provide: DEDUP_ADAPTER,

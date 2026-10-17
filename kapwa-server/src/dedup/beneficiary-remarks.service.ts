@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { BeneficiaryRemark, RemarkKind } from './dedup.entity';
 
 /**
@@ -56,9 +56,10 @@ export class BeneficiaryRemarksService {
     kind: RemarkKind;
     remark: string;
     source?: string;
-    authoredBy?: string;
-  }): Promise<BeneficiaryRemark> {
-    return this.repo.save(this.repo.create({
+    authoredBy?: string | null;
+  }, manager?: EntityManager): Promise<BeneficiaryRemark> {
+    const repo = manager ? manager.getRepository(BeneficiaryRemark) : this.repo;
+    return repo.save(repo.create({
       beneficiaryId: input.beneficiaryId,
       operationId: input.operationId,
       kind: input.kind,

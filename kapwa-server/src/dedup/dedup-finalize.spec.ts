@@ -23,6 +23,16 @@ describe('DedupService.finalize', () => {
     opsRepo = mockRepo(); rowsRepo = mockRepo(); matchesRepo = mockRepo(); remarksService = { append: jest.fn(async (e: any) => e) };
     personRepo = mockRepo(); beneficiaryRepo = mockRepo(); addressRepo = mockRepo();
     service = new DedupService(opsRepo, rowsRepo, matchesRepo, stubAdapter as any, remarksService, personRepo, beneficiaryRepo, addressRepo, stubWriter as any);
+    // finalize writes through the transaction's manager; hand back the same
+    // repository mocks the assertions inspect.
+    const em = {
+      getRepository: (entity: { name?: string }) =>
+        ({ Person: personRepo, Beneficiary: beneficiaryRepo, ClientImportRow: rowsRepo, PersonAddress: addressRepo, ClientImportOperation: opsRepo } as any)[entity?.name ?? ''] ?? mockRepo(),
+      query: (...args: any[]) => rowsRepo.manager.query(...args),
+    };
+    for (const r of [opsRepo, rowsRepo, matchesRepo, personRepo, beneficiaryRepo, addressRepo]) {
+      r.manager = { ...r.manager, transaction: async (fn: any) => fn(em) };
+    }
   });
 
   it('refuses to finalize while any match is still pending, writing nothing', async () => {

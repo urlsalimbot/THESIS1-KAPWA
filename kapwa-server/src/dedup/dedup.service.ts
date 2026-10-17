@@ -1,6 +1,6 @@
 import { Injectable, Optional, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { ClientImportOperation, ClientImportRow, ClientImportMatch, BeneficiaryRemark } from './dedup.entity';
 import { parseImportFile, ColumnMap, ColumnMapError } from './dedup-parse.service';
 import { sweep, RowInput } from './dedup-match-sweep.service';
@@ -57,10 +57,11 @@ export class DedupService {
     kind: 'import' | 'decision' | 'barangay_update' | 'manual',
     remark: string,
     source: string | undefined,
-    authoredBy: string,
+    authoredBy: string | null,
+    em: EntityManager,
   ): Promise<void> {
     if (!this.remarksService) return;
-    await this.remarksService.append({ beneficiaryId, operationId, kind, remark, source, authoredBy });
+    await this.remarksService.append({ beneficiaryId, operationId, kind, remark, source, authoredBy }, em);
   }
 
   /** A row's status derives from its matches: pending wins, then deprioritized,
@@ -549,19 +550,34 @@ export class DedupService {
   }
 
   /**
-   * Finalize: refuses while anything is pending, then saves in ONE transaction —
-   * new rows become persons + beneficiaries, retained rows update the existing
-   * record (barangay changes recorded), deprioritized rows create nothing.
-   * Idempotent by status: a finalized operation cannot be finalized again, and a
-   * failure anywhere rolls the whole save back with the status untouched.
+   * Queue the finalize and return immediately (HTTP 202): a whole-municipal-list
+   * batch takes minutes, and holding the request open that long loses the
+   * response while the work continues anyway.
+   *
+   * The review gates are checked HERE, synchronously, so the operator sees a
+   * blocked row now instead of discovering it in the job log. The worker then
+   * runs `finalize()` — one transaction, so a crash rolls the whole batch back
+   * and the reclaimed job simply runs again.
    */
-  async finalize(operationId: string, actorId: string) {
+  async enqueueFinalize(operationId: string, actorId: string) {
     const op = await this.opsRepo.findOne({ where: { id: operationId } });
     if (!op) throw new NotFoundException('Operation not found');
     if (op.status !== 'reviewing') {
       throw new BadRequestException(`Operation is not in review (status: ${op.status})`);
     }
+    await this.assertFinalizable(operationId);
 
+    op.status = 'finalizing';
+    op.accomplisher = actorId;
+    op.finalizeStartedAt = null; // the worker stamps this when it claims the job
+    op.finalizeError = null;
+    op.finalizeSummary = null;
+    await this.opsRepo.save(op);
+    return { status: 'finalizing' as const };
+  }
+
+  /** The review gates: nothing pending, every disqualification decided. */
+  private async assertFinalizable(operationId: string): Promise<void> {
     const pending: Array<{ id: string }> = await this.rowsRepo.query(
       `SELECT r.id FROM client_import_rows r
         WHERE r.operation_id = $1
@@ -581,11 +597,49 @@ export class DedupService {
     if (undecided.length > 0) {
       throw new BadRequestException(`Cannot finalize: ${undecided.length} disqualified row(s) still need an eligibility decision`);
     }
+  }
+
+  /** The worker's record of a failed attempt: the operator can fix and retry. */
+  async recordFinalizeFailure(operationId: string, error: unknown): Promise<void> {
+    const message = error instanceof Error ? error.message : String(error);
+    await this.opsRepo.query(
+      `UPDATE client_import_operations
+          SET status = 'reviewing', finalize_started_at = NULL, finalize_error = $2
+        WHERE id = $1 AND status = 'finalizing'`,
+      [operationId, message.slice(0, 2000)],
+    );
+  }
+
+  /**
+   * Finalize: refuses while anything is pending, then saves in ONE transaction —
+   * new rows become persons + beneficiaries, retained rows update the existing
+   * record (barangay changes recorded), deprioritized rows create nothing.
+   * Idempotent by status: a finalized operation cannot be finalized again, and a
+   * failure anywhere rolls the whole save back with the status untouched.
+   *
+   * Called by the worker against a claimed (`finalizing`) operation; accepts
+   * `reviewing` too so it can still be run synchronously in tests and by hand.
+   */
+  async finalize(operationId: string, actorId: string | null) {
+    const op = await this.opsRepo.findOne({ where: { id: operationId } });
+    if (!op) throw new NotFoundException('Operation not found');
+    if (op.status !== 'reviewing' && op.status !== 'finalizing') {
+      throw new BadRequestException(`Operation is not in review (status: ${op.status})`);
+    }
+    await this.assertFinalizable(operationId);
 
     const rows = await this.rowsRepo.find({ where: { operationId }, order: { rowIndex: 'ASC' } });
     const result = { created: 0, updated: 0, deprioritized: 0, barangayUpdates: 0 };
 
-    await this.rowsRepo.manager.transaction(async () => {
+    // Every write below goes through the transaction's manager. Using the
+    // injected repositories here (as this used to) meant the "transaction" was a
+    // no-op wrapper: a failure half-way left the earlier rows committed, so a
+    // retried batch duplicated them.
+    await this.rowsRepo.manager.transaction(async (em: EntityManager) => {
+      const rowsRepo = em.getRepository(ClientImportRow);
+      const personRepo = em.getRepository(Person);
+      const beneficiaryRepo = em.getRepository(Beneficiary);
+      const addressRepo = em.getRepository(PersonAddress);
       for (const row of rows) {
         // A `retained` row with no matched person is a row whose claim was
         // severed ("not the same person") and never re-pointed: treat it as a
@@ -595,7 +649,7 @@ export class DedupService {
         if (row.status === 'no_match' || row.status === 'primary' || (row.status === 'retained' && !row.matchedPersonId)) {
           // Gender is optional in the schema and usually absent from an import;
           // the person is created without it (own insert, not createBeneficiary).
-          const person: any = this.personRepo!.create({
+          const person: any = personRepo.create({
             surname: row.lastName,
             firstName: row.firstName,
             middleName: row.middleName ?? undefined,
@@ -603,41 +657,41 @@ export class DedupService {
             gender: undefined,
           } as any);
           person.addresses = [
-            this.addressRepo!.create({
+            addressRepo.create({
               addressType: 'current',
               barangay: row.barangay,
               raw: row.barangay,
               isPrimary: true,
             } as any),
           ];
-          const savedPerson: any = await this.personRepo!.save(person);
-          const savedBen: any = await this.beneficiaryRepo!.save(
-            this.beneficiaryRepo!.create({ personId: savedPerson.id } as any),
+          const savedPerson: any = await personRepo.save(person);
+          const savedBen: any = await beneficiaryRepo.save(
+            beneficiaryRepo.create({ personId: savedPerson.id } as any),
           );
           // A new record gets its own household (the person as primary member)
           // so future lists can see the household grouping.
-          const hhRows: Array<{ id: string }> = await this.rowsRepo.manager.query(
+          const hhRows: Array<{ id: string }> = await em.query(
             `INSERT INTO households (id, barangay) VALUES (uuid_generate_v7(), $1) RETURNING id`,
             [row.barangay ?? null],
           );
-          await this.rowsRepo.manager.query(
+          await em.query(
             `INSERT INTO household_memberships (id, person_id, household_id, relationship, is_primary)
              VALUES (uuid_generate_v7(), $1, $2, 'Self', true)`,
             [savedPerson.id, hhRows[0].id],
           );
           row.matchedPersonId = savedPerson.id;
           row.beneficiaryId = savedBen.id;
-          await this.rowsRepo.save(row);
-          await this.recordRemark(savedBen.id, operationId, 'import', row.originalRemarks ?? 'Imported client', op.source, actorId);
-          await this.recordBatchServing(savedBen.id, op, actorId);
+          await rowsRepo.save(row);
+          await this.recordRemark(savedBen.id, operationId, 'import', row.originalRemarks ?? 'Imported client', op.source, actorId, em);
+          await this.recordBatchServing(savedBen.id, op, actorId, em);
           result.created++;
         } else if (retainedWithPerson) {
-          const person = await this.personRepo!.findOne({ where: { id: row.matchedPersonId as string }, relations: ['addresses'] });
+          const person = await personRepo.findOne({ where: { id: row.matchedPersonId as string }, relations: ['addresses'] });
           if (!person) continue;
           if (row.lastName) (person as any).surname = row.lastName;
           if (row.firstName) (person as any).firstName = row.firstName;
           if (row.middleName) (person as any).middleName = row.middleName;
-          const benRows: Array<{ id: string }> = await this.rowsRepo.query(
+          const benRows: Array<{ id: string }> = await rowsRepo.query(
             'SELECT id FROM beneficiaries WHERE person_id = $1 LIMIT 1',
             [row.matchedPersonId],
           );
@@ -649,9 +703,9 @@ export class DedupService {
               if (current) {
                 current.barangay = row.barangay;
                 current.raw = row.barangay;
-                await this.addressRepo!.save(current);
+                await addressRepo.save(current);
               } else {
-                await this.addressRepo!.save(this.addressRepo!.create({
+                await addressRepo.save(addressRepo.create({
                   personId: person.id,
                   addressType: 'current',
                   barangay: row.barangay,
@@ -670,16 +724,17 @@ export class DedupService {
                   `Barangay updated to ${row.barangay} from import`,
                   op.source,
                   actorId,
+                  em,
                 );
               }
             }
           }
-          await this.personRepo!.save(person);
+          await personRepo.save(person);
           if (beneficiaryId) {
             row.beneficiaryId = beneficiaryId;
-            await this.recordBatchServing(beneficiaryId, op, actorId);
+            await this.recordBatchServing(beneficiaryId, op, actorId, em);
           }
-          await this.rowsRepo.save(row);
+          await rowsRepo.save(row);
           result.updated++;
         } else {
           // deprioritized (legacy duplicates and confirmed disqualifications):
@@ -688,11 +743,18 @@ export class DedupService {
         }
       }
 
-      op.accomplisher = actorId;
+      // Already recorded when the job was queued; a job queued without an
+      // actor keeps whatever the enqueue stamped.
+      if (actorId) op.accomplisher = actorId;
       op.finalizedAt = new Date();
       op.status = 'finalized';
+      op.finalizeStartedAt = null;
+      op.finalizeError = null;
+      // Persisted, not just returned: the request that queued the job is long
+      // gone by the time this runs, and the review screen polls for it.
+      op.finalizeSummary = result;
       if (this.outputWriter) op.outputFile = await this.outputWriter.write(op, rows as ClientImportRow[]);
-      await this.opsRepo.save(op);
+      await em.getRepository(ClientImportOperation).save(op);
     });
 
     return result;
@@ -764,8 +826,13 @@ export class DedupService {
   }
 
   /** Records the batch serving as a case_intervention (eligibility evidence). */
-  private async recordBatchServing(beneficiaryId: string, op: ClientImportOperation, actorId: string) {
-    await this.rowsRepo.manager.query(
+  private async recordBatchServing(
+    beneficiaryId: string,
+    op: ClientImportOperation,
+    actorId: string | null,
+    em: EntityManager,
+  ) {
+    await em.query(
       `INSERT INTO case_interventions
          (id, case_id, beneficiary_id, service_name, intervention_type, delivery_date, source, created_by)
        VALUES (uuid_generate_v7(), NULL, $1, $2, $3, CURRENT_DATE, 'batch', $4)`,

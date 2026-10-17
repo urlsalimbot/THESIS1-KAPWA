@@ -2,7 +2,7 @@ import { BaseEntity } from '../common/base.entity';
 import { Column, Entity, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import type { EligibilityCode } from './dedup-eligibility.service';
 
-export type ClientImportStatus = 'defined' | 'reviewing' | 'finalized';
+export type ClientImportStatus = 'defined' | 'reviewing' | 'finalizing' | 'finalized';
 export type ClientImportRowStatus = 'pending' | 'no_match' | 'retained' | 'primary' | 'deprioritized';
 export type MatchTargetType = 'db_person' | 'import_row' | 'household';
 export type MatchStatus = 'pending' | 'primary' | 'deprioritized';
@@ -40,6 +40,23 @@ export class ClientImportOperation extends BaseEntity {
 
   @Column({ name: 'finalized_at', type: 'timestamptz', nullable: true })
   finalizedAt?: Date;
+
+  /**
+   * The worker's lease on a queued (`finalizing`) operation. Null while queued,
+   * stamped when claimed: the claim is `FOR UPDATE SKIP LOCKED`, so two API
+   * instances cannot run the same batch, and a lease older than the stale
+   * window is reclaimed after a crash.
+   */
+  @Column({ name: 'finalize_started_at', type: 'timestamptz', nullable: true })
+  finalizeStartedAt?: Date | null;
+
+  /** Why the last attempt failed; the operation returns to `reviewing` to retry. */
+  @Column({ name: 'finalize_error', type: 'text', nullable: true })
+  finalizeError?: string | null;
+
+  /** What the batch saved, set on success (the review screen's summary). */
+  @Column({ name: 'finalize_summary', type: 'jsonb', nullable: true })
+  finalizeSummary?: { created: number; updated: number; deprioritized: number; barangayUpdates: number } | null;
 
   /** Stored path of the generated priority-list Excel (Task 8). */
   @Column({ name: 'output_file', nullable: true })
@@ -193,7 +210,7 @@ export class BeneficiaryRemark extends BaseEntity {
   source?: string;
 
   @Column({ name: 'authored_by', type: 'uuid', nullable: true })
-  authoredBy?: string;
+  authoredBy?: string | null;
 
   @Column({ name: 'created_at', type: 'timestamptz', default: () => 'now()' })
   createdAt!: Date;

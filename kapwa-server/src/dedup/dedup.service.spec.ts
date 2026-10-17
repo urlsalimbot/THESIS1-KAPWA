@@ -231,6 +231,32 @@ describe('DedupService', () => {
     expect(matchesRepo.save).not.toHaveBeenCalled();
   });
 
+  it('queues the finalize instead of running it', async () => {
+    opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing', source: 'batch.csv' });
+    rowsRepo.query.mockResolvedValue([]);
+
+    await expect(service.enqueueFinalize('op1', 'u1')).resolves.toEqual({ status: 'finalizing' });
+
+    const saved = opsRepo.save.mock.calls[0][0];
+    expect(saved).toMatchObject({ status: 'finalizing', accomplisher: 'u1', finalizeStartedAt: null });
+  });
+
+  it('refuses to queue while a match is still pending', async () => {
+    opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing' });
+    rowsRepo.query.mockResolvedValueOnce([{ id: 'm1' }]); // pending matches
+
+    await expect(service.enqueueFinalize('op1', 'u1')).rejects.toThrow(/still pending/i);
+    expect(opsRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('records a failed batch and hands the operation back to review', async () => {
+    await service.recordFinalizeFailure('op1', new Error('deadlock detected'));
+
+    const [sql, params] = opsRepo.query.mock.calls[0];
+    expect(String(sql)).toContain("status = 'reviewing'");
+    expect(params).toEqual(['op1', 'deadlock detected']);
+  });
+
   it('refuses an eligibility decision for a row that is not disqualified', async () => {
     opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing' });
     rowsRepo.findOne.mockResolvedValue({ id: 'r1', operationId: 'op1', eligibility: 'allowed', status: 'retained' });

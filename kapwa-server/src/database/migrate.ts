@@ -1495,6 +1495,12 @@ await q.query(`
     ALTER TABLE irf_cases ALTER COLUMN case_disposition SET NOT NULL;
   END $$`);
 
+  // Client-dedup finalize as a background job (Mirrors
+  // DedupFinalizeWorker…0102).
+  await q.query(`ALTER TABLE IF EXISTS client_import_operations ADD COLUMN IF NOT EXISTS finalize_started_at TIMESTAMPTZ`);
+  await q.query(`ALTER TABLE IF EXISTS client_import_operations ADD COLUMN IF NOT EXISTS finalize_error TEXT`);
+  await q.query(`ALTER TABLE IF EXISTS client_import_operations ADD COLUMN IF NOT EXISTS finalize_summary JSONB`);
+
   // Office-issued claimant logins (Mirrors ClaimantUsername…0101): a username
   // for people who have neither an email address nor a mobile number.
   await q.query(`ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS username TEXT`);

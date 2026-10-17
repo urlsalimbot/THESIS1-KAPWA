@@ -30,7 +30,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 interface DedupOperation {
   id: string;
   source: string;
-  status: 'defined' | 'reviewing' | 'finalized';
+  status: 'defined' | 'reviewing' | 'finalizing' | 'finalized';
   createdAt: string;
   pending?: number;
   noMatch?: number;
@@ -49,6 +49,10 @@ interface OperationDetail extends DedupOperation {
   pending: number;
   disqualified: number;
   totalRows: number;
+  /** Set by the worker when a batch fails; the operation returns to review. */
+  finalizeError?: string | null;
+  /** What the batch saved, persisted so a reload still shows the numbers. */
+  finalizeSummary?: FinalizeSummary | null;
 }
 
 interface RowsResponse {
@@ -78,12 +82,14 @@ const t = i18n.t.bind(i18n);
 const STATUS_LABELS: Record<DedupOperation['status'], string> = {
   defined: t('dedup.statusDefined', 'Defined'),
   reviewing: t('dedup.statusReviewing', 'Reviewing'),
+  finalizing: t('dedup.statusFinalizing', 'Finalizing'),
   finalized: t('dedup.statusFinalized', 'Finalized'),
 };
 
 const STATUS_VARIANTS: Record<DedupOperation['status'], 'default' | 'secondary' | 'outline'> = {
   defined: 'outline',
   reviewing: 'default',
+  finalizing: 'default',
   finalized: 'secondary',
 };
 
@@ -212,6 +218,8 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [summary, setSummary] = useState<FinalizeSummary | null>(null);
+  /** Seconds waited so far — a batch takes minutes; silence looks broken. */
+  const [elapsed, setElapsed] = useState(0);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
   const [reviewFilter, setReviewFilter] = useState<'all' | 'matched' | 'no_match' | 'disqualified'>('all');
@@ -220,8 +228,12 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
   // is listed.
   const [phase, setPhase] = useState<'all' | 'intra_list' | 'db_match'>('all');
 
-  const { data: detail } = useSWR<OperationDetail>(queryKeys.clientDedup.detail(operationId), () =>
-    api.get<OperationDetail>(`/client-dedup/operations/${operationId}`),
+  const { data: detail } = useSWR<OperationDetail>(
+    queryKeys.clientDedup.detail(operationId),
+    () => api.get<OperationDetail>(`/client-dedup/operations/${operationId}`),
+    // The finalize runs in the worker: while it does, keep the badge and the
+    // button in step with the operation instead of showing a stale "Reviewing".
+    { refreshInterval: (d) => (d?.status === 'finalizing' ? 3000 : 0) },
   );
   const { data: rowsData, isLoading } = useSWR(
     ['clientDedup', 'rows', operationId, pagination.pageIndex + 1, pagination.pageSize, reviewFilter, phase] as const,
@@ -239,13 +251,30 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
 
   const refresh = () => mutate((key) => Array.isArray(key) && key[0] === 'clientDedup');
 
+  /**
+   * The endpoint queues the batch (202) and the worker runs it — a
+   * whole-municipal-list import takes minutes and must not hold a request open.
+   * Poll until the operation lands, showing the elapsed time meanwhile.
+   */
+  async function waitForFinalize(id: string): Promise<FinalizeSummary | null> {
+    const STEP_MS = 3000;
+    const MAX_MS = 15 * 60 * 1000;
+    for (let waited = 0; waited <= MAX_MS; waited += STEP_MS) {
+      const op = await api.get<OperationDetail>(`/client-dedup/operations/${id}`);
+      if (op.finalizeError) throw new Error(op.finalizeError);
+      if (op.status === 'finalized') return op.finalizeSummary ?? null;
+      setElapsed(Math.round((waited + STEP_MS) / 1000));
+      await new Promise((r) => setTimeout(r, STEP_MS));
+    }
+    throw new Error(t('dedup.finalizeSlow', 'Still running after 15 minutes — reopen this operation to check again.'));
+  }
+
   async function finalize() {
     setFinalizing(true);
+    setElapsed(0);
     try {
-      const result = await api.post<FinalizeSummary>(
-        `/client-dedup/operations/${operationId}/finalize`,
-        {},
-      );
+      await api.post(`/client-dedup/operations/${operationId}/finalize`, {});
+      const result = await waitForFinalize(operationId);
       setSummary(result);
       toast.success(t('dedup.finalizeToast', 'Import finalized — the priority list is saved.'));
       await refresh();
@@ -253,6 +282,7 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
       toast.error(err instanceof Error ? err.message : 'Finalize failed');
     } finally {
       setFinalizing(false);
+      setElapsed(0);
       setConfirmOpen(false);
     }
   }
@@ -373,11 +403,15 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
       />
       <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background/95 p-3 shadow-sm backdrop-blur">
         <span className="text-sm text-muted-foreground">
-          {pendingCount} pending {disqualifiedCount} disqualified
+          {detail?.status === 'finalizing'
+            ? t('dedup.runningNow', 'The batch is running in the background{{elapsed}}.', {
+                elapsed: elapsed ? ` — ${elapsed}s` : '',
+              })
+            : `${pendingCount} pending ${disqualifiedCount} disqualified`}
         </span>
         <Button
           onClick={() => setConfirmOpen(true)}
-          disabled={pendingCount > 0 || disqualifiedCount > 0 || finalizing}
+          disabled={pendingCount > 0 || disqualifiedCount > 0 || finalizing || detail?.status === 'finalizing'}
           title={
             pendingCount > 0 || disqualifiedCount > 0
               ? `${pendingCount} match${pendingCount === 1 ? '' : 'es'} pending and ${disqualifiedCount} disqualified row${disqualifiedCount === 1 ? '' : 's'} awaiting decision`
@@ -472,12 +506,12 @@ function OutputView({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-4">
-          {summary && (
+          {(summary ?? detail?.finalizeSummary) && (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Stat label={t('dedup.statCreated', 'New records saved')} value={summary.created} testId="stat-created" />
-              <Stat label={t('dedup.statUpdated', 'Existing records updated')} value={summary.updated} testId="stat-updated" />
-              <Stat label={t('dedup.statDeprioritized', 'Rows deprioritized')} value={summary.deprioritized} testId="stat-deprioritized" />
-              <Stat label={t('dedup.statBarangay', 'Barangay updates')} value={summary.barangayUpdates} testId="stat-barangay" />
+              <Stat label={t('dedup.statCreated', 'New records saved')} value={(summary ?? detail!.finalizeSummary)!.created} testId="stat-created" />
+              <Stat label={t('dedup.statUpdated', 'Existing records updated')} value={(summary ?? detail!.finalizeSummary)!.updated} testId="stat-updated" />
+              <Stat label={t('dedup.statDeprioritized', 'Rows deprioritized')} value={(summary ?? detail!.finalizeSummary)!.deprioritized} testId="stat-deprioritized" />
+              <Stat label={t('dedup.statBarangay', 'Barangay updates')} value={(summary ?? detail!.finalizeSummary)!.barangayUpdates} testId="stat-barangay" />
             </div>
           )}
           <Button onClick={download} disabled={downloading}>
