@@ -197,10 +197,10 @@ export function ClusteringTab({ filters }: { filters: Record<string, unknown> })
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={candidates}>
-                  <XAxis dataKey="k" tick={{ fontSize: 10 }} />
-                  <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
-                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
-                  <Tooltip contentStyle={{ fontSize: '12px' }} />
+                  <XAxis dataKey="k" tick={{ fontSize: '0.75rem' }} />
+                  <YAxis yAxisId="left" tick={{ fontSize: '0.75rem' }} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: '0.75rem' }} />
+                  <Tooltip contentStyle={{ fontSize: '0.75rem' }} />
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
                   <Line yAxisId="left" dataKey="inertia" name={t('analytics.clustering.inertia', 'Inertia')} stroke="#3b82f6" dot={false} />
                   <Line yAxisId="right" dataKey="silhouette" name={t('analytics.clustering.silhouette', 'Silhouette')} stroke="#10b981" />

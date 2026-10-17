@@ -53,9 +53,9 @@ export function InequalityTab({ filters }: { filters: Record<string, unknown> })
         <CardContent>
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={data.lorenz}>
-              <XAxis dataKey="p" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip contentStyle={{ fontSize: '12px' }} />
+              <XAxis dataKey="p" tick={{ fontSize: '0.75rem' }} />
+              <YAxis tick={{ fontSize: '0.75rem' }} />
+              <Tooltip contentStyle={{ fontSize: '0.75rem' }} />
               <Legend wrapperStyle={{ fontSize: '11px' }} />
               <Line type="monotone" dataKey="share" name={t('analytics.inequality.lorenz', 'Lorenz curve')} stroke="#3b82f6" dot={false} />
               <Line type="monotone" dataKey="p" name="—" stroke="#9ca3af" strokeDasharray="4 4" dot={false} />

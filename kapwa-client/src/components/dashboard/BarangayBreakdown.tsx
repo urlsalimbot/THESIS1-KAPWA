@@ -28,9 +28,9 @@ export function BarangayBreakdown({ cases }: BarangayBreakdownProps) {
       <CardContent>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={cases} layout="vertical">
-            <XAxis type="number" tick={{ fontSize: 10 }} />
-            <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={90} />
-            <Tooltip contentStyle={{ fontSize: '12px' }} />
+            <XAxis type="number" tick={{ fontSize: '0.75rem' }} />
+            <YAxis type="category" dataKey="name" tick={{ fontSize: '0.75rem' }} width={90} />
+            <Tooltip contentStyle={{ fontSize: '0.75rem' }} />
             <Bar dataKey="count" fill="#3b82f6" radius={[0, 3, 3, 0]} />
           </BarChart>
         </ResponsiveContainer>

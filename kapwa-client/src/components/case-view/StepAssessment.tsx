@@ -129,7 +129,7 @@ export function StepAssessment({
                   disabled={readOnly}
                 >
                   {CLIENT_CATEGORIES_V2.map(cat => (
-                    <label key={cat} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <label key={cat} className="flex items-center gap-2 py-1.5 text-sm cursor-pointer">
                       <RadioGroupItem value={cat} aria-label={cat} />
                       {cat}
                     </label>

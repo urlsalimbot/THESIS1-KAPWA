@@ -77,10 +77,10 @@ export function DemographicsTab({ filters }: { filters: Record<string, unknown> 
         <CardContent>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={pyramid} layout="vertical">
-              <XAxis type="number" tick={{ fontSize: 10 }} />
-              <YAxis type="category" dataKey="bracket" tick={{ fontSize: 10 }} width={50} />
+              <XAxis type="number" tick={{ fontSize: '0.75rem' }} />
+              <YAxis type="category" dataKey="bracket" tick={{ fontSize: '0.75rem' }} width={50} />
               <Tooltip
-                contentStyle={{ fontSize: '12px' }}
+                contentStyle={{ fontSize: '0.75rem' }}
                 formatter={(value, name) => [value == null ? '—' : value, name]}
               />
               <Legend wrapperStyle={{ fontSize: '11px' }} />

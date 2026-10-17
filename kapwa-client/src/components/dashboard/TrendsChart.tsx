@@ -40,9 +40,9 @@ export function TrendsChart({ range }: { range?: TrendRange }) {
               <p className="text-xs font-medium text-muted-foreground mb-1">{t('dashboard.cases', 'Cases')}</p>
               <ResponsiveContainer width="100%" height={150}>
                 <BarChart data={series}>
-                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
-                  <Tooltip contentStyle={{ fontSize: '12px' }} />
+                  <XAxis dataKey="month" tick={{ fontSize: '0.75rem' }} />
+                  <YAxis tick={{ fontSize: '0.75rem' }} allowDecimals={false} />
+                  <Tooltip contentStyle={{ fontSize: '0.75rem' }} />
                   <Bar dataKey="casesCreated" name={t('dashboard.cases', 'Cases')} fill="#3b82f6" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -51,9 +51,9 @@ export function TrendsChart({ range }: { range?: TrendRange }) {
               <p className="text-xs font-medium text-muted-foreground mb-1">{t('dashboard.disbursed', 'Disbursed (₱)')}</p>
               <ResponsiveContainer width="100%" height={150}>
                 <BarChart data={series}>
-                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip contentStyle={{ fontSize: '12px' }} />
+                  <XAxis dataKey="month" tick={{ fontSize: '0.75rem' }} />
+                  <YAxis tick={{ fontSize: '0.75rem' }} />
+                  <Tooltip contentStyle={{ fontSize: '0.75rem' }} />
                   <Bar dataKey="transitioning" name={t('dashboard.disbursed', 'Disbursed (₱)')} fill="#10b981" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

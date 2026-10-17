@@ -148,7 +148,7 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
               required
             >
               {['Male', 'Female'].map(s => (
-                <label key={s} className="flex items-center gap-2 text-sm cursor-pointer">
+                <label key={s} className="flex items-center gap-2 py-1.5 text-sm cursor-pointer">
                   <RadioGroupItem value={s} aria-label={t(`intake.${s.toLowerCase()}`, s)} />
                   {t(`intake.${s.toLowerCase()}`, s)}
                 </label>

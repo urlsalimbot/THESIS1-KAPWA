@@ -109,7 +109,7 @@ export const Topbar = memo(function Topbar({ onMenuToggle, onToggleSidebar, side
 
   return (
     <TooltipProvider>
-      <header className="z-40 h-[4.5rem] border-b bg-card flex items-center px-4 lg:px-6 overflow-visible short:h-14">
+      <header className="z-40 min-h-[4.5rem] border-b bg-card flex flex-wrap items-center gap-y-1 px-4 py-2 lg:px-6 overflow-visible short:min-h-14 short:py-1">
         <div className="flex items-center gap-3 min-w-0 shrink-0">
           <Button variant="ghost" size="icon"
             className="touch-sm lg:hidden w-9 h-9 rounded-md text-muted-foreground transition-all duration-200 hover:scale-105"
@@ -165,7 +165,7 @@ export const Topbar = memo(function Topbar({ onMenuToggle, onToggleSidebar, side
             mobile too, where the center search is hidden and there is no
             flex-1 spacer — otherwise it packs left and can be pushed off
             screen on narrow phones. */}
-        <div className="flex items-center gap-2 shrink-0 ml-auto">
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 ml-auto">
 
           {canIntake && (
             <Tooltip>

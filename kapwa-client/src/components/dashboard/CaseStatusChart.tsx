@@ -36,9 +36,9 @@ export function CaseStatusChart({ data }: CaseStatusChartProps) {
       <CardContent>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={chartData}>
-            <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-            <YAxis tick={{ fontSize: 10 }} />
-            <Tooltip contentStyle={{ fontSize: '12px' }} />
+            <XAxis dataKey="name" tick={{ fontSize: '0.75rem' }} />
+            <YAxis tick={{ fontSize: '0.75rem' }} />
+            <Tooltip contentStyle={{ fontSize: '0.75rem' }} />
             <Bar dataKey="count" radius={[3, 3, 0, 0]}>
               {chartData.map((_, i) => (
                 <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
