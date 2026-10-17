@@ -487,10 +487,17 @@ export class DedupService {
     const ids = data.map((op) => op.id);
     const counts: any[] = ids.length
       ? await this.rowsRepo.query(
-          `SELECT operation_id::text AS operation_id, status, COUNT(*)::int AS count
+          // An undecided disqualification blocks finalize exactly like a pending
+          // match, so it counts as pending too — otherwise the list advertised
+          // "0 pending" on a run whose finalize button was disabled.
+          `SELECT operation_id::text AS operation_id,
+                  CASE WHEN status = 'pending'
+                            OR (eligibility = 'disqualified' AND eligibility_decision IS NULL)
+                       THEN 'pending' ELSE status END AS status,
+                  COUNT(*)::int AS count
              FROM client_import_rows
             WHERE operation_id::text = ANY($1::text[])
-            GROUP BY operation_id, status`,
+            GROUP BY 1, 2`,
           [ids],
         )
       : [];

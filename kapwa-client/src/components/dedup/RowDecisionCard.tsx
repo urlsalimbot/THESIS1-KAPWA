@@ -317,7 +317,7 @@ export function RowDecisionCard({
           Row {row.rowIndex} — {row.lastName ?? ''}, {row.firstName ?? ''} {row.middleName ?? ''}
         </CardTitle>
         <CardDescription>
-          {[row.dob ?? '—', row.barangay ?? '—'].join(' · ')}
+          {[formatDate(row.dob), row.barangay ?? '—'].join(' · ')}
           {row.remarks ? ` — ${row.remarks}` : ''}
         </CardDescription>
       </CardHeader>
@@ -463,7 +463,7 @@ function CandidateBody({ candidate: c, row }: { candidate: DedupCandidate; row: 
     return (
       <div className="space-y-1 text-sm">
         <div className="text-muted-foreground">
-          {c.person.dob ?? '—'} · {c.person.barangay ?? '—'}
+          {formatDate(c.person.dob)} · {c.person.barangay ?? '—'}
         </div>
         <CaseLines cases={c.cases ?? []} />
         <div>
