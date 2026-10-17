@@ -56,7 +56,7 @@ export function LatestAnnouncements() {
                 {t('announcements.whatsNew', "What's New")}
               </span>
             </div>
-            <h2 className="mb-4 text-balance font-heading text-3xl font-semibold tracking-tight md:text-4xl">
+            <h2 className="mb-4 text-balance font-heading text-3xl font-semibold tracking-tight">
               {t('announcements.latestTitle', 'Latest News & Announcements')}
             </h2>
             <p className="mx-auto max-w-2xl text-pretty text-muted-foreground">

@@ -32,12 +32,10 @@ export function ForgotPasswordPage() {
   if (sent) {
     return (
       <AuthShell>
-        <Card className="w-full border-border/50 shadow-lg">
+        <Card className="w-full border-border/50">
           <CardHeader className="text-center pb-6">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 ring-1 ring-inset ring-accent/15">
-              <Mail size={28} className="text-accent" aria-hidden="true" />
-            </div>
-            <CardTitle as="h1" className="text-2xl tracking-tight">
+            <CardTitle as="h1" className="flex items-center justify-center gap-2.5 text-2xl font-bold tracking-tight">
+              <Mail size={24} className="text-accent" aria-hidden="true" />
               {t('auth.checkYourEmail', 'Check Your Email')}
             </CardTitle>
             <CardDescription className="text-base">
@@ -67,12 +65,10 @@ export function ForgotPasswordPage() {
 
   return (
     <AuthShell>
-      <Card className="w-full border-border/50 shadow-lg">
+      <Card className="w-full border-border/50">
         <CardHeader className="text-center pb-6">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 ring-1 ring-inset ring-accent/15">
-            <Mail size={28} className="text-accent" aria-hidden="true" />
-          </div>
-          <CardTitle as="h1" className="text-2xl tracking-tight">
+          <CardTitle as="h1" className="flex items-center justify-center gap-2.5 text-2xl font-bold tracking-tight">
+            <Mail size={24} className="text-accent" aria-hidden="true" />
             {t('auth.forgotPassword', 'Forgot Password')}
           </CardTitle>
           <CardDescription className="text-base">

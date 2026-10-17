@@ -123,12 +123,10 @@ export function RegisterPage() {
   if (registeredEmail) {
     return (
       <AuthShell>
-        <Card className="w-full border-border/50 shadow-lg">
+        <Card className="w-full border-border/50">
           <CardHeader className="text-center pb-6">
-            <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-3 shadow-sm">
-              <HandHeart size={28} className="text-accent" />
-            </div>
-            <CardTitle as="h1" className="text-2xl tracking-tight">{t('auth.checkYourEmail', 'Check Your Email')}</CardTitle>
+            <CardTitle as="h1" className="flex items-center justify-center gap-2.5 text-2xl font-bold tracking-tight">
+              <HandHeart size={24} className="text-accent" aria-hidden="true" />{t('auth.checkYourEmail', 'Check Your Email')}</CardTitle>
             <CardDescription className="text-base">
               {t('auth.weSentVerificationLink', 'We sent a verification link to')} <strong>{registeredEmail}</strong>{t('auth.period', '.')}
               <br />
@@ -174,12 +172,10 @@ export function RegisterPage() {
   // sections so the eye groups fields before reading a single label.
   return (
     <AuthShell cardWidth="lg">
-      <Card className="w-full border-border/50 shadow-lg">
+      <Card className="w-full border-border/50">
         <CardHeader className="text-center pb-6">
-          <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mx-auto mb-3 shadow-sm">
-            <HandHeart size={24} className="text-accent" />
-          </div>
-          <CardTitle as="h1" className="text-2xl tracking-tight">{t('auth.claimantRegistration', 'Claimant Registration')}</CardTitle>
+          <CardTitle as="h1" className="flex items-center justify-center gap-2.5 text-2xl font-bold tracking-tight">
+            <HandHeart size={24} className="text-accent" aria-hidden="true" />{t('auth.claimantRegistration', 'Claimant Registration')}</CardTitle>
           <CardDescription className="text-base">
             {t('auth.registerDescription', 'Create an account to track your services and applications.')}
           </CardDescription>
@@ -194,8 +190,8 @@ export function RegisterPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               {/* Personal Information — the name quartet runs inline */}
               <div className="space-y-3">
-                <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  <User size={14} className="text-primary" aria-hidden="true" />
+                <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-foreground">
+                  <User size={18} className="text-primary" aria-hidden="true" />
                   {t('auth.sectionPersonal', 'Personal Information')}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -270,8 +266,8 @@ export function RegisterPage() {
 
               {/* Contact Details */}
               <div className="space-y-3">
-                <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  <Mail size={14} className="text-primary" aria-hidden="true" />
+                <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-foreground">
+                  <Mail size={18} className="text-primary" aria-hidden="true" />
                   {t('auth.sectionContact', 'Contact Details')}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -307,8 +303,8 @@ export function RegisterPage() {
 
               {/* Address — the barangay select gets the full width it needs */}
               <div className="space-y-3">
-                <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  <MapPin size={14} className="text-primary" aria-hidden="true" />
+                <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-foreground">
+                  <MapPin size={18} className="text-primary" aria-hidden="true" />
                   {t('auth.sectionAddress', 'Address')}
                 </h2>
                 <FormField
@@ -340,8 +336,8 @@ export function RegisterPage() {
 
               {/* Account Security */}
               <div className="space-y-3">
-                <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  <Lock size={14} className="text-primary" aria-hidden="true" />
+                <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-foreground">
+                  <Lock size={18} className="text-primary" aria-hidden="true" />
                   {t('auth.sectionSecurity', 'Account Security')}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

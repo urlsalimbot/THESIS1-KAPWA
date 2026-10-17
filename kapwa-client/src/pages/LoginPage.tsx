@@ -13,7 +13,6 @@ import { Input } from '@/components/ui/input';
 import { isOfficeIssuedId, normalizeLoginIdentifier } from '@/lib/identifiers';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, Smartphone, HandHeart, Eye, EyeOff } from 'lucide-react';
 import { AuthShell } from '@/components/public/AuthShell';
 
@@ -126,14 +125,12 @@ export function LoginPage() {
   if (mfaChallenge) {
     return (
       <AuthShell>
-        <Card className="w-full border-border/50 shadow-lg">
+        <Card className="w-full border-border/50">
           <CardHeader className="text-center pb-6">
-            <Avatar className="w-14 h-14 mx-auto mb-3 shadow-sm">
-              <AvatarFallback className="bg-accent/10">
-                <Smartphone size={28} className="text-accent" />
-              </AvatarFallback>
-            </Avatar>
-            <CardTitle as="h1" className="text-2xl tracking-tight">{isSmsOtp ? t('auth.oneTimePassword', 'One-Time Password') : isEmailOtp ? t('auth.emailCodeTitle', 'Email Verification Code') : t('auth.twoFactor', 'Two-Factor Authentication')}</CardTitle>
+            <CardTitle as="h1" className="flex items-center justify-center gap-2.5 text-2xl font-bold tracking-tight">
+              <Smartphone size={24} className="text-accent" aria-hidden="true" />
+              {isSmsOtp ? t('auth.oneTimePassword', 'One-Time Password') : isEmailOtp ? t('auth.emailCodeTitle', 'Email Verification Code') : t('auth.twoFactor', 'Two-Factor Authentication')}
+            </CardTitle>
             <CardDescription className="text-base">{isSmsOtp ? t('auth.otpSentToPhone', 'Enter the OTP sent to your phone.') : isEmailOtp ? t('auth.otpSentToEmail', 'Enter the 6-digit code sent to your email.') : t('auth.enterVerificationCode', 'Enter the verification code from your authenticator app.')}</CardDescription>
           </CardHeader>
           <CardContent className="pb-2">
@@ -228,12 +225,10 @@ export function LoginPage() {
   // Login Form Mode
   return (
     <AuthShell>
-      <Card className="w-full border-border/50 shadow-lg">
+      <Card className="w-full border-border/50">
         <CardHeader className="text-center pb-6">
-          <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-3 shadow-sm">
-            <HandHeart size={28} className="text-accent" />
-          </div>
-          <CardTitle as="h1" className="text-2xl tracking-tight">{t('auth.welcomeToKapwa', 'Welcome to KAPWA')}</CardTitle>
+          <CardTitle as="h1" className="flex items-center justify-center gap-2.5 text-2xl font-bold tracking-tight">
+            <HandHeart size={24} className="text-accent" aria-hidden="true" />{t('auth.welcomeToKapwa', 'Welcome to KAPWA')}</CardTitle>
           <CardDescription className="text-base">{t('auth.mswdoTagline', 'MSWDO Norzagaray Social Welfare System')}</CardDescription>
         </CardHeader>
         <CardContent>

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Compass, Home, Mail } from 'lucide-react';
+import { Home, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageContainer } from '@/components/public/PageContainer';
 
@@ -14,11 +14,8 @@ export function NotFoundPage() {
   return (
     <PageContainer className="py-20 sm:py-28">
       <div className="mx-auto max-w-xl text-center">
-        <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 ring-1 ring-inset ring-accent/15">
-          <Compass size={28} className="text-accent" aria-hidden="true" />
-        </div>
-        <p className="font-heading text-5xl font-bold tracking-tight text-accent/30">404</p>
-        <h1 className="mt-3 font-heading text-3xl font-bold tracking-tight text-balance">
+        <p className="font-heading text-6xl font-bold tracking-tight text-accent">404</p>
+        <h1 className="mt-3 font-heading text-3xl font-bold tracking-tight text-balance sm:text-4xl">
           {t('notFound.title', 'Page not found')}
         </h1>
         <p className="mt-4 leading-relaxed text-muted-foreground text-pretty">

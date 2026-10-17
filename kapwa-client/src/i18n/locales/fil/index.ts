@@ -2362,6 +2362,7 @@ const fil: EnLocale = {
     "phone": "Telepono",
     "emailError": "Pakilagay ang wastong email address.",
     "errorSummaryTitle": "Pakiayos ang mga sumusunod:",
+    "formTitle": "Magpadala ng mensahe",
     "message": "Mensahe",
     "messageError": "Ang mensahe ay dapat na hindi bababa sa 10 karakter.",
     "messagePlaceholder": "Paano ka namin matutulungan?",
@@ -2479,7 +2480,6 @@ const fil: EnLocale = {
     "login": "Mag-log in",
     "mainNavigation": "Pangunahing nabigasyon",
     "mswdoAddress": "Municipal Social Welfare and Development Office, Norzagaray, Bulacan",
-    "news": "Balita",
     "openMenu": "Buksan ang menu",
     "privacyPolicy": "Patakaran sa Privacy",
     "programs": "Mga Programa",
@@ -2511,15 +2511,12 @@ const fil: EnLocale = {
     "title": "Balita at Mga Anunsyo"
   },
   "terms": {
-    "eyebrow": "Pambatas",
     "title": "Mga Tuntunin ng Paggamit"
   },
   "accessibility": {
-    "eyebrow": "Accessibilidad",
     "title": "Accessibilidad"
   },
   "privacy": {
-    "eyebrow": "Pribado",
     "title": "Patakaran sa Privacy"
   },
   "quickScan": {
@@ -2550,7 +2547,6 @@ const fil: EnLocale = {
     "seniorCitizenDesc": "Komprehensibong suporta para sa mga senior citizen kabilang ang social pension, mga serbisyong pangkalusugan, at pakikilahok sa komunidad.",
     "subtitle": "Komprehensibong mga programa sa panlipunang kapakanan na idinisenyo upang suportahan ang bawat miyembro ng komunidad ng Norzagaray.",
     "title": "Aming Mga Serbisyo",
-    "whatWeOffer": "Ano ang Aming Inaalok"
   },
   "steps": {
     "approvalPayout": "Pag-apruba at Payout",

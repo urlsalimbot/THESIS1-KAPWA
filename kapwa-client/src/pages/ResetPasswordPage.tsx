@@ -45,19 +45,16 @@ export function ResetPasswordPage() {
 
   return (
     <AuthShell>
-      <Card className="w-full border-border/50 shadow-lg">
+      <Card className="w-full border-border/50">
         <CardHeader className="text-center pb-6">
-          {status === 'success' ? (
-            // `text-success` replaces an invalid class name that was missing
-            // the hyphen between the `text` prefix and the colour, which
-            // produced an unstyled icon.
-            <CheckCircle size={48} className="mx-auto mb-2 text-success" aria-hidden="true" />
-          ) : (
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 ring-1 ring-inset ring-accent/15">
-              <Lock size={28} className="text-accent" aria-hidden="true" />
-            </div>
-          )}
-          <CardTitle as="h1" className="text-2xl tracking-tight">
+          <CardTitle as="h1" className="flex items-center justify-center gap-2.5 text-2xl font-bold tracking-tight">
+            {/* `text-success` replaces an invalid class name that was missing the
+                hyphen between the `text` prefix and the colour. */}
+            {status === 'success' ? (
+              <CheckCircle size={24} className="text-success" aria-hidden="true" />
+            ) : (
+              <Lock size={24} className="text-accent" aria-hidden="true" />
+            )}
             {status === 'success'
               ? t('auth.passwordReset', 'Password Reset')
               : t('auth.setNewPassword', 'Set New Password')}

@@ -36,7 +36,6 @@ export function PublicAnnouncementsPage() {
       <PageContainer>
         <PageHero
           icon={Megaphone}
-          eyebrow={t('public.news', 'News')}
           title={t('announcementsPublic.title', 'News & Announcements')}
           description={t(
             'announcementsPublic.description',
@@ -103,7 +102,7 @@ export function PublicAnnouncementsPage() {
                           </span>
                         )}
                       </div>
-                      <h2 className="font-heading text-lg font-semibold leading-snug tracking-tight text-foreground transition-colors group-hover:text-accent line-clamp-2">
+                      <h2 className="font-heading text-xl font-semibold leading-snug tracking-tight text-foreground transition-colors group-hover:text-accent line-clamp-2">
                         {a.title}
                       </h2>
                       {a.excerpt && (

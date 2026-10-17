@@ -19,7 +19,7 @@ export function ContactInfo({ className }: ContactInfoProps) {
       {contactDetails.map((detail) => {
         const Icon = detail.icon;
         return (
-          <div key={detail.label} className="flex gap-4 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
+          <div key={detail.label} className="flex w-fit max-w-full gap-4 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
             <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0 mt-0.5">
               <Icon size={20} className="text-accent" />
             </div>

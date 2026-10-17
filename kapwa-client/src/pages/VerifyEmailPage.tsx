@@ -37,9 +37,9 @@ export function VerifyEmailPage() {
 
   return (
     <AuthShell>
-      <Card className="w-full border-border/50 shadow-lg">
+      <Card className="w-full border-border/50">
         <CardHeader className="text-center pb-6">
-          <CardTitle as="h1" className="text-2xl tracking-tight">
+          <CardTitle as="h1" className="text-2xl font-bold tracking-tight">
             {t('auth.emailVerification', 'Email Verification')}
           </CardTitle>
           <CardDescription className="text-base">

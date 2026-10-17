@@ -36,7 +36,6 @@ export function PublicProgramsPage() {
       <PageContainer>
         <PageHero
           icon={ScrollText}
-          eyebrow={t('public.programs', 'Programs')}
           title={t('programsPublic.title', 'Social Assistance Programs')}
           description={t(
             'programsPublic.description',
@@ -99,7 +98,7 @@ export function PublicProgramsPage() {
 
                   <div className="mt-4 space-y-4 pb-5">
                     {p.fundSources && p.fundSources.length > 0 && (
-                      <p className="text-xs leading-relaxed text-muted-foreground">
+                      <p className="text-sm leading-relaxed text-muted-foreground">
                         {t('programsPublic.fundedBy', 'Funded by')}:{' '}
                         <span className="font-medium text-foreground/80">
                           {p.fundSources.join(' · ')}
@@ -115,7 +114,7 @@ export function PublicProgramsPage() {
                         </p>
                         <ul className="space-y-1.5">
                           {shownDocs.map((doc, i) => (
-                            <li key={i} className="flex gap-2 text-xs leading-relaxed text-foreground/85">
+                            <li key={i} className="flex gap-2 text-sm leading-relaxed text-foreground/85">
                               <span
                                 className="mt-[.45rem] h-1 w-1 shrink-0 rounded-full bg-muted-foreground/50"
                                 aria-hidden="true"

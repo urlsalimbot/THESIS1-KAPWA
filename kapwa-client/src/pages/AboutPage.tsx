@@ -7,7 +7,7 @@ import { PageContainer } from '@/components/public/PageContainer';
 import { ProgramCard, type PublicProgram } from '@/components/public/ProgramsCarousel';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
-import { ArrowRight, Heart } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export function AboutPage() {
@@ -31,17 +31,11 @@ export function AboutPage() {
     <div className="w-full">
       {/* Hero — the right column carries the office facts instead of the
           previous external stock photo. */}
-      <section className="pb-14 pt-12 sm:pb-16 sm:pt-16 lg:pb-20 lg:pt-20">
+      <section className="overflow-hidden pb-8 pt-12 sm:pb-10 sm:pt-16 lg:pb-12 lg:pt-20">
         <PageContainer>
           <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-10">
             <div className="lg:col-span-7">
-              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 ring-1 ring-inset ring-accent/15">
-                <Heart size={28} className="text-accent" aria-hidden="true" />
-              </div>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-accent">
-                About Us
-              </p>
-              <h1 className="mb-4 text-balance font-heading text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
+              <h1 className="mb-4 text-balance font-heading text-3xl font-bold leading-[1.15] tracking-tight sm:text-4xl">
                 About MSWDO Norzagaray
               </h1>
               <p className="max-w-xl text-pretty text-lg leading-relaxed text-muted-foreground">
@@ -50,23 +44,26 @@ export function AboutPage() {
             </div>
 
             <div className="lg:col-span-5">
-              <div className="grid grid-cols-3 gap-4 rounded-3xl border border-border/70 bg-card p-6 shadow-lg">
+              {/* Office facts as a definition list. This was three accent
+                  numbers with small labels — the hero-metric block — which
+                  shouted statistics the page is not about. */}
+              <dl className="divide-y divide-border/60 rounded-2xl border border-border/70 bg-card px-6">
                 {facts.map((fact) => (
-                  <div key={fact.label}>
-                    <p className="font-heading text-3xl font-bold tabular-nums tracking-tight text-accent">
+                  <div key={fact.label} className="flex items-baseline justify-between gap-4 py-5">
+                    <dt className="text-sm text-muted-foreground">{fact.label}</dt>
+                    <dd className="font-heading text-lg font-semibold tabular-nums tracking-tight text-foreground">
                       {fact.value}
-                    </p>
-                    <p className="mt-1 text-xs leading-snug text-muted-foreground">{fact.label}</p>
+                    </dd>
                   </div>
                 ))}
-              </div>
+              </dl>
             </div>
           </div>
         </PageContainer>
       </section>
 
       {/* Mission */}
-      <section className="pb-16 sm:pb-20 lg:pb-24">
+      <section className="py-16 sm:py-20 lg:py-24">
         <PageContainer>
           <div className="grid gap-8 lg:grid-cols-12 lg:gap-12">
             <div className="lg:col-span-4">
@@ -76,7 +73,7 @@ export function AboutPage() {
               <div className="h-1 w-12 rounded-full bg-accent/30" />
             </div>
             <div className="lg:col-span-8">
-              <p className="max-w-3xl text-pretty leading-relaxed text-muted-foreground">
+              <p className="max-w-[70ch] text-pretty leading-relaxed text-muted-foreground">
                 The Municipal Social Welfare and Development Office (MSWDO) of Norzagaray, Bulacan
                 is committed to promoting the well-being and quality of life of all residents,
                 especially the poor, vulnerable, and marginalized sectors of society. We strive to
@@ -103,13 +100,10 @@ export function AboutPage() {
       <section className="py-16 sm:py-20 lg:py-24">
         <PageContainer>
           <div className="mb-12 max-w-3xl">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5">
-              <span className="text-xs font-medium tracking-wide text-accent">What We Offer</span>
-            </div>
             <h2 className="text-balance font-heading text-3xl font-semibold tracking-tight">
               Our Programs
             </h2>
-            <p className="mt-4 text-pretty text-muted-foreground">
+            <p className="mt-4 max-w-[70ch] text-pretty text-muted-foreground">
               {t(
                 'about.programsSubtitle',
                 'The assistance programs the office currently runs. Each lists its processing time and the documents you will need.',

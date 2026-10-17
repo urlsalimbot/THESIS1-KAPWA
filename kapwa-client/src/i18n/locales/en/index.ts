@@ -1452,6 +1452,7 @@ const en = {
     "email": "Email",
     "emailError": "Please enter a valid email address.",
     "errorSummaryTitle": "Please correct the following:",
+    "formTitle": "Send us a message",
     "message": "Message",
     "messageError": "Message must be at least 10 characters.",
     "messagePlaceholder": "How can we help you?",
@@ -2210,7 +2211,6 @@ const en = {
     "login": "Login",
     "mainNavigation": "Main navigation",
     "mswdoAddress": "Municipal Social Welfare and Development Office, Norzagaray, Bulacan",
-    "news": "News",
     "openMenu": "Open menu",
     "privacyPolicy": "Privacy Policy",
     "programs": "Programs",
@@ -2242,15 +2242,12 @@ const en = {
     "title": "News & Announcements",
   },
   "terms": {
-    "eyebrow": "Legal",
     "title": "Terms of Use",
   },
   "accessibility": {
-    "eyebrow": "Accessibility",
     "title": "Accessibility",
   },
   "privacy": {
-    "eyebrow": "Privacy",
     "title": "Privacy Policy",
   },
   "quickScan": {
@@ -2387,7 +2384,6 @@ const en = {
     "seniorCitizenDesc": "Comprehensive support for senior citizens including social pensions, health services, and community engagement.",
     "subtitle": "Comprehensive social welfare programs designed to support every member of the Norzagaray community.",
     "title": "Our Services",
-    "whatWeOffer": "What We Offer",
   },
   "settings": {
     "category": "Category",

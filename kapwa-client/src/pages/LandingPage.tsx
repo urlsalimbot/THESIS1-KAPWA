@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
-import { HandHeart, ArrowRight, CalendarClock, MapPin, Phone } from 'lucide-react';
+import { ArrowRight, CalendarClock, MapPin, Phone } from 'lucide-react';
 import { ProgramsCarousel } from '@/components/public/ProgramsCarousel';
 import { ContactInfo } from '@/components/ContactInfo';
 import { LatestAnnouncements } from '@/components/announcements/LatestAnnouncements';
@@ -57,18 +57,15 @@ export function LandingPage() {
         <PageContainer>
           <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-10">
             <div className="lg:col-span-7">
-              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 ring-1 ring-inset ring-accent/15">
-                <HandHeart size={28} className="text-accent" aria-hidden="true" />
-              </div>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-accent">
-                MSWDO Norzagaray
-              </p>
-
+              {/* The section mark used to be a rounded tile stacking an icon,
+                  a tracked-caps "MSWDO Norzagaray" eyebrow and the headline.
+                  The eyebrow only repeated the header, and the tile was the
+                  generated icon-card shape, so the headline now leads alone. */}
               <h1 className="mb-6 text-balance font-heading text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
                 Compassionate social welfare services for every resident
               </h1>
 
-              <p className="mb-10 max-w-xl text-pretty text-lg leading-relaxed text-muted-foreground">
+              <p className="mb-10 max-w-[65ch] text-pretty text-lg leading-relaxed text-muted-foreground">
                 Empowering communities through accessible, transparent, and efficient social
                 assistance programs in Norzagaray, Bulacan.
               </p>
@@ -99,13 +96,10 @@ export function LandingPage() {
             </div>
 
             <div className="lg:col-span-5">
-              <div className="rounded-3xl border border-border/70 bg-card p-8 shadow-lg">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  {t('public.contactUs', 'Contact Us')}
-                </p>
-                <p className="mt-2 font-heading text-2xl font-bold tracking-tight">
+              <div className="rounded-2xl border border-border/70 bg-card p-8">
+                <h2 className="font-heading text-2xl font-bold tracking-tight">
                   {t('landing.visitOffice', 'Visit or contact the office')}
-                </p>
+                </h2>
                 <Separator className="my-6" />
                 <ul className="space-y-4">
                   {officeRows.map((row) => {
@@ -157,19 +151,13 @@ export function LandingPage() {
         <PageContainer>
           <div className="grid gap-8 lg:grid-cols-12 lg:gap-12">
             <div className="lg:col-span-5">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5">
-                <HandHeart size={14} className="text-accent" aria-hidden="true" />
-                <span className="text-xs font-medium tracking-wide text-accent">
-                  {t('public.about', 'About')}
-                </span>
-              </div>
               <h2 className="text-balance font-heading text-3xl font-semibold tracking-tight">
                 About MSWDO Norzagaray
               </h2>
             </div>
 
             <div className="lg:col-span-7">
-              <p className="max-w-2xl text-pretty leading-relaxed text-muted-foreground">
+              <p className="max-w-[65ch] text-pretty leading-relaxed text-muted-foreground">
                 The Municipal Social Welfare and Development Office (MSWDO) of Norzagaray, Bulacan
                 is dedicated to providing comprehensive social welfare services to all residents.
                 Our team of licensed social workers and dedicated staff work tirelessly to ensure

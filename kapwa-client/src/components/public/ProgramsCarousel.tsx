@@ -64,7 +64,7 @@ export function ProgramCard({ program, className }: { program: PublicProgram; cl
             </Badge>
           )}
         </div>
-        <CardTitle className="font-heading text-lg font-semibold tracking-tight">
+        <CardTitle className="font-heading text-xl font-semibold tracking-tight">
           {program.name}
         </CardTitle>
       </CardHeader>
@@ -155,15 +155,10 @@ export function ProgramsCarousel({ className }: { className?: string }) {
   return (
     <div className={cn(className)}>
       <div className="mb-12 text-center">
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5">
-          <span className="text-xs font-medium tracking-wide text-accent">
-            {t('services.whatWeOffer', 'What We Offer')}
-          </span>
-        </div>
-        <h2 className="mb-4 text-balance font-heading text-3xl font-semibold tracking-tight md:text-4xl">
+        <h2 className="mb-4 text-balance font-heading text-3xl font-semibold tracking-tight">
           {t('services.title', 'Our Services')}
         </h2>
-        <p className="mx-auto max-w-2xl text-pretty text-muted-foreground">
+        <p className="mx-auto max-w-[65ch] text-pretty text-muted-foreground">
           {t(
             'services.subtitle',
             'Comprehensive social welfare programs designed to support every member of the Norzagaray community.',
@@ -201,7 +196,7 @@ export function ProgramsCarousel({ className }: { className?: string }) {
             tabIndex={0}
             role="group"
             aria-label={t('services.carouselLabel', 'Programs carousel')}
-            className="flex snap-x snap-mandatory gap-5 overflow-x-auto pb-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="-mx-4 px-4 scroll-ps-4 sm:-mx-6 sm:px-6 sm:scroll-ps-6 lg:-mx-8 lg:px-8 lg:scroll-ps-8 flex snap-x snap-mandatory gap-5 overflow-x-auto pb-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             {programs.map((p) => (
               <div key={p.id} className="w-[280px] shrink-0 snap-start sm:w-[320px]">

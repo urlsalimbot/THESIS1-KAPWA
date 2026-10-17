@@ -9,7 +9,7 @@ export function TermsPage() {
   return (
     <div className="w-full py-12 sm:py-16 lg:py-20">
       <PageContainer>
-        <div className="mx-auto max-w-3xl">
+        <div className="max-w-[70ch]">
           <Link
             to="/"
             className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground no-underline transition-colors hover:text-foreground"
@@ -20,7 +20,6 @@ export function TermsPage() {
 
           <PageHero
             icon={FileText}
-            eyebrow={t('terms.eyebrow', 'Legal')}
             title={t('terms.title', 'Terms of Use')}
           />
 
