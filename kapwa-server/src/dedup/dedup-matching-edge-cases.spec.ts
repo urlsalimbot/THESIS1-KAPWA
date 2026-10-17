@@ -257,13 +257,16 @@ describe('sweep — orchestration edge cases', () => {
     expect(out.rowStatus.r1).toBe('pending');
   });
 
-  it('an identical twin INSIDE the file and one in the DB both surface (pairs + person)', async () => {
-    // r1 and r2 are the same person and the DB has an identical person p9:
-    // the pair candidate AND the person match both form. The eligibility
-    // engine (not the sweep) then applies "only one gets through".
-    const repos = makeRepos({
-      persons: () => [{ id: 'p9', lastName: 'Reyes', firstName: 'Pedro', dob: '1988-03-21', barangay: 'Bigte' }],
-    });
+  it('an in-file duplicate is paired, and only the VALID row is matched against the DB', async () => {
+    // r1 and r2 are the same person, and the DB has an identical person p9.
+    // The pair is resolved first: r2 is a duplicate of r1, so it never reaches
+    // the database sweep — asking "does r2 exist in KAPWA?" is asking about an
+    // identity that r1 owns. r1 carries the person match. This is what keeps a
+    // duplicate pair from being decided twice (once as a pair, once as a person)
+    // and then created as two records.
+    const searchSimilar = jest.fn().mockResolvedValue([
+      { id: 'p9', lastName: 'Reyes', firstName: 'Pedro', dob: '1988-03-21', barangay: 'Bigte' },
+    ]);
     const out = await sweep({
       rows: [
         exactRow('r1', { lastName: 'Reyes', firstName: 'Pedro', dob: '1988-03-21', barangay: 'Bigte' }),
@@ -271,11 +274,19 @@ describe('sweep — orchestration edge cases', () => {
       ],
       threshold: 0.75,
       sim: trigramSim,
-      ...repos,
+      persons: { searchSimilar },
+      households: { byMemberPersonIds: () => Promise.resolve([]) },
+      interventions: { countsByPerson: () => Promise.resolve({}) },
     });
+
+    // One DB lookup for the two rows: the duplicate is not swept.
+    expect(searchSimilar).toHaveBeenCalledTimes(1);
+
+    const r1Cands = out.candidates.filter((c) => c.rowId === 'r1');
     const r2Cands = out.candidates.filter((c) => c.rowId === 'r2');
+    expect(r1Cands.some((c) => c.targetType === 'db_person' && c.targetPersonId === 'p9')).toBe(true);
     expect(r2Cands.some((c) => c.targetType === 'import_row')).toBe(true);
-    expect(r2Cands.some((c) => c.targetType === 'db_person')).toBe(true);
+    expect(r2Cands.some((c) => c.targetType === 'db_person')).toBe(false);
     expect(out.rowStatus.r1).toBe('pending');
     expect(out.rowStatus.r2).toBe('pending');
   });

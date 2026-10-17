@@ -144,6 +144,17 @@ export function computeEligibility(input: EligibilityInput): Record<number, Elig
           groupKind = 'person';
         }
       }
+      // The direct pair is decisive when the group lookup misses: the earlier
+      // row registers no group if it was itself disqualified (e.g. served
+      // recently), and without this the later row of the pair would fall
+      // through as a brand-new client and be created as a duplicate.
+      // Uses `pairedRowIndex` (the row it actually duplicates), not
+      // `pairAnchor` — that one returns a person id when the pair has a DB
+      // identity, which is a different question.
+      if (firstIdx === undefined && r.pairedRowIndex !== undefined && r.pairedRowIndex !== r.rowIndex) {
+        firstIdx = r.pairedRowIndex;
+        groupKind = 'person';
+      }
       if (firstIdx !== undefined && firstIdx !== r.rowIndex) {
         disqualified = true;
         code = 'intra_list';

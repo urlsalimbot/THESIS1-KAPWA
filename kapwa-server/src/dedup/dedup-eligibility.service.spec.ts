@@ -109,4 +109,24 @@ describe('computeEligibility', () => {
     expect(out[2].eligibility).toBe('allowed');
     expect(out[2].code).toBe('new_client');
   });
+
+  it('disqualifies the later row of a pair even when the earlier row was served recently', () => {
+    // The earlier row is disqualified for recent service and registers no
+    // group; the later row is still the same person, so it must not come
+    // through as a new client (that created a duplicate of an existing record).
+    const today = '2026-10-17';
+    const rows = [
+      { rowIndex: 2, personId: 'p1', householdPersonIds: [] as string[] },
+      { rowIndex: 3, pairedRowIndex: 2, householdPersonIds: [] as string[] },
+    ];
+    const out = computeEligibility({
+      today,
+      rows,
+      interventionsByPerson: { p1: [{ deliveryDate: '2026-10-14', type: 'scsr_generated' }] },
+    });
+    expect(out[2].code).toBe('recent_intervention');
+    expect(out[2].eligibility).toBe('disqualified');
+    expect(out[3].code).toBe('intra_list');
+    expect(out[3].eligibility).toBe('disqualified');
+  });
 });

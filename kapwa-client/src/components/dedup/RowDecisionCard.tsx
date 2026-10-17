@@ -228,7 +228,12 @@ export function RowDecisionCard({
           </div>
           {disqualifiedUndecided && onEligibility && (
             <div className="flex gap-2 pt-1">
-              <Button size="sm" variant="outline" onClick={() => onEligibility('waive')} disabled={busy}>{t('dedup.waive', 'Waive — serve anyway')}</Button>
+              {/* A duplicate of another row in the same list is decided by the
+                  pair buttons, never waived: serving both is what creates the
+                  duplicate. */}
+              {row.eligibilityCode !== 'intra_list' && (
+                <Button size="sm" variant="outline" onClick={() => onEligibility('waive')} disabled={busy}>{t('dedup.waive', 'Waive — serve anyway')}</Button>
+              )}
               <Button size="sm" variant="default" onClick={() => onEligibility('confirm')} disabled={busy}>{t('dedup.confirm', 'Confirm disqualified')}</Button>
             </div>
           )}

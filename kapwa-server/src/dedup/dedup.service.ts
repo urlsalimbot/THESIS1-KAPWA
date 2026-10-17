@@ -718,6 +718,14 @@ export class DedupService {
     if (row.eligibility !== 'disqualified') {
       throw new BadRequestException('Only disqualified rows need an eligibility decision');
     }
+    // An in-list duplicate is not an eligibility question: "serve anyway" here
+    // would create the second record the operation exists to prevent. The pair
+    // decision ("keep this row" / "keep the other one") is the only resolution.
+    if (row.eligibilityCode === 'intra_list' && decision === 'waive') {
+      throw new BadRequestException(
+        'This row duplicates another row in the same list — decide which one to keep instead of waiving it.',
+      );
+    }
 
     // Every disqualified MATCH requires the decision: with a matchId, decide
     // just that match; without one, decide them all at once (the aggregate

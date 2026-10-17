@@ -218,6 +218,19 @@ describe('DedupService', () => {
     expect(service).toBeDefined();
   });
 
+  it('refuses to waive a duplicate of another row in the same list', async () => {
+    // "Serve anyway" on an in-list duplicate creates the second record the
+    // operation exists to prevent; the pair decision is the only resolution.
+    opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing', interventionType: 'food_pack' });
+    rowsRepo.findOne.mockResolvedValue({
+      id: 'r1', operationId: 'op1', eligibility: 'disqualified', status: 'deprioritized',
+      eligibilityCode: 'intra_list',
+    });
+
+    await expect(service.decideEligibility('op1', 'r1', 'waive', 'u1')).rejects.toThrow(/duplicates another row/i);
+    expect(matchesRepo.save).not.toHaveBeenCalled();
+  });
+
   it('refuses an eligibility decision for a row that is not disqualified', async () => {
     opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing' });
     rowsRepo.findOne.mockResolvedValue({ id: 'r1', operationId: 'op1', eligibility: 'allowed', status: 'retained' });
