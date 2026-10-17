@@ -3,6 +3,7 @@ import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ClassSerializerInterceptor } from '@nestjs/common';
 import { CasesService } from './cases.service';
 import { CasesExportService } from './cases-export.service';
+import { ScsrExportService } from '../scsr/scsr-export.service';
 import { CaseStepLocksService } from './case-step-locks.service';
 import { GisExportService } from '../gis/gis-export.service';
 import { CaseStatus } from './case.entity';
@@ -58,6 +59,7 @@ export class CasesController {
     private casesExportService: CasesExportService,
     private stepLocks: CaseStepLocksService,
     private gisExportService: GisExportService,
+    private scsrExport: ScsrExportService,
   ) {}
 
   @Get()
@@ -397,6 +399,27 @@ export class CasesController {
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="${exportFileName('CSR', controlNo)}"`,
+      'Content-Length': pdf.length,
+    });
+    res.end(pdf);
+  }
+
+  @Get(':id/scsr-pdf')
+  @Roles('admin', 'social_worker')
+  @ApiOperation({ summary: 'Download the Social Case Study Report (burial or medical)' })
+  async downloadScsrPdf(
+    @Param('id') id: string,
+    @Res() res: any,
+    @Query('kind') kind?: string,
+  ) {
+    // Two office forms share one layout: the burial report's questions end at
+    // the funeral details, the medical report's at the treatment asked for.
+    const form: 'burial' | 'medical' = kind === 'medical' ? 'medical' : 'burial';
+    const pdf = await this.scsrExport.generateScsrPdf(id, form);
+    const controlNo = await this.scsrExport.controlNo(id);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${exportFileName(form === 'medical' ? 'SCSR-Medikal' : 'SCSR-Buryal', controlNo)}"`,
       'Content-Length': pdf.length,
     });
     res.end(pdf);

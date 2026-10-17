@@ -371,6 +371,24 @@ export function dataURItoBlob(dataUrl: string): Blob {
   return new Blob([array], { type: mime });
 }
 
+export async function downloadScsrPdf(caseId: string, kind: 'burial' | 'medical') {
+  const token = getToken();
+  const res = await fetch(
+    `${API_BASE}/cases/${caseId}/scsr-pdf?kind=${kind}`,
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+  );
+  if (!res.ok) throw new Error(`SCSR export failed: ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `scsr-${kind === 'medical' ? 'medikal' : 'buryal'}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export async function downloadCsrPdf(caseId: string) {
   const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch(

@@ -732,6 +732,8 @@ const fil: EnLocale = {
     "byRole": " · ayon kay {{role}}",
     "caseHistory": "Kasaysayan ng Kaso",
     "caseStudyReport": "Case Study Report",
+    "scsrBurial": "SCSR — Buryal",
+    "scsrMedical": "SCSR — Medikal",
     "gisPdf": "GIS (PDF)",
     "gisLocked": "Magagamit kapag aktibo na ang kaso (kasalukuyang {{status}})",
     "gisNational": "Pambansa (DSWD)",

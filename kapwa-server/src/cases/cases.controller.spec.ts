@@ -5,6 +5,7 @@ import { CasesService } from './cases.service';
 import { CasesExportService } from './cases-export.service';
 import { CaseStepLocksService } from './case-step-locks.service';
 import { GisExportService } from '../gis/gis-export.service';
+import { ScsrExportService } from '../scsr/scsr-export.service';
 import { AuthenticatedRequest } from '../auth/types';
 import { AbacGuard } from '../auth/guards/abac.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -46,6 +47,7 @@ describe('CasesController step-lock routes', () => {
         { provide: CasesExportService, useValue: {} },
         { provide: CaseStepLocksService, useValue: stepLocks },
         { provide: GisExportService, useValue: {} },
+        { provide: ScsrExportService, useValue: {} },
       ],
     })
       // The controller's guards need AbacService and the consent-ledger repo.

@@ -12,7 +12,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { api, downloadCsrPdf, downloadFilingDoc, filingDocIdFromUrl, getFilingObjectUrl, downloadGisPdf } from '../lib/api';
+import { api, downloadCsrPdf, downloadFilingDoc, filingDocIdFromUrl, getFilingObjectUrl, downloadGisPdf, downloadScsrPdf } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { addressNames } from '@/lib/psgc';
 import { formatDate, formatDateTime, personFullName, formatPeso } from '../lib/format';
@@ -852,6 +852,12 @@ export function CaseViewPage() {
                     {caseData.status === 'closed' && (
                       <>
                         <DropdownMenuSeparator />
+                        <DropdownMenuItem onSelect={() => runDownload(downloadScsrPdf(id!, 'burial'))}>
+                          <FileText size={14} className="mr-2" aria-hidden="true" /> {t('cases.scsrBurial', 'SCSR — Burial')}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => runDownload(downloadScsrPdf(id!, 'medical'))}>
+                          <FileText size={14} className="mr-2" aria-hidden="true" /> {t('cases.scsrMedical', 'SCSR — Medical')}
+                        </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => runDownload(downloadCsrPdf(id!))}>
                           <FileText size={14} className="mr-2" aria-hidden="true" /> {t('cases.caseStudyReport', 'Case Study Report')}
                         </DropdownMenuItem>
