@@ -104,9 +104,7 @@ export function ContactPage() {
           {/* Right column: contact form */}
           <div className="lg:col-span-7">
             <Card className="border-border/60 p-6 shadow-sm">
-              {/* The card had no heading, so on a page whose left column leads
-                  with "Office Information" the submit button was the first
-                  thing with any visual weight. */}
+              {/* Without this the submit button is the card's first bold element. */}
               <h2 className="mb-5 font-heading text-xl font-semibold tracking-tight">
                 {t('contact.formTitle', 'Send us a message')}
               </h2>

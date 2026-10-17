@@ -57,10 +57,7 @@ export function LandingPage() {
         <PageContainer>
           <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-10">
             <div className="lg:col-span-7">
-              {/* The section mark used to be a rounded tile stacking an icon,
-                  a tracked-caps "MSWDO Norzagaray" eyebrow and the headline.
-                  The eyebrow only repeated the header, and the tile was the
-                  generated icon-card shape, so the headline now leads alone. */}
+              {/* The headline leads alone; no icon tile or "MSWDO Norzagaray" kicker. */}
               <h1 className="mb-6 text-balance font-heading text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
                 Compassionate social welfare services for every resident
               </h1>

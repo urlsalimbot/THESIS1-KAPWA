@@ -1360,7 +1360,6 @@ const fil: EnLocale = {
   },
   "announcements": {
     "allAnnouncements": "Lahat ng Anunsyo",
-    "announcement": "Anunsyo",
     "backToHome": "Bumalik sa home",
     "backToManage": "Bumalik sa Mga Anunsyo",
     "detailDesc": "Tingnan ang mga detalye ng anunsyo at pamahalaan ang paglalathala.",
@@ -1450,7 +1449,6 @@ const fil: EnLocale = {
     "updated": "Na-update",
     "updatedOn": "Na-update",
     "urlPrompt": "URL",
-    "whatsNew": "Ano ang Bago",
     "write": "Isulat"
   },
   "coordinator": {

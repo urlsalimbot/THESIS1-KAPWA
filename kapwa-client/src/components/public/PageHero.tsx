@@ -13,12 +13,8 @@ interface PageHeroProps {
 /**
  * Standard opening block for public sub-pages (programs, announcements,
  * contact, legal). Keeps the icon, heading size and measure identical
- * everywhere instead of drifting page to page.
- *
- * The icon sits inline with the title. It used to be a bordered tile above it,
- * which is the generated "icon tile + heading" stack, and the block above the
- * title used to be a tracked-caps eyebrow label, which only repeated the
- * heading in smaller words. The title now carries the section on its own.
+ * everywhere instead of drifting page to page. The icon sits inline with the
+ * title so the heading carries the section rather than a tile above it.
  */
 export function PageHero({ icon: Icon, title, description, className }: PageHeroProps) {
   return (

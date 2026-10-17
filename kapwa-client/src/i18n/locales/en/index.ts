@@ -939,7 +939,6 @@ const en = {
   },
   "announcements": {
     "allAnnouncements": "All announcements",
-    "announcement": "Announcement",
     "backToHome": "Back to home",
     "backToManage": "Back to Announcements",
     "detailDesc": "View announcement details and manage publishing.",
@@ -1029,7 +1028,6 @@ const en = {
     "updated": "Updated",
     "updatedOn": "Updated",
     "urlPrompt": "URL",
-    "whatsNew": "What's New",
     "write": "Write",
   },
   "approvals": {

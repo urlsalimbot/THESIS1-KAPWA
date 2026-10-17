@@ -3,7 +3,7 @@ import useSWR from 'swr';
 import { api, publicAnnouncementPhotoUrl } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { Card, CardContent } from '@/components/ui/card';
-import { Pin, ArrowRight, Megaphone, CalendarDays } from 'lucide-react';
+import { Pin, ArrowRight, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/public/PageContainer';
@@ -50,16 +50,10 @@ export function LatestAnnouncements() {
       <PageContainer>
         <div className={cn('mx-auto', layout.wrap)}>
           <div className="mb-12 text-center">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5">
-              <Megaphone size={14} className="text-accent" aria-hidden="true" />
-              <span className="text-xs font-medium tracking-wide text-accent">
-                {t('announcements.whatsNew', "What's New")}
-              </span>
-            </div>
             <h2 className="mb-4 text-balance font-heading text-3xl font-semibold tracking-tight">
               {t('announcements.latestTitle', 'Latest News & Announcements')}
             </h2>
-            <p className="mx-auto max-w-2xl text-pretty text-muted-foreground">
+            <p className="mx-auto max-w-[65ch] text-pretty text-muted-foreground">
               {t(
                 'announcements.latestDesc',
                 'Updates, advisories, and information from the MSWDO of Norzagaray — stay informed about programs and services that may affect you.'
@@ -109,7 +103,7 @@ export function LatestAnnouncements() {
                       )}
                     </div>
 
-                    <h3 className="font-heading font-semibold text-base leading-snug line-clamp-2 transition-colors group-hover:text-accent">
+                    <h3 className="font-heading text-xl font-semibold leading-snug line-clamp-2 transition-colors group-hover:text-accent">
                       {a.title}
                     </h3>
 

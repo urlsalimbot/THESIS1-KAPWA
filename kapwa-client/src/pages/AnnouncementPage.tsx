@@ -3,7 +3,7 @@ import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
 import { api, publicAnnouncementPhotoUrl } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
-import { Pin, ArrowLeft, Megaphone, CalendarDays } from 'lucide-react';
+import { Pin, ArrowLeft, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageContainer } from '@/components/public/PageContainer';
 import { formatDate } from '../lib/format';
@@ -39,7 +39,7 @@ export function AnnouncementPage() {
   if (isLoading) {
     return (
       <PageContainer className="py-12 sm:py-16">
-        <div className="max-w-3xl animate-pulse space-y-4">
+        <div className="max-w-[70ch] animate-pulse space-y-4">
           <div className="h-4 w-40 rounded bg-muted" />
           <div className="h-10 w-3/4 rounded bg-muted" />
           <div className="h-4 w-full rounded bg-muted" />
@@ -53,7 +53,9 @@ export function AnnouncementPage() {
   if (error || !data) {
     return (
       <PageContainer className="py-16 text-center">
-        <h1 className="font-heading text-2xl font-bold">{t('announcements.notFound', 'Article not found')}</h1>
+        <h1 className="font-heading text-3xl font-bold tracking-tight sm:text-4xl">
+          {t('announcements.notFound', 'Article not found')}
+        </h1>
         <p className="mt-2 text-muted-foreground">{t('announcements.notFoundBody', 'This announcement may have been removed or is no longer published.')}</p>
         <Button asChild variant="outline" className="mt-6">
           <Link to="/">{t('announcements.backToHome', 'Back to home')}</Link>
@@ -64,7 +66,7 @@ export function AnnouncementPage() {
 
   return (
     <PageContainer className="py-10 sm:py-14 lg:py-16">
-      <div className="mx-auto max-w-3xl">
+      <div className="max-w-[70ch]">
         <Link
           to="/"
           className="mb-8 inline-flex items-center gap-1 text-sm text-muted-foreground no-underline transition-colors hover:text-foreground"
@@ -74,13 +76,6 @@ export function AnnouncementPage() {
         </Link>
 
       <article>
-        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5">
-          <Megaphone size={14} className="text-accent" aria-hidden="true" />
-          <span className="text-xs font-medium tracking-wide text-accent">
-            {t('announcements.announcement', 'Announcement')}
-          </span>
-        </div>
-
         <h1 className="mb-5 text-balance font-heading text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
           {data.title}
         </h1>

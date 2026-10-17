@@ -27,7 +27,7 @@ export function PublicProgramDetailPage() {
   if (isLoading) {
     return (
       <PageContainer className="py-12 sm:py-16">
-        <div className="mx-auto max-w-3xl animate-pulse space-y-4">
+        <div className="max-w-[70ch] animate-pulse space-y-4">
           <div className="h-4 w-40 rounded bg-muted" />
           <div className="h-10 w-3/4 rounded bg-muted" />
           <div className="mt-8 h-40 w-full rounded-2xl bg-muted/60" />
@@ -39,7 +39,7 @@ export function PublicProgramDetailPage() {
   if (error || !data) {
     return (
       <PageContainer className="py-16 text-center">
-        <h1 className="font-heading text-2xl font-bold">
+        <h1 className="font-heading text-3xl font-bold tracking-tight sm:text-4xl">
           {t('programsPublic.notFound', 'Program not found')}
         </h1>
         <p className="mt-2 text-muted-foreground">
@@ -70,58 +70,51 @@ export function PublicProgramDetailPage() {
           {t('programsPublic.backToPrograms', 'Back to programs')}
         </Link>
 
-        <div className="mx-auto max-w-3xl">
+        <div className="max-w-[70ch]">
           <Card className="border-border/60">
             <CardContent className="space-y-6 p-6 sm:p-8">
-              {/* Card header: the category icon, category, and program name
-                  live INSIDE the card with the rest of the program details. */}
-              <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/10 ring-1 ring-inset ring-accent/15">
-                  <Icon size={24} className="text-accent" aria-hidden="true" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
-                    {data.category || t('public.programs', 'Programs')}
-                  </p>
-                  <h1 className="mt-1 font-heading text-2xl font-bold leading-[1.15] tracking-tight text-balance sm:text-3xl">
-                    {data.name}
-                  </h1>
-                </div>
+              <div>
+                <h1 className="flex items-center gap-3 font-heading text-3xl font-bold leading-[1.15] tracking-tight text-balance sm:text-4xl">
+                  <Icon size={28} className="shrink-0 text-accent" aria-hidden="true" />
+                  {data.name}
+                </h1>
+                <span className="mt-4 inline-block rounded-md border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  {data.category || t('public.programs', 'Programs')}
+                </span>
               </div>
-              <Separator />
 
               {funds.length > 0 && (
-                <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {t('programsPublic.fundSources', 'Fund Sources')}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {funds.map((f) => (
-                      <span
-                        key={f}
-                        className="rounded-md border border-border bg-background px-2 py-0.5 text-xs font-medium text-foreground/85"
-                      >
-                        {f}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+                <>
+                  <Separator />
+                  <section>
+                    <h2 className="font-heading text-lg font-semibold tracking-tight">
+                      {t('programsPublic.fundSources', 'Fund Sources')}
+                    </h2>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {funds.map((f) => (
+                        <span
+                          key={f}
+                          className="rounded-md border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                        >
+                          {f}
+                        </span>
+                      ))}
+                    </div>
+                  </section>
+                </>
               )}
 
               {docs.length > 0 && (
                 <>
                   <Separator />
                   <section>
-                    <h2 className="flex items-center gap-2 font-heading text-base font-semibold tracking-tight">
+                    <h2 className="flex items-center gap-2 font-heading text-lg font-semibold tracking-tight">
                       <FileText size={16} className="text-accent" aria-hidden="true" />
                       {t('programsPublic.requiredDocuments', 'Required Documents')}
                     </h2>
                     <ul className="mt-3 space-y-2">
                       {docs.map((doc, i) => (
-                        <li
-                          key={i}
-                          className="flex items-start gap-2.5 rounded-lg border border-border/60 bg-background px-3 py-2.5"
-                        >
+                        <li key={i} className="flex items-start gap-2.5">
                           <span
                             className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent/70"
                             aria-hidden="true"
@@ -138,7 +131,7 @@ export function PublicProgramDetailPage() {
                 <>
                   <Separator />
                   <section>
-                    <h2 className="font-heading text-base font-semibold tracking-tight">
+                    <h2 className="font-heading text-lg font-semibold tracking-tight">
                       {t('programsPublic.legalBasis', 'Legal Basis')}
                     </h2>
                     <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">

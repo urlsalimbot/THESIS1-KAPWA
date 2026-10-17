@@ -44,9 +44,7 @@ export function AboutPage() {
             </div>
 
             <div className="lg:col-span-5">
-              {/* Office facts as a definition list. This was three accent
-                  numbers with small labels — the hero-metric block — which
-                  shouted statistics the page is not about. */}
+              {/* Office facts as label/value rows, not a metric block. */}
               <dl className="divide-y divide-border/60 rounded-2xl border border-border/70 bg-card px-6">
                 {facts.map((fact) => (
                   <div key={fact.label} className="flex items-baseline justify-between gap-4 py-5">
