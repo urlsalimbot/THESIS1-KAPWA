@@ -51,7 +51,8 @@ function FamilyMemberNode({ data }: NodeProps<FamilyFlowNode>) {
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-foreground">{member.fullName}</p>
         <p className="truncate text-xs text-muted-foreground">
-          {member.relationship} &middot; {member.age} {t('family.yrs', 'yrs')}
+          {member.relationship ? `${member.relationship} · ` : ''}
+          {member.age} {t('family.yrs', 'yrs')}
         </p>
         {member.statusIncome && (
           <p className="truncate text-[9px] text-muted-foreground">{member.statusIncome}</p>
@@ -148,7 +149,8 @@ export function FamilyTreeGraph({ members, primary }: FamilyTreeGraphProps) {
                   {selectedMember.isPrimary && <span className="ml-1.5 text-xs text-primary font-medium">({t('family.primary', 'Primary')})</span>}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {selectedMember.relationship} &middot; {selectedMember.age} {t('family.yrs', 'yrs')}
+                  {selectedMember.relationship ? `${selectedMember.relationship} · ` : ''}
+                  {selectedMember.age} {t('family.yrs', 'yrs')}
                 </p>
               </div>
             </div>

@@ -147,7 +147,11 @@ describe('BeneficiariesService', () => {
         { id: 'hm-2', full_name: 'Kuatro Dela Cruz', surname: 'Dela Cruz', first_name: 'Kuatro', middle_name: null, extension: null, gender: 'Female', dob: '2020-01-01', relationship: 'Child', age: 6, occupation: null, income: 0, status: 'Inactive', status_reason: 'Moved out', is_primary: false },
       ]);
 
-      benRepoMock.query = jest.fn().mockResolvedValue([{ size: '2' }]);
+      benRepoMock.query = jest.fn().mockImplementation((sql: string) => {
+        if (sql.includes('COUNT(DISTINCT t.person_id)')) return Promise.resolve([{ size: '2' }]);
+        if (sql.includes('FROM beneficiaries b')) return Promise.resolve([]);
+        return Promise.resolve([]);
+      });
 
       const res = await service.getFamilyGraph('ben-1');
 
@@ -155,31 +159,49 @@ describe('BeneficiariesService', () => {
       expect(res.totalCount).toBe(2);
       expect(res.members).toHaveLength(3);
 
-      const sizeSql = String(benRepoMock.query.mock.calls[0][0]);
-      expect(sizeSql).toContain('COUNT(DISTINCT t.person_id)');
-      expect(sizeSql).toContain("<> 'inactive'");
+      const sizeCall = benRepoMock.query.mock.calls.find((c: any[]) =>
+        String(c[0]).includes('COUNT(DISTINCT t.person_id)'),
+      );
+      expect(String(sizeCall[0])).toContain("<> 'inactive'");
+      // a membership row for the primary would list the same person twice
+      expect(String(hmRepoMock.query.mock.calls[0][0])).toContain('hm.person_id <> $3');
+      expect(hmRepoMock.query.mock.calls[0][1]).toContain('p1');
       // The primary carries the same detail fields as a member.
       expect(res.primary).toMatchObject({ gender: 'Male', dob: '1980-01-01' });
       const inactive = res.members.find((m: any) => m.id === 'hm-2');
       expect(inactive).toMatchObject({ status: 'Inactive', statusReason: 'Moved out' });
     });
 
-    it('counts a second beneficiary sharing the household, which intake creates without a membership row', async () => {
+    it('lists and counts a second beneficiary that intake created without a membership row', async () => {
       benRepoMock.findOne.mockResolvedValue({ id: 'ben-1', householdId: 'h1', personId: 'p1' });
       personRepoMock.findOne.mockResolvedValue({
         id: 'p1', surname: 'Reyes', firstName: 'Pedro', middleName: null, extension: null,
         gender: 'Male', dob: new Date('1988-03-21'), occupation: null, estimatedMonthlyIncome: 0, age: 38,
       });
       // confirmMatch writes no membership row for the member it turns into a
-      // beneficiary, so the roster holds only the primary while two people share
-      // the household — the size must still say two.
+      // beneficiary: the roster used to hold only the primary while two people
+      // shared the household, and the size counted one.
       hmRepoMock.query.mockResolvedValue([]);
-      benRepoMock.query = jest.fn().mockResolvedValue([{ size: '2' }]);
+      benRepoMock.query = jest.fn().mockImplementation((sql: string) => {
+        if (sql.includes('COUNT(DISTINCT t.person_id)')) return Promise.resolve([{ size: '2' }]);
+        if (sql.includes('FROM beneficiaries b')) {
+          return Promise.resolve([{
+            id: 'ben-2', person_id: 'p2', full_name: 'Ana Reyes', surname: 'Reyes', first_name: 'Ana',
+            middle_name: 'Lontok', extension: null, gender: 'Female', dob: '1990-01-01', age: 36,
+            occupation: 'Vendor', income: 5000,
+          }]);
+        }
+        return Promise.resolve([]);
+      });
 
       const res = await service.getFamilyGraph('ben-1');
 
       expect(res.totalCount).toBe(2);
-      expect(res.members).toHaveLength(1);
+      // primary + the co-beneficiary, which has no relationship stored
+      expect(res.members).toHaveLength(2);
+      const co = res.members.find((m: any) => m.personId === 'p2');
+      expect(co).toMatchObject({ fullName: 'Ana Reyes', relationship: null, isBeneficiary: true, isPrimary: false });
+      expect(res.members.find((m: any) => m.isPrimary)?.fullName).toContain('Pedro');
     });
   });
 

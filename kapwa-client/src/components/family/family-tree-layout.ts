@@ -29,9 +29,14 @@ import { MarkerType } from '@xyflow/react';
 
 export interface FamilyMemberNode extends Record<string, unknown> {
   id: string;
+  /** Set for membership rows; a co-beneficiary entry carries their person id. */
+  personId?: string | null;
   fullName: string;
-  relationship: string;
+  /** Null for a household co-beneficiary: no relationship is stored for them. */
+  relationship: string | null;
   age: number;
+  /** True when the entry is a beneficiary rather than a membership row. */
+  isBeneficiary?: boolean;
   surname?: string;
   statusIncome?: string;
   isPrimary: boolean;

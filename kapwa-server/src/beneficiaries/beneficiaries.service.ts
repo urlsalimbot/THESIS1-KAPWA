@@ -400,6 +400,7 @@ export class BeneficiariesService {
 
     const members = await this.hmRepo.query(
       `SELECT hm.id,
+              hm.person_id,
               TRIM(CONCAT(p.first_name, ' ', COALESCE(p.middle_name || ' ', ''), p.surname)) AS full_name,
               p.surname, p.first_name, p.middle_name, p.extension, p.gender,
               to_char(p.dob, 'YYYY-MM-DD') AS dob,
@@ -408,13 +409,17 @@ export class BeneficiariesService {
        FROM household_memberships hm
        JOIN persons p ON p.id = hm.person_id
        WHERE hm.household_id = $1
+         -- the primary is the household's own person and is listed as "Self"; a
+         -- membership row for them would show the same person twice
+         AND hm.person_id <> $3
        ORDER BY hm.is_primary DESC, p.surname, p.first_name
        LIMIT $2`,
-      [ben.householdId, FAMILY_MEMBER_LIMIT],
+      [ben.householdId, FAMILY_MEMBER_LIMIT, ben.personId],
     );
 
     const camelCase = (m: any) => ({
       id: m.id,
+      personId: m.person_id,
       fullName: m.full_name,
       surname: m.surname,
       firstName: m.first_name,
@@ -433,7 +438,57 @@ export class BeneficiariesService {
     });
     const mapped = members.map(camelCase);
 
-    const allMembers = primaryMember ? [primaryMember, ...mapped] : mapped;
+    // People who are beneficiaries of this household in their own right but have
+    // no membership row: intake's confirm path turns a matched household member
+    // into a Beneficiary inside the existing household and writes no membership,
+    // so the roster (and the tree) showed fewer people than the household size.
+    // Anyone already listed above keeps that entry — a membership carries the
+    // relationship and the id the deactivate action needs.
+    const listedPersonIds = new Set<string>(
+      [ben.personId, ...mapped.map((m: any) => m.personId)].filter(Boolean) as string[],
+    );
+    const coBeneficiaries: any[] = await this.benRepo.query(
+      `SELECT b.id,
+              p.id AS person_id,
+              TRIM(CONCAT(p.first_name, ' ', COALESCE(p.middle_name || ' ', ''), p.surname)) AS full_name,
+              p.surname, p.first_name, p.middle_name, p.extension, p.gender,
+              to_char(p.dob, 'YYYY-MM-DD') AS dob,
+              EXTRACT(YEAR FROM AGE(NOW(), p.dob))::integer AS age,
+              p.occupation, p.estimated_monthly_income AS income
+         FROM beneficiaries b
+         JOIN persons p ON p.id = b.person_id
+        WHERE b.household_id = $1
+        ORDER BY p.surname, p.first_name
+        LIMIT $2`,
+      [ben.householdId, FAMILY_MEMBER_LIMIT],
+    );
+    const extraBeneficiaries = coBeneficiaries
+      .filter(r => r.person_id && !listedPersonIds.has(r.person_id))
+      .map(r => ({
+        id: r.id,
+        personId: r.person_id,
+        fullName: r.full_name,
+        surname: r.surname,
+        firstName: r.first_name,
+        middleName: r.middle_name,
+        extension: r.extension,
+        gender: r.gender,
+        dob: r.dob ? String(r.dob).slice(0, 10) : null,
+        // No relationship is stored for a co-beneficiary (matchCheck carries
+        // NULL for beneficiaries too), so the family view shows them by age.
+        relationship: null,
+        age: r.age ?? 0,
+        occupation: r.occupation ?? null,
+        income: r.income != null ? Number(r.income) : null,
+        status: null,
+        statusReason: null,
+        isPrimary: false,
+        isBeneficiary: true,
+        depth: 0,
+      }));
+
+    const roster = primaryMember ? [primaryMember, ...mapped] : [...mapped];
+    const allMembers = [...roster, ...extraBeneficiaries];
     const primary = primaryMember || allMembers[0] || null;
     // Household size is the distinct people in the household — the beneficiaries
     // sharing it plus the active membership rows, deduplicated per person — the

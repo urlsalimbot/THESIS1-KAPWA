@@ -245,7 +245,9 @@ export function AccessCardViewPage() {
             {famGraph.members.map((m, i) => (
               <Badge key={i} variant="outline" className="text-xs">
                 {personFullName(m.firstName, m.middleName, m.surname, m.extension) || m.fullName}
-                <span className="ml-1 text-muted-foreground">({m.relationship}, {m.age})</span>
+                <span className="ml-1 text-muted-foreground">
+                  ({m.relationship ? `${m.relationship}, ` : ''}{m.age})
+                </span>
               </Badge>
             ))}
           </div>

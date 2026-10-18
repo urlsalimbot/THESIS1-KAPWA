@@ -87,8 +87,11 @@ interface BeneficiaryIntervention {
 interface FamilyMember {
   id: string;
   fullName: string;
-  relationship: string;
+  /** Null for a household co-beneficiary: no relationship is stored for them. */
+  relationship: string | null;
   age: number;
+  /** True when the entry is a beneficiary of the household, not a membership row. */
+  isBeneficiary?: boolean;
   occupation?: string;
   income?: number;
   status?: string;
@@ -489,10 +492,13 @@ export function BeneficiaryViewPage() {
                               {m.isPrimary && <span className="rounded bg-primary/20 px-1 py-0.5 text-[9px] font-medium text-primary leading-none">{t("beneficiaries.primary", "Primary")}</span>}
                               {inactive && <Badge variant="outline" className="px-1 py-0 text-[9px] leading-none text-muted-foreground">{t("beneficiaries.inactive", "Inactive")}</Badge>}
                             </div>
-                            <p className="text-xs text-muted-foreground truncate">{m.relationship} &middot; {m.age} {t("beneficiaries.yearsShort", "yrs")}</p>
+                            <p className="text-xs text-muted-foreground truncate">{m.relationship ? `${m.relationship} · ` : ""}{m.age} {t("beneficiaries.yearsShort", "yrs")}</p>
                           </div>
                         </div>
-                        {!m.isPrimary && (
+                        {/* A co-beneficiary has no membership row, so there is nothing
+                            to deactivate or reactivate — those actions address a
+                            membership id. */}
+                        {!m.isPrimary && !m.isBeneficiary && (
                           inactive ? (
                             <Button type="button" variant="ghost" size="sm" className="h-7 shrink-0 text-xs" onClick={() => reactivateMember(m)}>
                               {t("beneficiaries.reactivate", "Reactivate")}
