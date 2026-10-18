@@ -8,7 +8,7 @@ Root `package.json` is a stub; each app has its own `package.json`. CI is `.gith
 
 ## Commands (run from `kapwa-server/` unless noted)
 
-- **Server full suite:** `npx jest --silent` (currently **58 suites / 478 tests PASS**). Do NOT use `npm test` — it adds `--coverage` and is slow.
+- **Server full suite:** `npx jest --silent` (currently **147 suites / 1,594 tests PASS**). Do NOT use `npm test` — it adds `--coverage` and is slow.
 - **Single spec:** `npx jest <file>` e.g. `npx jest user-wave2`.
 - **Server typecheck:** `npm run typecheck` (`tsc --noEmit`). **Run this before claiming work done.**
 - **Server lint:** `npm run lint` (ESLint with `--fix`).
