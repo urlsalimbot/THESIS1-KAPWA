@@ -217,6 +217,35 @@ export class BeneficiariesService {
       }
     }
 
+    // Enrich with the intervention history: how often the office has served this
+    // person and when last. Joined through cases because
+    // case_interventions.case_id is TEXT while cases.id is UUID (same cast as
+    // getInterventions). Best-effort like the lookup above: the list must render
+    // even if this fails.
+    if (benIds.length > 0) {
+      try {
+        const rows: Array<{ beneficiary_id: string; cnt: string; last: string | null }> =
+          await this.benRepo.query(
+            `SELECT c.beneficiary_id, COUNT(*)::text AS cnt, MAX(ci.delivery_date)::text AS last
+               FROM case_interventions ci
+               JOIN cases c ON c.id::text = ci.case_id
+              WHERE c.beneficiary_id = ANY($1::uuid[])
+              GROUP BY c.beneficiary_id`,
+            [benIds],
+          );
+        const ivMap = new Map(rows.map(r => [r.beneficiary_id, r]));
+        for (const b of data) {
+          const hit = ivMap.get(b.id);
+          // Reported as 0 / null rather than left absent, so the shape is stable
+          // for the client.
+          (b as any).interventionCount = hit ? parseInt(hit.cnt, 10) : 0;
+          (b as any).lastInterventionDate = hit?.last ?? null;
+        }
+      } catch {
+        // Enrichment only — never fail the list because the history lookup failed.
+      }
+    }
+
     return { data, total };
   }
 

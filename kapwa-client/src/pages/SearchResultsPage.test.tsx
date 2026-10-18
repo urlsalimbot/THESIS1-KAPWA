@@ -73,6 +73,8 @@ describe('SearchResultsPage', () => {
           dob: '1985-02-11',
           gender: 'Female',
           accessCardCode: 'NORZ-AC-2026-0002',
+          interventionCount: 5,
+          lastInterventionDate: '2026-06-02',
           household: { barangay: 'Minuyan', familyMemberCount: 4, nhtsPrId: 'NHTS-0001' },
         },
       ],
@@ -85,6 +87,9 @@ describe('SearchResultsPage', () => {
     expect(screen.getByText('Minuyan')).toBeTruthy();
     expect(screen.getByText('NORZ-AC-2026-0002')).toBeTruthy();
     expect(screen.getByText('NHTS-0001')).toBeTruthy();
+    // the intervention history the list now enriches each row with
+    expect(screen.getByText(/5 interventions/)).toBeTruthy();
+    expect(screen.getByText(/Jun 2, 2026/)).toBeTruthy();
   });
 
   it('shows the empty state when the response has no rows', async () => {

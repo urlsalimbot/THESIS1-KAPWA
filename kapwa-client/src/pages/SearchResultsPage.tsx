@@ -33,6 +33,8 @@ interface SearchResult {
   occupation: string;
   income: string;
   placeOfBirth: string;
+  interventionCount: number;
+  lastInterventionDate: string;
   household: {
     barangay: string;
     familyMemberCount: number;
@@ -76,6 +78,8 @@ function mapResult(raw: Record<string, unknown>): SearchResult {
     occupation: (raw.occupation as string) || '',
     income: (raw.estimatedMonthlyIncome as string) || '',
     placeOfBirth: (raw.placeOfBirth as string) || '',
+    interventionCount: Number(raw.interventionCount) || 0,
+    lastInterventionDate: (raw.lastInterventionDate as string) || '',
     household: household
       ? {
           barangay: (household.barangay as string) || '',
@@ -326,11 +330,24 @@ export function SearchResultsPage() {
                           </dl>
                         )}
 
-                      <div className="mt-auto pt-1">
+                      <div className="mt-auto flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
+                        {(item.interventionCount > 0 || item.lastInterventionDate) && (
+                          <p className="text-xs text-muted-foreground">
+                            {item.interventionCount > 0 &&
+                              t('search.interventionCount', '{{count}} interventions', {
+                                count: item.interventionCount,
+                              })}
+                            {item.interventionCount > 0 && item.lastInterventionDate ? ' · ' : ''}
+                            {item.lastInterventionDate &&
+                              t('search.last', 'Last: {{date}}', {
+                                date: formatDate(item.lastInterventionDate),
+                              })}
+                          </p>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
-                          className="w-full sm:w-auto"
+                          className="w-full sm:ml-auto sm:w-auto"
                           onClick={() => navigate(`/beneficiaries/${item.id}`)}
                         >
                           {t('search.view', 'View')}

@@ -203,6 +203,69 @@ describe('BeneficiariesService', () => {
     });
   });
 
+  describe('findAll', () => {
+    function mockListQuery(rows: any[]) {
+      const qb: any = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        setParameters: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([rows, rows.length]),
+      };
+      benRepoMock.createQueryBuilder = jest.fn().mockReturnValue(qb);
+      return qb;
+    }
+
+    it('enriches each row with its intervention count and last delivery', async () => {
+      const rows = [
+        { id: 'ben-1', person: { id: 'p-1' }, household: { id: 'h-1' } },
+        { id: 'ben-2', person: { id: 'p-2' }, household: { id: 'h-2' } },
+      ];
+      mockListQuery(rows);
+      benRepoMock.query = jest.fn().mockImplementation((sql: string) => {
+        if (sql.includes('household_memberships')) {
+          return Promise.resolve([{ household_id: 'h-1', cnt: '3' }]);
+        }
+        if (sql.includes('case_interventions')) {
+          return Promise.resolve([{ beneficiary_id: 'ben-1', cnt: '5', last: '2026-06-02' }]);
+        }
+        return Promise.resolve([]); // the client-category lookup
+      });
+
+      const res = await service.findAll(undefined, 'pedro', 1, 50);
+
+      expect(res.total).toBe(2);
+      expect((res.data[0] as any).interventionCount).toBe(5);
+      expect((res.data[0] as any).lastInterventionDate).toBe('2026-06-02');
+      // someone with no interventions reports zero rather than being absent
+      expect((res.data[1] as any).interventionCount).toBe(0);
+      expect((res.data[1] as any).lastInterventionDate).toBeNull();
+
+      // the count is scoped to the ids on this page
+      const ivCall = benRepoMock.query.mock.calls.find((c: any[]) =>
+        String(c[0]).includes('case_interventions'),
+      );
+      expect(ivCall[1][0]).toEqual(['ben-1', 'ben-2']);
+    });
+
+    it('still returns the list when the history lookup fails', async () => {
+      const rows = [{ id: 'ben-1', person: { id: 'p-1' }, household: { id: 'h-1' } }];
+      mockListQuery(rows);
+      benRepoMock.query = jest.fn().mockImplementation((sql: string) => {
+        if (sql.includes('case_interventions')) return Promise.reject(new Error('boom'));
+        return Promise.resolve([]);
+      });
+
+      const res = await service.findAll(undefined, 'pedro');
+
+      expect(res.data).toHaveLength(1);
+      expect((res.data[0] as any).interventionCount).toBeUndefined();
+    });
+  });
+
   describe('getInterventions', () => {
     it("returns every intervention across the beneficiary's cases", async () => {
       benRepoMock.findOne.mockResolvedValue({ id: 'ben-1' });
