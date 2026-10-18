@@ -119,3 +119,47 @@ test('the OTP header keeps its icon inline rather than in a tile above', async (
   });
   expect(tilesAbove, `accent tile(s) stacked above the heading: ${tilesAbove.join(' | ')}`).toEqual([]);
 });
+
+/**
+ * Registration's success screen ("Check Your Email") only appears after a
+ * successful POST, so nothing in the unit suite renders it — its header was
+ * converted to an inline icon without a test. Forced here with a stubbed
+ * register call.
+ */
+test('the register success state keeps its icon inline, not in a tile', async ({ page }) => {
+  await page.route('**/api/v1/auth/register', (route) =>
+    route.fulfill({ json: { email: 'maria@example.com', emailDelivered: true } }),
+  );
+
+  await page.goto('/register');
+  await page.locator('[name="firstName"]').fill('Maria');
+  await page.locator('[name="middleName"]').fill('Reyes');
+  await page.locator('[name="lastName"]').fill('Santos');
+  await page.locator('[name="email"]').fill('maria@example.com');
+  await page.locator('[name="phone"]').fill('09171234567');
+  await page.locator('[name="password"]').fill('Password123!');
+  await page.locator('[name="confirmPassword"]').fill('Password123!');
+  await page.locator('[name="dateOfBirth"]').fill('1990-01-01');
+  // the barangay is a Radix select
+  await page.getByRole('combobox').first().click();
+  await page.getByRole('option').first().click();
+  await page.locator('button[type="submit"]').first().click();
+
+  const heading = page.getByRole('heading', { level: 1 });
+  await expect(heading).toContainText('Check Your Email');
+  await expect(heading.locator('svg[aria-hidden="true"]')).toHaveCount(1);
+
+  const tiles = await page.evaluate(() => {
+    const h1 = document.querySelector('h1');
+    if (!h1) return ['no h1'];
+    const card = h1.closest('div.rounded-lg.border') || h1.parentElement;
+    if (!card) return ['no card'];
+    const top = h1.getBoundingClientRect().top;
+    return [...card.querySelectorAll('*')]
+      .filter((el) => String(el.className).includes('bg-accent/10')
+        && el.getBoundingClientRect().height > 0
+        && el.getBoundingClientRect().bottom <= top + 1)
+      .map((el) => String(el.className).slice(0, 60));
+  });
+  expect(tiles, `accent tile(s) above the heading: ${tiles.join(' | ')}`).toEqual([]);
+});
