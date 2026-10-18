@@ -251,6 +251,29 @@ describe('BeneficiariesService', () => {
       expect(ivCall[1][0]).toEqual(['ben-1', 'ben-2']);
     });
 
+    it('reports household size as the beneficiary plus the other members', async () => {
+      const rows = [
+        { id: 'ben-1', person: { id: 'p-1' }, household: { id: 'h-1' } },
+        { id: 'ben-2', person: { id: 'p-2' }, household: { id: 'h-2' } },
+      ];
+      mockListQuery(rows);
+      benRepoMock.query = jest.fn().mockImplementation((sql: string) => {
+        // membership rows are the household's *other* people only
+        if (sql.includes('household_memberships')) {
+          return Promise.resolve([{ household_id: 'h-1', cnt: '3' }]);
+        }
+        return Promise.resolve([]);
+      });
+
+      const res = await service.findAll(undefined, 'pedro', 1, 50);
+
+      // 3 memberships + the primary beneficiary, the same figure the detail page
+      // shows — not 3, which is what the list column used to display
+      expect((res.data[0].household as any).familyMemberCount).toBe(4);
+      // a household with no other members is still one person, not zero
+      expect((res.data[1].household as any).familyMemberCount).toBe(1);
+    });
+
     it('still returns the list when the history lookup fails', async () => {
       const rows = [{ id: 'ben-1', person: { id: 'p-1' }, household: { id: 'h-1' } }];
       mockListQuery(rows);

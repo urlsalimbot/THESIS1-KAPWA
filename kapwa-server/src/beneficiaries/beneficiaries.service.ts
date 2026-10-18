@@ -190,7 +190,13 @@ export class BeneficiariesService {
       const countMap = new Map(counts.map(r => [r.household_id, parseInt(r.cnt, 10)]));
       for (const b of data) {
         if (b.household?.id) {
-          (b.household as any).familyMemberCount = countMap.get(b.household.id) || 0;
+          // The query counts membership rows, which are the household's *other*
+          // people — the primary beneficiary has no membership row of their own.
+          // Household size therefore adds that person back, matching the figure
+          // the beneficiary page shows (getFamilyGraph.totalCount = primary +
+          // active members), so the list, the search cards and the detail page
+          // cannot disagree.
+          (b.household as any).familyMemberCount = (countMap.get(b.household.id) || 0) + 1;
         }
       }
     }
