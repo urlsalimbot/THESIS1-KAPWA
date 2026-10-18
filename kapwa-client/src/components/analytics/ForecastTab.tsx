@@ -84,7 +84,7 @@ export function ForecastTab({ filters }: { filters: Record<string, unknown> }) {
         <CardContent>
           <ResponsiveContainer width="100%" height={280}>
             <ComposedChart data={chartData}>
-              <XAxis dataKey="month" tick={{ fontSize: 9 }} />
+              <XAxis dataKey="month" tick={{ fontSize: '0.75rem' }} />
               <YAxis tick={{ fontSize: '0.75rem' }} />
               <Tooltip contentStyle={{ fontSize: '0.75rem' }} />
               <Legend wrapperStyle={{ fontSize: '11px' }} />

@@ -138,17 +138,22 @@ function rowOrder(member: FamilyMemberNode, isPrimaryNode: boolean): [number, nu
   return [group, -member.age];
 }
 
+// Two of these have a token equivalent and follow the theme; the other two are
+// a deliberate part of the graph's palette and have no token, so they keep
+// their light-theme values (see the dark-mode note in the summary).
 const RELATION_STROKE: Record<string, string> = {
   Spouse: '#C8553D',
   Child: '#3D5A80',
-  Parent: '#1B3A5C',
-  Sibling: '#5C5A56',
+  Parent: 'var(--ring)',
+  Sibling: 'var(--muted-foreground)',
 };
 
 function edgeLabelStyle() {
   return {
-    labelStyle: { fill: '#5C5A56', fontSize: 10, fontWeight: 500 },
-    labelBgStyle: { fill: '#FFFFFF', fillOpacity: 0.9 },
+    // Token fills, so the label follows the theme; the size is rem so it grows
+    // with the reader's text size like every other label in the app.
+    labelStyle: { fill: 'var(--muted-foreground)', fontSize: '0.75rem', fontWeight: 500 },
+    labelBgStyle: { fill: 'var(--card)', fillOpacity: 0.9 },
     labelBgPadding: [4, 2] as [number, number],
     labelBgBorderRadius: 4,
   };
