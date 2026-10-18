@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { MethodologyNote } from './MethodologyNote';
 import { formatDateTime } from '../../lib/format';
+import { insufficientDataOf } from '@/lib/errors';
 
 interface RunSummary {
   id: string;
@@ -126,9 +127,9 @@ export function ClusteringTab({ filters }: { filters: Record<string, unknown> })
       await api.post('/analytics/clustering/runs', body);
       await mutateRuns();
     } catch (err) {
-      const errorBody = (err as { body?: { code?: string; required?: number; actual?: number } }).body;
-      if (errorBody?.code === 'insufficient_data') {
-        setError(t('analytics.insufficientData', 'Not enough data (needs {{required}}, found {{actual}})', { required: errorBody.required, actual: errorBody.actual }));
+      const insufficient = insufficientDataOf(err);
+      if (insufficient) {
+        setError(t('analytics.insufficientData', 'Not enough data (needs {{required}}, found {{actual}})', { required: insufficient.required, actual: insufficient.actual }));
       } else {
         setError(t('analytics.actionFailed', 'Action failed. Please try again.'));
       }

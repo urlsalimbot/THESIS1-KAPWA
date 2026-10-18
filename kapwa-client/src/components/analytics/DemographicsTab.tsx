@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { queryKeys } from '@/lib/query-keys';
 import { MethodologyNote } from './MethodologyNote';
+import { insufficientDataOf } from '@/lib/errors';
 
 export type SuppressedCell = { value: number } | { suppressed: true };
 
@@ -43,9 +44,9 @@ export function DemographicsTab({ filters }: { filters: Record<string, unknown> 
   const { data, error, isLoading } = useSWR<DemographicsResponse>(queryKeys.analytics.demographics(filters));
 
   if (error) {
-    const body = (error as { body?: { code?: string; required?: number; actual?: number } }).body;
-    if (body?.code === 'insufficient_data') {
-      return <p className="text-sm text-muted-foreground">{t('analytics.insufficientData', 'Not enough data (needs {{required}}, found {{actual}})', { required: body.required, actual: body.actual })}</p>;
+    const insufficient = insufficientDataOf(error);
+    if (insufficient) {
+      return <p className="text-sm text-muted-foreground">{t('analytics.insufficientData', 'Not enough data (needs {{required}}, found {{actual}})', { required: insufficient.required, actual: insufficient.actual })}</p>;
     }
     return <p className="text-sm text-destructive">{t('analytics.noData', 'No data for the selected filters')}</p>;
   }

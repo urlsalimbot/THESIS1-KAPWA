@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { queryKeys } from '../../lib/query-keys';
 import { MethodologyNote } from './MethodologyNote';
+import { insufficientDataOf } from '@/lib/errors';
 
 type Cell = { value: number } | { suppressed: true };
 interface EquityResponse {
@@ -18,9 +19,9 @@ export function EquityTab({ filters }: { filters: Record<string, unknown> }) {
   const { t } = useTranslation();
   const { data, error, isLoading } = useSWR<EquityResponse>(queryKeys.analytics.equity(filters));
   if (error) {
-    const body = (error as { body?: { code?: string; required?: number; actual?: number } }).body;
-    if (body?.code === 'insufficient_data') {
-      return <p className="text-sm text-muted-foreground">{t('analytics.insufficientData', 'Not enough data (needs {{required}}, found {{actual}})', { required: body.required, actual: body.actual })}</p>;
+    const insufficient = insufficientDataOf(error);
+    if (insufficient) {
+      return <p className="text-sm text-muted-foreground">{t('analytics.insufficientData', 'Not enough data (needs {{required}}, found {{actual}})', { required: insufficient.required, actual: insufficient.actual })}</p>;
     }
     return <p className="text-sm text-muted-foreground">{t('analytics.noData', 'No data for the selected filters')}</p>;
   }

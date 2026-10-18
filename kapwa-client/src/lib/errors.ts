@@ -72,6 +72,29 @@ export function apiErrorMessage(status: number, body: unknown): string {
 }
 
 // Human copy for any thrown value — safe to put in a toast description.
+/**
+ * The analytics endpoints answer "not enough data to compute this" with a 422
+ * whose payload the app's standard error envelope nests under `message`
+ * (`{ statusCode, message: { code: 'insufficient_data', required, actual } }`).
+ * Callers used to read `body.code`, which is always undefined for a real
+ * response, so the tabs fell through to a permanent "Loading…" instead of the
+ * counts. Accept both shapes: the nested one the API sends and the flat one the
+ * unit tests mock.
+ */
+export function insufficientDataOf(err: unknown): { required?: number; actual?: number } | null {
+  const body = (err as { body?: unknown } | null | undefined)?.body;
+  if (!body || typeof body !== 'object') return null;
+  const outer = body as Record<string, unknown>;
+  const inner = (
+    outer.message && typeof outer.message === 'object' ? outer.message : outer
+  ) as Record<string, unknown>;
+  if (inner.code !== 'insufficient_data') return null;
+  return {
+    required: typeof inner.required === 'number' ? inner.required : undefined,
+    actual: typeof inner.actual === 'number' ? inner.actual : undefined,
+  };
+}
+
 export function humanizeError(err: unknown, fallback = 'Please try again.'): string {
   if (err instanceof ApiError) {
     const detail = bodyMessage(err.body);

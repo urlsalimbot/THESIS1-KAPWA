@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ApiError } from './api-error';
-import { apiErrorMessage, humanizeError } from './errors';
+import { apiErrorMessage, humanizeError, insufficientDataOf } from './errors';
 
 describe('apiErrorMessage', () => {
   it('prefers the API message when it is short enough to show', () => {
@@ -77,5 +77,34 @@ describe('humanizeError', () => {
 
   it('uses the supplied fallback for a string throw', () => {
     expect(humanizeError('boom', 'Could not save')).toBe('Could not save');
+  });
+});
+
+describe('insufficientDataOf', () => {
+  // The API's real 422 envelope: the payload sits under `message`, which is why
+  // reading `body.code` alone never matched and the analytics tabs sat on
+  // "Loading…" forever.
+  const serverShape = new ApiError(422, {
+    statusCode: 422,
+    message: { code: 'insufficient_data', required: 3, actual: 1 },
+    timestamp: '2026-10-18T20:15:51.422+08:00',
+    path: '/api/v1/analytics/concentration',
+  });
+
+  it('reads the counts out of the envelope the API actually sends', () => {
+    expect(insufficientDataOf(serverShape)).toEqual({ required: 3, actual: 1 });
+  });
+
+  it('still accepts the flat shape the older call sites assumed', () => {
+    const flat = Object.assign(new Error('nope'), {
+      body: { code: 'insufficient_data', required: 30, actual: 3 },
+    });
+    expect(insufficientDataOf(flat)).toEqual({ required: 30, actual: 3 });
+  });
+
+  it('returns null for any other failure', () => {
+    expect(insufficientDataOf(new ApiError(500, { message: 'boom' }))).toBeNull();
+    expect(insufficientDataOf(new Error('plain'))).toBeNull();
+    expect(insufficientDataOf(undefined)).toBeNull();
   });
 });
