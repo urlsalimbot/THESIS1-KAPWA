@@ -57,6 +57,8 @@ describe('SearchResultsPage', () => {
     expect(screen.getByText('Bigte')).toBeTruthy();
     // identifying fields, not just the name
     expect(screen.getByText(/May 0?1, 1990/)).toBeTruthy();
+    // no card has been issued for this record, so no shortcut to one
+    expect(screen.queryByRole('link', { name: /view access card/i })).toBeNull();
   });
 
   it('reads the barangay from the household and shows the identifiers', async () => {
@@ -90,6 +92,10 @@ describe('SearchResultsPage', () => {
     // the intervention history the list now enriches each row with
     expect(screen.getByText(/5 interventions/)).toBeTruthy();
     expect(screen.getByText(/Jun 2, 2026/)).toBeTruthy();
+    // and the access card, for the record that has one
+    expect(screen.getByRole('link', { name: /view access card/i }).getAttribute('href')).toBe(
+      '/beneficiary/BEN-002/access-card',
+    );
   });
 
   it('shows the empty state when the response has no rows', async () => {

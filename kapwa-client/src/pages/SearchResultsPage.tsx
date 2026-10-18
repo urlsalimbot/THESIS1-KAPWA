@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
-import { Search, ExternalLink } from 'lucide-react';
+import { Search, ExternalLink, CreditCard } from 'lucide-react';
 import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
@@ -344,15 +344,27 @@ export function SearchResultsPage() {
                               })}
                           </p>
                         )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full sm:ml-auto sm:w-auto"
-                          onClick={() => navigate(`/beneficiaries/${item.id}`)}
-                        >
-                          {t('search.view', 'View')}
-                          <ExternalLink size={14} className="ml-1.5" aria-hidden="true" />
-                        </Button>
+                        <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row sm:items-center">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full sm:w-auto"
+                            onClick={() => navigate(`/beneficiaries/${item.id}`)}
+                          >
+                            {t('search.view', 'View')}
+                            <ExternalLink size={14} className="ml-1.5" aria-hidden="true" />
+                          </Button>
+                          {/* The card a tracer may need in hand. Shown only when one
+                              has been issued — the same guard the case view uses. */}
+                          {item.accessCardCode && (
+                            <Button asChild size="sm" variant="ghost" className="w-full sm:w-auto">
+                              <Link to={`/beneficiary/${item.id}/access-card`}>
+                                <CreditCard size={14} className="mr-1.5" aria-hidden="true" />
+                                {t('caseView.viewAccessCard', 'View Access Card')}
+                              </Link>
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
