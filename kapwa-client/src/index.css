@@ -198,6 +198,11 @@ body {
   --border: #D8D4CE;
   --input: #D8D4CE;
   --ring: #1B3A5C;
+  /* Family-tree relationship edges. Two hues have no token to borrow.
+     shortcut: the dark values are hand-picked tints of the same hues, not a
+     designed dark palette — upgrade them if the graph ever gets real tokens. */
+  --relation-spouse: #C8553D;
+  --relation-child: #3D5A80;
   /* Native date/time pickers render against this scheme, not the OS's. */
   color-scheme: light;
 
@@ -283,6 +288,10 @@ body {
   --border: #2A3A4A;
   --input: #3D5A80;
   --ring: #E07A5F;
+  /* Light enough to clear the 3:1 floor for graphics on the dark surface
+     (the light values would sit at roughly 2.5:1). */
+  --relation-spouse: #E07A5F;
+  --relation-child: #7FA6D9;
   /* Native date/time pickers render against this scheme, not the OS's. */
   color-scheme: dark;
 
