@@ -32,6 +32,9 @@ describe('BeneficiariesService — Family Graph', () => {
             create: jest.fn(),
             save: jest.fn(),
             createQueryBuilder: jest.fn(),
+            // household size: distinct people across the household's
+            // beneficiaries and its active membership rows
+            query: jest.fn().mockResolvedValue([{ size: '2' }]),
           },
         },
         {
@@ -96,6 +99,12 @@ describe('BeneficiariesService — Family Graph', () => {
     expect(result.primary?.relationship).toBe('Self');
     expect(result.members).toHaveLength(2);
     expect(result.totalCount).toBe(2);
+    // the size comes from its own count over beneficiaries + active members,
+    // not from the roster length
+    expect(benRepo.query).toHaveBeenCalledWith(
+      expect.stringContaining('COUNT(DISTINCT t.person_id)'),
+      ['hh-1'],
+    );
   });
 
   it('should return all members with depth 0', async () => {

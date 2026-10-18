@@ -179,24 +179,39 @@ export class BeneficiariesService {
       .map(b => b.household?.id)
       .filter((id): id is string => !!id);
     if (householdIds.length > 0) {
+      // Household size is the distinct people in the household: every
+      // beneficiary sharing it plus the active membership rows, deduplicated per
+      // person (someone can be both — matchCheck's roster resolves that the same
+      // way, beneficiary first). Counting membership rows alone missed the
+      // member that confirmMatch turns into a second Beneficiary, which is why
+      // the list and the beneficiary page disagreed.
       const counts: Array<{ household_id: string; cnt: string }> = await this.benRepo.query(
-        `SELECT hm.household_id, COUNT(*)::text AS cnt
-         FROM household_memberships hm
-         WHERE hm.household_id = ANY($1)
-           AND (hm.status IS NULL OR lower(trim(hm.status)) <> 'inactive')
-         GROUP BY hm.household_id`,
+        `SELECT t.household_id, COUNT(DISTINCT t.person_id)::text AS cnt
+           FROM (
+             SELECT b.household_id, b.person_id
+               FROM beneficiaries b
+              WHERE b.household_id = ANY($1::uuid[])
+             UNION
+             SELECT h.id, pb.person_id
+               FROM households h
+               JOIN beneficiaries pb ON pb.id = h.primary_beneficiary_id
+              WHERE h.id = ANY($1::uuid[])
+             UNION
+             SELECT hm.household_id, hm.person_id
+               FROM household_memberships hm
+              WHERE hm.household_id = ANY($1::uuid[])
+                AND (hm.status IS NULL OR lower(trim(hm.status)) <> 'inactive')
+           ) t
+          WHERE t.person_id IS NOT NULL
+          GROUP BY t.household_id`,
         [householdIds],
       );
       const countMap = new Map(counts.map(r => [r.household_id, parseInt(r.cnt, 10)]));
       for (const b of data) {
         if (b.household?.id) {
-          // The query counts membership rows, which are the household's *other*
-          // people — the primary beneficiary has no membership row of their own.
-          // Household size therefore adds that person back, matching the figure
-          // the beneficiary page shows (getFamilyGraph.totalCount = primary +
-          // active members), so the list, the search cards and the detail page
-          // cannot disagree.
-          (b.household as any).familyMemberCount = (countMap.get(b.household.id) || 0) + 1;
+          // The union already contains the person being listed, so the floor is
+          // 1 rather than 0 when the lookup somehow misses the household.
+          (b.household as any).familyMemberCount = countMap.get(b.household.id) || 1;
         }
       }
     }
@@ -420,10 +435,30 @@ export class BeneficiariesService {
 
     const allMembers = primaryMember ? [primaryMember, ...mapped] : mapped;
     const primary = primaryMember || allMembers[0] || null;
-    // Household size counts the primary plus members who are not inactive; the
-    // roster above still lists inactive members so they can be reactivated.
-    const isInactive = (s?: string | null) => (s ?? '').trim().toLowerCase() === 'inactive';
-    const totalCount = (primaryMember ? 1 : 0) + mapped.filter((m: { status?: string | null }) => !isInactive(m.status)).length;
+    // Household size is the distinct people in the household — the beneficiaries
+    // sharing it plus the active membership rows, deduplicated per person — the
+    // same set matchCheck scores. Counting memberships alone (plus the primary)
+    // under-reported a member confirmed into the household by intake, because
+    // that path creates a Beneficiary and no membership row. Inactive members
+    // stay in the roster above so they can be reactivated.
+    const sizeRows: Array<{ size: string }> = await this.benRepo.query(
+      `SELECT COUNT(DISTINCT t.person_id)::text AS size
+         FROM (
+           SELECT b.person_id FROM beneficiaries b WHERE b.household_id = $1
+           UNION
+           SELECT pb.person_id
+             FROM households h
+             JOIN beneficiaries pb ON pb.id = h.primary_beneficiary_id
+            WHERE h.id = $1
+           UNION
+           SELECT hm.person_id FROM household_memberships hm
+            WHERE hm.household_id = $1
+              AND (hm.status IS NULL OR lower(trim(hm.status)) <> 'inactive')
+         ) t
+        WHERE t.person_id IS NOT NULL`,
+      [ben.householdId],
+    );
+    const totalCount = Number(sizeRows?.[0]?.size ?? 0);
     return { primary, members: allMembers, totalCount };
   }
 

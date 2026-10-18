@@ -147,15 +147,39 @@ describe('BeneficiariesService', () => {
         { id: 'hm-2', full_name: 'Kuatro Dela Cruz', surname: 'Dela Cruz', first_name: 'Kuatro', middle_name: null, extension: null, gender: 'Female', dob: '2020-01-01', relationship: 'Child', age: 6, occupation: null, income: 0, status: 'Inactive', status_reason: 'Moved out', is_primary: false },
       ]);
 
+      benRepoMock.query = jest.fn().mockResolvedValue([{ size: '2' }]);
+
       const res = await service.getFamilyGraph('ben-1');
 
-      // Primary (1) + one active member; the inactive member is still listed.
+      // Primary + one active member; the inactive member is still listed.
       expect(res.totalCount).toBe(2);
       expect(res.members).toHaveLength(3);
+
+      const sizeSql = String(benRepoMock.query.mock.calls[0][0]);
+      expect(sizeSql).toContain('COUNT(DISTINCT t.person_id)');
+      expect(sizeSql).toContain("<> 'inactive'");
       // The primary carries the same detail fields as a member.
       expect(res.primary).toMatchObject({ gender: 'Male', dob: '1980-01-01' });
       const inactive = res.members.find((m: any) => m.id === 'hm-2');
       expect(inactive).toMatchObject({ status: 'Inactive', statusReason: 'Moved out' });
+    });
+
+    it('counts a second beneficiary sharing the household, which intake creates without a membership row', async () => {
+      benRepoMock.findOne.mockResolvedValue({ id: 'ben-1', householdId: 'h1', personId: 'p1' });
+      personRepoMock.findOne.mockResolvedValue({
+        id: 'p1', surname: 'Reyes', firstName: 'Pedro', middleName: null, extension: null,
+        gender: 'Male', dob: new Date('1988-03-21'), occupation: null, estimatedMonthlyIncome: 0, age: 38,
+      });
+      // confirmMatch writes no membership row for the member it turns into a
+      // beneficiary, so the roster holds only the primary while two people share
+      // the household — the size must still say two.
+      hmRepoMock.query.mockResolvedValue([]);
+      benRepoMock.query = jest.fn().mockResolvedValue([{ size: '2' }]);
+
+      const res = await service.getFamilyGraph('ben-1');
+
+      expect(res.totalCount).toBe(2);
+      expect(res.members).toHaveLength(1);
     });
   });
 
@@ -226,8 +250,8 @@ describe('BeneficiariesService', () => {
       ];
       mockListQuery(rows);
       benRepoMock.query = jest.fn().mockImplementation((sql: string) => {
-        if (sql.includes('household_memberships')) {
-          return Promise.resolve([{ household_id: 'h-1', cnt: '3' }]);
+        if (sql.includes('COUNT(DISTINCT t.person_id)')) {
+          return Promise.resolve([{ household_id: 'h-1', cnt: '4' }]);
         }
         if (sql.includes('case_interventions')) {
           return Promise.resolve([{ beneficiary_id: 'ben-1', cnt: '5', last: '2026-06-02' }]);
@@ -251,27 +275,33 @@ describe('BeneficiariesService', () => {
       expect(ivCall[1][0]).toEqual(['ben-1', 'ben-2']);
     });
 
-    it('reports household size as the beneficiary plus the other members', async () => {
+    it('reports household size as the distinct people in the household', async () => {
       const rows = [
         { id: 'ben-1', person: { id: 'p-1' }, household: { id: 'h-1' } },
         { id: 'ben-2', person: { id: 'p-2' }, household: { id: 'h-2' } },
       ];
       mockListQuery(rows);
       benRepoMock.query = jest.fn().mockImplementation((sql: string) => {
-        // membership rows are the household's *other* people only
-        if (sql.includes('household_memberships')) {
-          return Promise.resolve([{ household_id: 'h-1', cnt: '3' }]);
+        if (sql.includes('COUNT(DISTINCT t.person_id)')) {
+          return Promise.resolve([{ household_id: 'h-1', cnt: '4' }]);
         }
         return Promise.resolve([]);
       });
 
       const res = await service.findAll(undefined, 'pedro', 1, 50);
 
-      // 3 memberships + the primary beneficiary, the same figure the detail page
-      // shows — not 3, which is what the list column used to display
       expect((res.data[0].household as any).familyMemberCount).toBe(4);
-      // a household with no other members is still one person, not zero
+      // a household the lookup misses still counts its own beneficiary
       expect((res.data[1].household as any).familyMemberCount).toBe(1);
+
+      // the rule: beneficiaries unioned with active memberships, per person
+      const sizeCall = benRepoMock.query.mock.calls.find((c: any[]) =>
+        String(c[0]).includes('COUNT(DISTINCT t.person_id)'),
+      );
+      const sql = String(sizeCall[0]);
+      expect(sql).toContain('FROM beneficiaries');
+      expect(sql).toContain('FROM household_memberships');
+      expect(sql).toContain("<> 'inactive'");
     });
 
     it('still returns the list when the history lookup fails', async () => {
