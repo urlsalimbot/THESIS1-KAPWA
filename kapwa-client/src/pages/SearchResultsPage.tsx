@@ -7,37 +7,121 @@ import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { formatDate, personFullName } from '../lib/format';
+import { categoryLabel } from '@/i18n/display';
 
+/**
+ * One beneficiary, flattened for the results card. The list endpoint returns
+ * the person and household nested; `address` is only present on older payloads
+ * (the person's address was normalised into its own table), so the barangay is
+ * read from the household and falls back to the tail of `address`.
+ */
 interface SearchResult {
   id: string;
   fullName: string;
-  controlNo: string;
+  accessCardCode: string;
+  philsysNumber: string;
   barangay: string;
   address: string;
+  dob: string;
   age: number;
   gender: string;
   category: string;
-  interventionCount: number;
-  lastInterventionDate: string;
+  civilStatus: string;
+  occupation: string;
+  income: string;
+  placeOfBirth: string;
+  household: {
+    barangay: string;
+    familyMemberCount: number;
+    nhtsPrId: string;
+  } | null;
 }
 
 function mapResult(raw: Record<string, unknown>): SearchResult {
   const address = (raw.address as string) || '';
-  const dob = raw.dob as string;
-  const age = dob ? (() => { const today = new Date(); const b = new Date(dob); let a = today.getFullYear() - b.getFullYear(); if (today < new Date(today.getFullYear(), b.getMonth(), b.getDate())) a--; return a; })() : 0;
+  const household = (raw.household as Record<string, unknown> | null) || null;
+  const dob = (raw.dob as string) || '';
+  const computedAge = dob
+    ? (() => {
+        const today = new Date();
+        const b = new Date(dob);
+        let a = today.getFullYear() - b.getFullYear();
+        if (today < new Date(today.getFullYear(), b.getMonth(), b.getDate())) a--;
+        return a;
+      })()
+    : 0;
+
   return {
     id: raw.id as string,
-    fullName: personFullName(raw.firstName as string, raw.middleName as string, raw.surname as string),
-    controlNo: (raw.accessCardCode as string) || (raw.philsysNumber as string) || '',
-    barangay: address.split(',').pop()?.trim() || '',
+    fullName: personFullName(
+      raw.firstName as string,
+      raw.middleName as string,
+      raw.surname as string,
+      raw.extension as string,
+    ),
+    accessCardCode: (raw.accessCardCode as string) || '',
+    philsysNumber: (raw.philsysNumber as string) || '',
+    // The household carries the barangay; `address` is the fallback for payloads
+    // that still inline it.
+    barangay: (household?.barangay as string) || address.split(',').pop()?.trim() || '',
     address,
-    age,
+    dob,
+    age: Number(raw.age) || computedAge,
     gender: (raw.gender as string) || '',
     category: (raw.category as string) || '',
-    interventionCount: (raw.interventionCount as number) || 0,
-    lastInterventionDate: (raw.lastInterventionDate as string) || '',
+    civilStatus: (raw.civilStatus as string) || '',
+    occupation: (raw.occupation as string) || '',
+    income: (raw.estimatedMonthlyIncome as string) || '',
+    placeOfBirth: (raw.placeOfBirth as string) || '',
+    household: household
+      ? {
+          barangay: (household.barangay as string) || '',
+          familyMemberCount: Number(household.familyMemberCount) || 0,
+          nhtsPrId: (household.nhtsPrId as string) || '',
+        }
+      : null,
   };
+}
+
+/** Marks the matched part of a value so the reader can see why it came up. */
+function Highlight({ text, query }: { text: string; query: string }) {
+  if (!text) return null;
+  const at = query ? text.toLowerCase().indexOf(query.toLowerCase()) : -1;
+  if (at === -1) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, at)}
+      <mark className="rounded bg-accent/20 px-0.5 text-foreground">
+        {text.slice(at, at + query.length)}
+      </mark>
+      {text.slice(at + query.length)}
+    </>
+  );
+}
+
+/** Label/value pair. Labels reuse the beneficiary field vocabulary. */
+function Field({
+  label,
+  value,
+  mono,
+  className,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={className ? `min-w-0 ${className}` : 'min-w-0'}>
+      <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dd className={`break-words text-sm text-foreground ${mono ? 'font-mono tabular-nums' : ''}`}>
+        {value}
+      </dd>
+    </div>
+  );
 }
 
 export function SearchResultsPage() {
@@ -54,13 +138,13 @@ export function SearchResultsPage() {
   }, [q]);
 
   useEffect(() => {
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       if (input.trim() !== debounced) {
         setSearchParams(input.trim() ? { q: input.trim() } : {}, { replace: true });
         setDebounced(input.trim());
       }
     }, 300);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [input, debounced, setSearchParams]);
 
   const swrKey = debounced
@@ -73,77 +157,191 @@ export function SearchResultsPage() {
 
   const results = useMemo(() => (Array.isArray(data?.data) ? data.data : []).map(mapResult), [data]);
 
+  // The API sends income as a decimal string; anything unparseable is dropped
+  // rather than rendered as "₱NaN".
+  const money = (value: string) => {
+    const n = Number(value);
+    return value && Number.isFinite(n) ? `₱${n.toLocaleString()}` : '';
+  };
+
   return (
-    <PageShell title={t('search.title', 'Search Results')} description={debounced ? t('search.resultsFor', 'Results for "{{query}}"', { query: debounced }) : ''}>
-      <div className="max-w-3xl mx-auto space-y-6">
-        {/* Search input */}
-        <div className="relative">
-          <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+    <PageShell
+      title={t('search.title', 'Search Results')}
+      description={
+        debounced ? t('search.resultsFor', 'Results for "{{query}}"', { query: debounced }) : ''
+      }
+    >
+      <div className="space-y-6">
+        <div className="relative max-w-2xl">
+          <Search
+            size={18}
+            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
           <Input
             type="text"
             aria-label={t('search.ariaLabel', 'Search')}
             placeholder={t('search.placeholder', 'Search by name, control no, or barangay...')}
-            className="w-full pl-10 h-12 text-base"
+            className="h-12 w-full pl-10 text-base"
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={(e) => setInput(e.target.value)}
             autoFocus
           />
         </div>
 
         {!debounced && !isLoading && (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <Search size={48} className="mb-4 opacity-20" />
+            <Search size={48} className="mb-4 opacity-20" aria-hidden="true" />
             <p className="text-sm">{t('search.enterTerm', 'Enter a search term to find beneficiaries')}</p>
           </div>
         )}
 
         {debounced && isLoading && (
-          <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">{t('search.searching', 'Searching...')}</div>
+          <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
+            {t('search.searching', 'Searching...')}
+          </div>
         )}
 
         {debounced && !isLoading && results.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <Search size={48} className="mb-4 opacity-20" />
-            <p className="text-sm font-medium">{t('search.noResults', 'No results found for "{{query}}"', { query: debounced })}</p>
-            <p className="text-xs mt-1">{t('search.tryDifferent', 'Try a different name, control number, or barangay')}</p>
+            <Search size={48} className="mb-4 opacity-20" aria-hidden="true" />
+            <p className="text-sm font-medium">
+              {t('search.noResults', 'No results found for "{{query}}"', { query: debounced })}
+            </p>
+            <p className="mt-1 text-xs">
+              {t('search.tryDifferent', 'Try a different name, control number, or barangay')}
+            </p>
           </div>
         )}
 
         {results.length > 0 && (
           <>
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">{t('search.resultCount', '{{count}} results for "{{query}}"', { count: results.length, query: debounced })}</p>
-            </div>
-            <div className="rounded-lg border divide-y">
-              {results.map(item => (
-                <div key={item.id} className="px-5 py-4 hover:bg-muted/50 transition-colors">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0 space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold">{item.fullName}</p>
-                        {item.category && <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">{item.category}</span>}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                        {item.controlNo && <span>{item.controlNo}</span>}
-                        {item.age > 0 && <span>{item.age} {t('search.yrs', 'yrs')}</span>}
-                        {item.gender && <span>{item.gender}</span>}
-                        <span>{item.barangay}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground/70 truncate max-w-lg">{item.address}</p>
-                      <div className="flex items-center gap-3 text-xs">
-                        <span className="text-muted-foreground">{t('search.interventionCount', '{{count}} interventions', { count: item.interventionCount })}</span>
-                        {item.lastInterventionDate && (
-                          <span className="text-muted-foreground">{t('search.last', 'Last: {{date}}', { date: formatDate(item.lastInterventionDate) })}</span>
+            <p className="text-sm text-muted-foreground">
+              {t('search.resultCount', '{{count}} results for "{{query}}"', {
+                count: results.length,
+                query: debounced,
+              })}
+            </p>
+
+            <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {results.map((item) => (
+                <li key={item.id}>
+                  <Card className="h-full border-border/60">
+                    <CardContent className="flex h-full flex-col gap-4 p-5">
+                      {/* Who this is: name, category, and the office-issued code */}
+                      <div className="flex items-start justify-between gap-3">
+                        <h2 className="min-w-0 break-words font-heading text-lg font-semibold tracking-tight">
+                          <Highlight text={item.fullName} query={debounced} />
+                        </h2>
+                        {item.category && (
+                          <Badge variant="secondary" className="shrink-0 text-xs">
+                            {categoryLabel(t, item.category)}
+                          </Badge>
                         )}
                       </div>
-                    </div>
-                    <Button variant="ghost" size="sm" className="shrink-0 mt-0.5" onClick={() => navigate(`/beneficiaries/${item.id}`)}>
-                      {t('search.view', 'View')} <ExternalLink size={14} className="ml-1" />
-                    </Button>
-                  </div>
-                </div>
+
+                      {/* The facts that identify and locate a person */}
+                      <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                        {item.accessCardCode && (
+                          <Field
+                            label={t('beneficiaries.accessCard', 'Access Card')}
+                            value={item.accessCardCode}
+                            mono
+                          />
+                        )}
+                        {item.philsysNumber && (
+                          <Field
+                            label={t('intake.philsysNumber', 'PhilSys Number')}
+                            value={item.philsysNumber}
+                            mono
+                          />
+                        )}
+                        {item.dob && (
+                          <Field
+                            label={t('beneficiaries.dob', 'Date of Birth')}
+                            value={formatDate(item.dob)}
+                          />
+                        )}
+                        {item.age > 0 && (
+                          <Field label={t('beneficiaries.age', 'Age')} value={String(item.age)} />
+                        )}
+                        {item.gender && (
+                          <Field label={t('beneficiaries.sex', 'Sex')} value={item.gender} />
+                        )}
+                        {item.civilStatus && (
+                          <Field
+                            label={t('beneficiaries.civilStatus', 'Civil Status')}
+                            value={item.civilStatus}
+                          />
+                        )}
+                        {item.barangay && (
+                          <Field
+                            label={t('beneficiaries.barangay', 'Barangay')}
+                            value={item.barangay}
+                          />
+                        )}
+                        {item.occupation && (
+                          <Field
+                            label={t('beneficiaries.occupation', 'Occupation')}
+                            value={item.occupation}
+                          />
+                        )}
+                        {money(item.income) && (
+                          <Field
+                            label={t('beneficiaries.monthlyIncome', 'Monthly Income')}
+                            value={money(item.income)}
+                          />
+                        )}
+                        {item.placeOfBirth && (
+                          <Field
+                            label={t('beneficiaries.placeOfBirth', 'Place of Birth')}
+                            value={item.placeOfBirth}
+                          />
+                        )}
+                        {item.address && (
+                          <Field
+                            label={t('beneficiaries.address', 'Address')}
+                            value={item.address}
+                            className="col-span-2"
+                          />
+                        )}
+                      </dl>
+
+                      {/* Household context — only when the record actually has it */}
+                      {item.household &&
+                        (item.household.familyMemberCount > 0 || item.household.nhtsPrId) && (
+                          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border/60 pt-3">
+                            {item.household.familyMemberCount > 0 && (
+                              <Field
+                                label={t('analytics.householdSize', 'Household size')}
+                                value={String(item.household.familyMemberCount)}
+                              />
+                            )}
+                            {item.household.nhtsPrId && (
+                              <Field
+                                label={t('nhts.label', 'NHTS-PR / Listahanan ID')}
+                                value={item.household.nhtsPrId}
+                                mono
+                              />
+                            )}
+                          </dl>
+                        )}
+
+                      <div className="mt-auto pt-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full sm:w-auto"
+                          onClick={() => navigate(`/beneficiaries/${item.id}`)}
+                        >
+                          {t('search.view', 'View')}
+                          <ExternalLink size={14} className="ml-1.5" aria-hidden="true" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </li>
               ))}
-            </div>
+            </ul>
           </>
         )}
       </div>

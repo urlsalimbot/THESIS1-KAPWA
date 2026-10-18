@@ -661,6 +661,7 @@ const en = {
     "membersCount_one": "{{count}} member",
     "membersCount_other": "{{count}} member",
     "accessCard": "Access Card",
+    "address": "Address",
     "actions": "Actions",
     "addCase": "Add case",
     "age": "Age",

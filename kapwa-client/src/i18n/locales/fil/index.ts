@@ -594,6 +594,7 @@ const fil: EnLocale = {
   },
   "beneficiaries": {
     "accessCard": "Access Card",
+    "address": "Tirahan",
     "actions": "Mga Aksyon",
     "addCase": "Idagdag ang kaso",
     "age": "Edad",
