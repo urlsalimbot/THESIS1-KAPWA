@@ -11,69 +11,20 @@
  */
 import { AppDataSource } from './data-source';
 import { seedPrograms } from './seed-programs';
+import { call, login, uploadFile } from './seed-http';
 
-const API = process.env.API_BASE || 'http://localhost:3000/api/v1';
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-// Double-submit CSRF: the guard sets a readable `csrf-token` cookie on any
-// request that lacks one and refuses unsafe methods without a matching
-// `X-CSRF-Token` header. Node's fetch has no cookie jar, so this script keeps
-// its own — without it every write 403s with "Missing CSRF token".
-let csrfToken: string | null = null;
-function captureCsrf(res: Response): void {
-  const cookies = (res.headers as unknown as { getSetCookie?: () => string[] }).getSetCookie?.() ?? [];
-  for (const cookie of cookies) {
-    const m = /^csrf-token=([^;]+)/.exec(cookie);
-    if (m) csrfToken = m[1];
-  }
-}
-function csrfHeaders(): Record<string, string> {
-  return csrfToken ? { 'X-CSRF-Token': csrfToken, Cookie: `csrf-token=${csrfToken}` } : {};
-}
-
-async function login(email: string, password: string): Promise<string> {
-  const r = await fetch(`${API}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
-    body: JSON.stringify({ email, password }),
-  });
-  captureCsrf(r);
-  if (!r.ok) throw new Error(`login ${email}: ${r.status} ${await r.text()}`);
-  return (await r.json()).accessToken;
-}
-
-async function call(
-  token: string,
-  method: string,
-  path: string,
-  body?: unknown,
-  label = '',
-): Promise<{ status: number; json: any }> {
-  const r = await fetch(`${API}${path}`, {
-    method,
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...csrfHeaders() },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  captureCsrf(r);
-  const text = await r.text();
-  let json: any;
-  try { json = JSON.parse(text); } catch { json = text; }
-  if (r.status >= 400) console.warn(`  WARN ${label || method} ${path} -> ${r.status}: ${String(text).slice(0, 400)}`);
-  return { status: r.status, json };
-}
-
 // Files one required document so the activation gate (all program-required
-// documents present) can pass. Multipart, so it bypasses the JSON `call` helper.
+// documents present) can pass.
 async function uploadRequirement(token: string, caseId: string, requirementKey: string): Promise<void> {
-  const fd = new FormData();
-  fd.append('caseId', caseId);
-  fd.append('requirementKey', requirementKey);
-  fd.append('category', 'requirement');
-  fd.append('notes', 'Seeded demo requirement');
-  fd.append('file', new Blob([Buffer.from('%PDF-1.3 demo')], { type: 'application/pdf' }), `${requirementKey.replace(/[^a-z0-9]+/gi, '_')}.pdf`);
-  const r = await fetch(`${API}/filing/upload`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, ...csrfHeaders() }, body: fd });
-  captureCsrf(r);
-  if (r.status >= 400) console.warn(`  WARN requirement upload '${requirementKey}' -> ${r.status}`);
+  await uploadFile(
+    token,
+    '/filing/upload',
+    { caseId, requirementKey, category: 'requirement', notes: 'Seeded demo requirement' },
+    `${requirementKey.replace(/[^a-z0-9]+/gi, '_')}.pdf`,
+    Buffer.from('%PDF-1.3 demo'),
+  );
 }
 
 interface Person {

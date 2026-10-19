@@ -72,12 +72,16 @@ async function openFirstRow(page: Page, listPath: string): Promise<string | null
 
   const rowLink = page.locator(`main a[href^="${listPath}/"]`).first();
   const rowButton = page.locator('table tbody tr').first().getByRole('button').first();
-  const anyAction = page
+  // Card lists open with a full-width button named "Open <title>". Scoped to
+  // `main`: the shell's own "Open user menu" is a button too, and it comes first.
+  const content = page.locator('main');
+  const openAction = content.getByRole('button', { name: /^open\b/i }).first();
+  const anyAction = content
     .getByRole('button')
-    .filter({ hasNotText: /new|add|create|filter|export|search|refresh|cancel|back|dismiss/i })
+    .filter({ hasNotText: /new|add|create|filter|export|search|refresh|cancel|back|dismiss|user menu/i })
     .first();
 
-  for (const candidate of [rowLink, rowButton, anyAction]) {
+  for (const candidate of [rowLink, rowButton, openAction, anyAction]) {
     if ((await candidate.count()) === 0) continue;
     const before = page.url();
     await candidate.click({ timeout: 5_000 }).catch(() => undefined);
