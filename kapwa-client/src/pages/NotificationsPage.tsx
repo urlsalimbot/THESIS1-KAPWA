@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { TFunction } from 'i18next';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
 import { mutate } from 'swr';
@@ -13,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { connectNotificationSocket, disconnectNotificationSocket } from '../lib/notification-socket';
-import { formatDate } from '../lib/format';
+import { relativeNotificationTime } from '../lib/relative-time';
 
 interface Notification {
   id: string; title: string; message: string; category: string;
@@ -237,7 +236,7 @@ export function NotificationsPage() {
                         <ExternalLink size={12} className="text-muted-foreground/40 shrink-0" />
                       </span>
                       <span className="text-xs text-muted-foreground shrink-0">
-                        {formatNotificationTime(n.createdAt, t)}
+                        {relativeNotificationTime(n.createdAt, t)}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground/80 mt-0.5">{n.message}</p>
@@ -258,14 +257,4 @@ export function NotificationsPage() {
   );
 }
 
-function formatNotificationTime(dateStr: string, t: TFunction) {
-  const d = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1) return t('notifications.justNow', 'now');
-  if (diffMins < 60) return t('notifications.minutesAgo', '{{count}}m ago', { count: diffMins });
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return t('notifications.hoursAgo', '{{count}}h ago', { count: diffHours });
-  return formatDate(d);
-}
+
