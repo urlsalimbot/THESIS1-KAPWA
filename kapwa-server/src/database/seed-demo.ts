@@ -414,6 +414,9 @@ async function main(): Promise<void> {
       const r = await call(coor, 'POST', '/referrals', {
         personId: refCase.personId,
         reason: 'Requesting MSWDO assessment for financial assistance (barangay referral)',
+        // Required since the coordinator form gained the review-lane picker —
+        // without it every run 400s and the referrals module stays empty.
+        caseCategory: 'Indigent',
       }, 'coordinator-referral');
       if (r.status < 400) console.log('coordinator referral sent for', refCase.name);
       else console.warn(`  WARN coordinator referral: ${r.status}`);
