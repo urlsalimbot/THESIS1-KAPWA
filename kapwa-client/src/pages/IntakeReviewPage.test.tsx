@@ -355,6 +355,14 @@ describe('IntakeReviewPage', () => {
       </MemoryRouter>
     );
 
+    // Hold the request open: on a loaded CI runner it settles late, and the
+    // buttons read "Saving..." meanwhile. This used to make the last assertion
+    // flake because it sampled the label once, mid-request.
+    let settle!: (value: unknown) => void;
+    (api.post as ReturnType<typeof vi.fn>).mockImplementationOnce(
+      () => new Promise(resolve => { settle = resolve; }),
+    );
+
     // A fresh member match would normally open a new case — the record-only
     // action must still be there, and it must tell the server not to create one.
     fireEvent.click(screen.getByRole('button', { name: /update household record only/i }));
@@ -362,7 +370,12 @@ describe('IntakeReviewPage', () => {
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith('/intake/confirm/hh-querubin', expect.objectContaining({ createCase: false }));
     });
-    expect(screen.getByRole('button', { name: /update info & create case/i })).toBeDefined();
+    // In flight, the action labels are replaced by the saving state…
+    expect(screen.queryByRole('button', { name: /update info & create case/i })).toBeNull();
+
+    // …and both actions come back once the confirm settles.
+    settle({ caseCreated: false, message: 'Existing case updated' });
+    expect(await screen.findByRole('button', { name: /update info & create case/i })).toBeDefined();
   });
 
   it('uploads the pending ID photo once a case is confirmed', async () => {

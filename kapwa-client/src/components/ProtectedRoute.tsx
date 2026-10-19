@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 // issues another request (which previously fanned out into 429s).
 export function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { t } = useTranslation();
-  const { user, token, loading, logout } = useAuth();
+  const { user, token, loading, logout, refresh } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const roleKey = roles?.join(',') ?? '';
@@ -67,8 +67,25 @@ export function ProtectedRoute({ children, roles }: { children: React.ReactNode;
     );
   }
 
-  if (loading || !token || (roleMismatch && !strandedRole) || mustChangeRedirect) {
-    return <div className="min-h-screen flex items-center justify-center text-muted-foreground">{t('shell.verifyingAccess', 'Verifying access...')}</div>;
+  // A token without a user means /auth/me has not succeeded yet (in flight, or a
+  // transient 429/5xx). Render the gate, never the page: failing open here let a
+  // throttled session load a route the role is not allowed — the API still 403s
+  // the data, but the operator sees a screen they should not. The session is kept
+  // (a 401 is what ends it) and, once the request has actually failed, the user
+  // gets a retry instead of an indefinite wait.
+  const sessionUnavailable = !!token && !user && !loading;
+
+  if (loading || !token || !user || (roleMismatch && !strandedRole) || mustChangeRedirect) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 px-6 text-center text-muted-foreground">
+        <p>{t('shell.verifyingAccess', 'Verifying access...')}</p>
+        {sessionUnavailable && (
+          <Button variant="outline" size="sm" onClick={() => void refresh()}>
+            {t('error.retry', 'Retry')}
+          </Button>
+        )}
+      </div>
+    );
   }
 
   return <>{children}</>;

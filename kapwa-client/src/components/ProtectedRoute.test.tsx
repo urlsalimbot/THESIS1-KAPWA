@@ -12,7 +12,7 @@ vi.mock('../lib/auth-context', () => ({
 }));
 
 function authState(over: Record<string, unknown> = {}) {
-  return { user: null, token: null, loading: false, logout: vi.fn(), ...over };
+  return { user: null, token: null, loading: false, logout: vi.fn(), refresh: vi.fn().mockResolvedValue(undefined), ...over };
 }
 
 // A role the client no longer ships a home for (16bda23 retired mayor, auditor
@@ -89,9 +89,12 @@ describe('ProtectedRoute', () => {
     });
   });
 
-  it('keeps the session when the token exists but the user failed to load', async () => {
-    // Transient /auth/me failure (429/5xx): the api interceptor decides on 401.
-    mockUseAuth.mockReturnValue(authState({ token: 'test', user: null, loading: false }));
+  it('gates the route when the token exists but the user failed to load, and offers a retry', async () => {
+    // Transient /auth/me failure (429/5xx): the api interceptor decides on 401, so
+    // the session is kept — but the page must not render until the role is known,
+    // otherwise a throttled session can load a route its role is not allowed.
+    const refresh = vi.fn().mockResolvedValue(undefined);
+    mockUseAuth.mockReturnValue(authState({ token: 'test', user: null, loading: false, refresh }));
     render(
       <MemoryRouter>
         <ProtectedRoute roles={['social_worker']}>
@@ -100,8 +103,13 @@ describe('ProtectedRoute', () => {
       </MemoryRouter>
     );
     await waitFor(() => {
-      expect(screen.getByText('Protected')).toBeTruthy();
+      expect(screen.getByText(/verifying access/i)).toBeTruthy();
     });
+    expect(screen.queryByText('Protected')).toBeNull();
+    expect(screen.queryByText('Login Page')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 
   it('offers a way out instead of looping when the role has no home route', async () => {
