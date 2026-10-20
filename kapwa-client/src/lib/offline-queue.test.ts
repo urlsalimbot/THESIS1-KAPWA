@@ -11,6 +11,14 @@ describe('Offline Queue', () => {
     expect(queue).toEqual([]);
   });
 
+  it('loadQueue drops a corrupt blob instead of throwing', () => {
+    // A truncated write must not take sync down: recover empty and clear it.
+    localStorage.setItem('kapwa_sync_queue', '{"not":"json"');
+    expect(() => loadQueue()).not.toThrow();
+    expect(loadQueue()).toEqual([]);
+    expect(localStorage.getItem('kapwa_sync_queue')).toBeNull();
+  });
+
   it('loadQueue returns queued changes', () => {
     const changes = [
       { id: '1', tableName: 'cases', operation: 'INSERT', status: 'pending' }

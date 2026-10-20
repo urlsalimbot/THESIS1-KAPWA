@@ -16,6 +16,7 @@ import { CalendarClock, Lock, Plus, Trash2 } from 'lucide-react';
 import { StepLockBar, type StepLock } from './StepLockBar';
 import { CaseRequirements } from './CaseRequirements';
 import { toast } from 'sonner';
+import { todayInManila } from '@/lib/format';
 
 interface ProgramEnrollmentView {
   id: string;
@@ -70,7 +71,7 @@ export function StepEnrollments({ caseId, caseData, userRole, readOnly, lockRead
 
   const [adding, setAdding] = useState(false);
   const [programId, setProgramId] = useState('');
-  const [enrolledAt, setEnrolledAt] = useState(new Date().toISOString().slice(0, 10));
+  const [enrolledAt, setEnrolledAt] = useState(todayInManila());
   const [saving, setSaving] = useState(false);
 
   const refresh = async () => {

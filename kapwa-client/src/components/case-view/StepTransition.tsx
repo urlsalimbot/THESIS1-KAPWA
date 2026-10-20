@@ -20,6 +20,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { todayInManila } from '@/lib/format';
 
 interface FollowUpVisit {
   date: string;
@@ -97,7 +98,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
   );
   const [addingScheduled, setAddingScheduled] = useState(false);
   const [newScheduled, setNewScheduled] = useState({
-    date: new Date().toISOString().slice(0, 10),
+    date: todayInManila(),
     time: '',
     notes: '',
   });
@@ -114,7 +115,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
         notes: newScheduled.notes || undefined,
       });
       toast.success(t('caseView.transition.visitScheduled', 'Home visit scheduled'));
-      setNewScheduled({ date: new Date().toISOString().slice(0, 10), time: '', notes: '' });
+      setNewScheduled({ date: todayInManila(), time: '', notes: '' });
       setAddingScheduled(false);
       await mutateEvents();
     } catch (e) {

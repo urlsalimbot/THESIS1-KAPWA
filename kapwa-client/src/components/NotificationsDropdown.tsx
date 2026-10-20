@@ -69,6 +69,9 @@ function markOneRead(id: string, navigateTo?: string, doNavigate?: (path: string
     );
     mutate(queryKeys.notifications.unreadCount(), undefined, { revalidate: true });
     if (navigateTo && doNavigate) doNavigate(navigateTo);
+  }).catch(() => {
+    // A failed mark-read is cosmetic: leave the item unread rather than throw an
+    // unhandled rejection into the console.
   });
 }
 
@@ -81,6 +84,8 @@ function markAllRead() {
       false,
     );
     mutate(queryKeys.notifications.unreadCount(), undefined, { revalidate: true });
+  }).catch(() => {
+    // Same: the bell keeps its count; nothing is lost by staying unread.
   });
 }
 

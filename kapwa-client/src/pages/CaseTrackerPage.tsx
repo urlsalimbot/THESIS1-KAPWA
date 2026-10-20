@@ -14,7 +14,7 @@ import { CaseCategoryCell } from '@/components/case-category-cell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { queryKeys } from '../lib/query-keys';
-import { formatDateTime } from '../lib/format';
+import { formatDateTime, todayInManila } from '../lib/format';
 import { CASE_STATUSES } from '@/lib/constants';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -72,7 +72,7 @@ export function CaseTrackerPage() {
     [pagination, updateURL],
   );
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayInManila();
   const [dateFrom, setDateFrom] = useState(today);
   const [dateTo, setDateTo] = useState(today);
 

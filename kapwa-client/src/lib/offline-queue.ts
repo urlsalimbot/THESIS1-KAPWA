@@ -25,7 +25,15 @@ export interface VersionVector {
 
 export function loadQueue(): QueuedChange[] {
   const stored = localStorage.getItem(QUEUE_KEY);
-  return stored ? JSON.parse(stored) : [];
+  if (!stored) return [];
+  try {
+    return JSON.parse(stored) as QueuedChange[];
+  } catch {
+    // A truncated write (tab closed mid-save, storage quota) would otherwise
+    // throw on every sync and take the queue with it: drop the unusable blob.
+    localStorage.removeItem(QUEUE_KEY);
+    return [];
+  }
 }
 
 function saveQueue(queue: QueuedChange[]): void {
@@ -69,7 +77,13 @@ async function mutateQueue(fn: (queue: QueuedChange[]) => void): Promise<void> {
 
 function loadVersions(): VersionVector[] {
   const stored = localStorage.getItem(VERSION_KEY);
-  return stored ? JSON.parse(stored) : [];
+  if (!stored) return [];
+  try {
+    return JSON.parse(stored) as VersionVector[];
+  } catch {
+    localStorage.removeItem(VERSION_KEY);
+    return [];
+  }
 }
 
 function saveVersions(versions: VersionVector[]): void {

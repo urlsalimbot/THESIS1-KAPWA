@@ -1,3 +1,4 @@
+import { todayInManila } from '@/lib/format';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -78,7 +79,9 @@ describe('CaseTrackerPage', () => {
   it('renders date inputs', async () => {
     renderWithSWR(<CaseTrackerPage />);
     expect(await screen.findByLabelText('Date from')).toBeTruthy();
-    expect(await screen.findByLabelText('Date to')).toBeTruthy();
+    const dateTo = (await screen.findByLabelText('Date to')) as HTMLInputElement;
+    // Manila's date, not UTC's: before 08:00 local, toISOString() is yesterday.
+    expect(dateTo.value).toBe(todayInManila());
   });
 
   it('shows the case category column', async () => {

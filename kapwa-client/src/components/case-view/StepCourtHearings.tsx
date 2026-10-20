@@ -19,6 +19,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { StepLockBar, type StepLock } from './StepLockBar';
 import { toast } from 'sonner';
+import { todayInManila } from '@/lib/format';
 
 interface CaseEventView {
   id: string;
@@ -61,7 +62,7 @@ export function StepCourtHearings({ caseId, caseData, userRole, readOnly, lockRe
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    eventDate: new Date().toISOString().slice(0, 10),
+    eventDate: todayInManila(),
     startTime: '',
     venue: '',
     title: '',
@@ -113,7 +114,7 @@ export function StepCourtHearings({ caseId, caseData, userRole, readOnly, lockRe
         notes: form.notes || undefined,
       });
       toast.success(t('caseView.hearings.added', 'Hearing recorded'));
-      setForm({ eventDate: new Date().toISOString().slice(0, 10), startTime: '', venue: '', title: '', notes: '', attended: true });
+      setForm({ eventDate: todayInManila(), startTime: '', venue: '', title: '', notes: '', attended: true });
       setAdding(false);
       await refresh();
     } catch (e) {

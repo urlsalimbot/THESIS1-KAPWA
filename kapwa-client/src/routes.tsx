@@ -195,7 +195,7 @@ export const router = createBrowserRouter([
   { path: '/coordinator/tracker', element: <Private roles={['coordinator']}><CaseTrackerPage /></Private> },
   { path: '/coordinator/access-cards', element: <Private roles={['coordinator']}><CoordinatorAccessCardsPage /></Private> },
   { path: '/team', element: <Private roles={['admin','social_worker','coordinator']}><TeamWorkspacePage /></Private> },
-  { path: '/beneficiary/:id/access-card', element: <Private roles={['admin','social_worker','claimant']}><AccessCardViewPage /></Private> },
+  { path: '/beneficiary/:id/access-card', element: <Private roles={['admin','social_worker']}><AccessCardViewPage /></Private> },
   { path: '/beneficiary/:id/card/print', element: <Private roles={['admin','social_worker']}><AccessCardPrintView /></Private> },
   { path: '/intake/referrals', element: <Private roles={['admin','social_worker']}><ReferralReviewPage /></Private> },
   // The MSWDO <-> barangay referral flow. Role decides the surface inside the

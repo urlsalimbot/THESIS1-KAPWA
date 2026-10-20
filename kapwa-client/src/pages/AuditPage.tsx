@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { Download, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
-import { formatPeso } from '../lib/format';
+import { formatPeso, todayInManila } from '../lib/format';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 export function AuditPage() {
   const { t } = useTranslation();
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayInManila();
   const yearStart = `${new Date().getFullYear()}-01-01`;
   const [startDate, setStartDate] = useState(yearStart);
   const [endDate, setEndDate] = useState(today);
