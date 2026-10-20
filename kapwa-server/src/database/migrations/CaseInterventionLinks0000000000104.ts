@@ -19,15 +19,31 @@ export class CaseInterventionLinks0000000000104 implements MigrationInterface {
   name = 'CaseInterventionLinks0000000000104';
 
   public async up(q: QueryRunner): Promise<void> {
-    await q.query(`ALTER TABLE case_interventions ALTER COLUMN case_id TYPE UUID USING case_id::uuid`);
+    // Idempotent on purpose: the deploy applies the bootstrap *and* the chain in
+    // one step, and the bootstrap already carries these links. Postgres has no
+    // ADD CONSTRAINT IF NOT EXISTS, so each step checks first.
+    await q.query(`DO $$ BEGIN
+      IF (SELECT data_type FROM information_schema.columns
+           WHERE table_name = 'case_interventions' AND column_name = 'case_id') = 'text' THEN
+        ALTER TABLE case_interventions ALTER COLUMN case_id TYPE UUID USING case_id::uuid;
+      END IF;
+    END $$`);
 
-    await q.query(`ALTER TABLE case_interventions
-      ADD CONSTRAINT fk_case_interventions_case FOREIGN KEY (case_id) REFERENCES cases(id)`);
+    await q.query(`DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_case_interventions_case') THEN
+        ALTER TABLE case_interventions
+          ADD CONSTRAINT fk_case_interventions_case FOREIGN KEY (case_id) REFERENCES cases(id);
+      END IF;
+    END $$`);
 
     // A deleted program leaves the delivered service on record (the row keeps
     // its service name/type); only the now-meaningless program id is cleared.
-    await q.query(`ALTER TABLE case_interventions
-      ADD CONSTRAINT fk_case_interventions_program FOREIGN KEY (program_id) REFERENCES programs(id) ON DELETE SET NULL`);
+    await q.query(`DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_case_interventions_program') THEN
+        ALTER TABLE case_interventions
+          ADD CONSTRAINT fk_case_interventions_program FOREIGN KEY (program_id) REFERENCES programs(id) ON DELETE SET NULL;
+      END IF;
+    END $$`);
 
     // The recorded program must be the one the enrollment belongs to. The
     // service enforces this too; the trigger closes the door for any other
