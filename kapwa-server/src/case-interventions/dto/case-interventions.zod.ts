@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { INTERVENTION_TYPE_VALUES } from '../../common/case-catalog';
 
 const CreateCaseInterventionFields = z.object({
   // Two shapes are valid: a service rendered under a program ASSIGNED to the
@@ -10,7 +9,9 @@ const CreateCaseInterventionFields = z.object({
   // Typed service from the intervention catalog (spec §4.4) — a *service
   // rendered under a program*, so the service comes from that program's
   // `program_interventions` rows.
-  interventionType: z.enum(INTERVENTION_TYPE_VALUES).nullable().optional(),
+  // Built-in code, or a custom code an admin added to the catalog. Membership is
+  // checked in the service (it needs the database for the custom half).
+  interventionType: z.string().trim().min(1).max(64).nullable().optional(),
   // The program enrollment the service was delivered under — validated to
   // belong to this case (and to the named program). Absent = ad-hoc service.
   programEnrollmentId: z.string().uuid().optional(),

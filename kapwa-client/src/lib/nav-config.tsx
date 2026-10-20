@@ -1,5 +1,5 @@
 import {
-  FilePlus, LayoutDashboard, Users, CheckCircle,
+  FilePlus, LayoutDashboard, Users, CheckCircle, Wrench,
   ClipboardList, Shield, UserCircle, Stamp, Settings, MessageSquare,
   FileWarning, IdCard, ScrollText, BarChart3, Send, BadgeCheck,
   Megaphone, CalendarDays, Share2, ScanSearch,
@@ -48,6 +48,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { path: '/admin', label: 'Admin Panel', icon: <Shield size={20} />, roles: ['admin'] },
       { path: '/admin/programs', label: 'Programs', icon: <ScrollText size={20} />, roles: ['admin'] },
+      { path: '/admin/interventions', label: 'Intervention Catalog', icon: <Wrench size={20} />, roles: ['admin'] },
       // Social workers' account-management surface: the claimant accounts tab
       // (the server coerces the list and mutations to claimants for them).
       { path: '/admin/users', label: 'Claimant Accounts', icon: <Users size={20} />, roles: ['social_worker'] },

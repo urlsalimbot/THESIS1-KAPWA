@@ -229,6 +229,19 @@ export async function migrate() {
   await q.query(`CREATE TABLE IF NOT EXISTS csr_reports ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), case_id UUID NOT NULL, control_no TEXT UNIQUE NOT NULL, social_worker_name TEXT NOT NULL, social_worker_position TEXT, referral_origin TEXT, reason_for_referral TEXT, problem_presented TEXT, family_background TEXT, socio_economic_profile TEXT, assessment_analysis TEXT, recommendation TEXT, intervention_plan TEXT, client_signature_url TEXT, worker_signature_url TEXT, finalized BOOLEAN DEFAULT FALSE, created_by TEXT NOT NULL, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE TABLE IF NOT EXISTS document_vault ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), file_name TEXT NOT NULL, original_name TEXT, mime_type TEXT, file_size INTEGER DEFAULT 0, case_id UUID, beneficiary_id UUID, category TEXT, notes TEXT, uploaded_by UUID, created_at TIMESTAMP DEFAULT NOW() )`);
 
+  // Custom services in the intervention catalog (Mirrors
+  // InterventionCatalog…0103). Built-ins stay in code; this table holds the
+  // additions an admin makes, keyed by the code rows store.
+  await q.query(`CREATE TABLE IF NOT EXISTS intervention_catalog (
+    code TEXT PRIMARY KEY,
+    label TEXT NOT NULL,
+    is_financial BOOLEAN NOT NULL DEFAULT false,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_by UUID,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`);
+
   await q.query(`CREATE TABLE IF NOT EXISTS case_interventions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
     case_id TEXT NOT NULL,

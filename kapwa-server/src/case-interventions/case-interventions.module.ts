@@ -4,6 +4,9 @@ import { CaseIntervention } from './case-intervention.entity';
 import { ProgramIntervention } from '../programs/program-intervention.entity';
 import { CaseInterventionsService } from './case-interventions.service';
 import { CaseInterventionsController } from './case-interventions.controller';
+import { InterventionCatalogEntry } from './intervention-catalog.entity';
+import { InterventionCatalogService } from './intervention-catalog.service';
+import { InterventionCatalogController } from './intervention-catalog.controller';
 import { AccessCardsModule } from '../access-cards/access-cards.module';
 import { CasesModule } from '../cases/cases.module';
 
@@ -16,9 +19,9 @@ import { CasesModule } from '../cases/cases.module';
   // done-predicate behind `CaseStepLocksService` is still not reachable from out
   // here, which is what that export boundary was for. `ProgramIntervention` feeds
   // the matrix-membership validation + the required-form obligation.
-  imports: [TypeOrmModule.forFeature([CaseIntervention, ProgramIntervention]), forwardRef(() => AccessCardsModule), forwardRef(() => CasesModule)],
-  controllers: [CaseInterventionsController],
-  providers: [CaseInterventionsService],
+  imports: [TypeOrmModule.forFeature([CaseIntervention, ProgramIntervention, InterventionCatalogEntry]), forwardRef(() => AccessCardsModule), forwardRef(() => CasesModule)],
+  controllers: [CaseInterventionsController, InterventionCatalogController],
+  providers: [CaseInterventionsService, InterventionCatalogService],
   exports: [CaseInterventionsService],
 })
 export class CaseInterventionsModule {}

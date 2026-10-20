@@ -10,9 +10,11 @@ function mockService() {
   // Default: every typed service belongs to some matrix row that obliges no
   // form — the membership and obligation tests override this.
   const matrixRepo = { findOne: jest.fn().mockResolvedValue({ interventionType: 'x', requiredForm: null }) };
+  // No custom catalog entries by default: every code the tests use is built in.
+  const catalogRepo = { findOne: jest.fn().mockResolvedValue(null) };
   const accessCardsService = { autoLogFromIntervention: jest.fn().mockResolvedValue(undefined) };
-  const svc = new CaseInterventionsService(interventionRepo as any, matrixRepo as any, accessCardsService as any);
-  return { interventionRepo, matrixRepo, accessCardsService, svc };
+  const svc = new CaseInterventionsService(interventionRepo as any, matrixRepo as any, catalogRepo as any, accessCardsService as any);
+  return { interventionRepo, matrixRepo, catalogRepo, accessCardsService, svc };
 }
 
 describe('CaseInterventionsService enrollment + financial gating', () => {
@@ -175,5 +177,54 @@ describe('CaseInterventionsService — program matrix membership + form obligati
     // no program matrix, because there is neither.
     expect(interventionRepo.manager.query).toHaveBeenCalledTimes(1);
     expect(matrixRepo.findOne).not.toHaveBeenCalled();
+  });
+
+  it('accepts a custom catalog service and honours its money flag', async () => {
+    const { interventionRepo, catalogRepo, svc } = mockService();
+    (interventionRepo.manager.query as jest.Mock)
+      .mockResolvedValueOnce([]) // consent: none revoked
+      .mockResolvedValueOnce([{ program_id: 'p1', status: 'active' }]); // enrollment
+    catalogRepo.findOne.mockResolvedValue({ code: 'relief_goods', label: 'Relief Goods', isFinancial: true, isActive: true });
+
+    const saved = await svc.create('c1', {
+      programId: 'p1',
+      programEnrollmentId: 'enr-1',
+      interventionType: 'relief_goods',
+      serviceName: 'Relief Goods',
+      amount: 750,
+    } as any, 'u1');
+
+    // Financial custom service: the money survives, and the program matrix is
+    // asked for its obligation like any other typed service.
+    expect(saved.amount).toBe(750);
+    expect(saved.interventionType).toBe('relief_goods');
+    expect(catalogRepo.findOne).toHaveBeenCalledWith({ where: { code: 'relief_goods' } });
+  });
+
+  it('refuses a code that is neither built in nor in the catalog', async () => {
+    const { interventionRepo, catalogRepo, svc } = mockService();
+    (interventionRepo.manager.query as jest.Mock).mockResolvedValueOnce([]);
+    catalogRepo.findOne.mockResolvedValue(null);
+
+    await expect(
+      svc.create('c1', { interventionType: 'invented_service', serviceName: 'Invented' } as any, 'u1'),
+    ).rejects.toThrow(/unknown service type/i);
+    expect(interventionRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('edits an intervention whose custom service was retired', async () => {
+    const { interventionRepo, catalogRepo, svc } = mockService();
+    catalogRepo.findOne.mockResolvedValue({ code: 'relief_goods', isFinancial: false, isActive: false });
+    interventionRepo.findOne.mockResolvedValue({
+      id: 'iv-1', caseId: 'c1', interventionType: 'relief_goods', amount: 100, modeOfDelivery: 'Cash', fundSource: 'LGU',
+    });
+
+    // An update that leaves the type alone must not resurrect the active check.
+    const saved = await svc.update('c1', 'iv-1', { notes: 'Follow-up' } as any);
+    expect(saved.notes).toBe('Follow-up');
+    // It saved rather than rejecting the retired code: only a *new* choice of a
+    // retired service is refused. (An untouched amount stays out of the patch —
+    // TypeORM leaves an undefined column alone, so the recorded money survives.)
+    expect(interventionRepo.save).toHaveBeenCalledTimes(1);
   });
 });

@@ -5,7 +5,8 @@ import { CaseIntervention } from './case-intervention.entity';
 import { ProgramIntervention } from '../programs/program-intervention.entity';
 import { CreateCaseInterventionInput, UpdateCaseInterventionInput } from './dto/case-interventions.zod';
 import { AccessCardsService } from '../access-cards/access-cards.service';
-import { isFinancialIntervention } from '../common/case-catalog';
+import { isFinancialIntervention, INTERVENTION_TYPES } from '../common/case-catalog';
+import { InterventionCatalogEntry } from './intervention-catalog.entity';
 import { roundMoney } from '../common/utils';
 
 /**
@@ -13,8 +14,8 @@ import { roundMoney } from '../common/utils';
  * source do not apply to it. Strip them on the way in (create and update), so
  * a client that renders them away can never still persist them.
  */
-function stripFinancialFields<T extends { interventionType?: string | null; amount?: unknown; modeOfDelivery?: unknown; fundSource?: unknown }>(data: T): T {
-  if (data.interventionType && !isFinancialIntervention(data.interventionType)) {
+function stripFinancialFields<T extends { interventionType?: string | null; amount?: unknown; modeOfDelivery?: unknown; fundSource?: unknown }>(data: T, financial: boolean): T {
+  if (data.interventionType && !financial) {
     return { ...data, amount: null, modeOfDelivery: null, fundSource: null };
   }
   // Centavo rounding at the boundary: the form accepts "1,234.567" and
@@ -30,6 +31,8 @@ export class CaseInterventionsService {
     private interventionRepo: Repository<CaseIntervention>,
     @InjectRepository(ProgramIntervention)
     private matrixRepo: Repository<ProgramIntervention>,
+    @InjectRepository(InterventionCatalogEntry)
+    private catalogRepo: Repository<InterventionCatalogEntry>,
     @Inject(forwardRef(() => AccessCardsService))
     private accessCardsService: AccessCardsService,
   ) {}
@@ -57,6 +60,27 @@ export class CaseInterventionsService {
       where: { caseId },
       order: { deliveryDate: 'ASC', createdAt: 'ASC' },
     });
+  }
+
+  /**
+   * Whether a service code carries money, and whether it is allowed at all.
+   * Built-ins answer from the canonical vocabulary; anything else must be a
+   * custom catalog entry. Validation is off for an update that leaves the type
+   * alone — an old row keeps rendering after its service is retired.
+   */
+  private async financialOf(code: string | null | undefined, validate: boolean): Promise<boolean> {
+    if (!code) return false;
+    if (isFinancialIntervention(code)) return true;
+    if (INTERVENTION_TYPES.includes(code)) return false;
+    const custom = await this.catalogRepo.findOne({ where: { code } });
+    if (!custom) {
+      if (validate) throw new BadRequestException(`Unknown service type "${code}" — pick one from the catalog`);
+      return false;
+    }
+    if (validate && !custom.isActive) {
+      throw new BadRequestException(`The service "${custom.label}" is no longer offered — pick another one`);
+    }
+    return custom.isFinancial;
   }
 
   async create(caseId: string, data: CreateCaseInterventionInput, callerId?: string) {    // RA 10173: a revoked consent blocks new service delivery against the
@@ -105,7 +129,7 @@ export class CaseInterventionsService {
         : null;
     }
 
-    data = stripFinancialFields(data);
+    data = stripFinancialFields(data, await this.financialOf(data.interventionType, true));
     const cleaned = Object.fromEntries(
       Object.entries(data).map(([k, v]) => [k, v === null ? undefined : v]),
     );
@@ -133,7 +157,11 @@ export class CaseInterventionsService {
   async update(caseId: string, id: string, data: UpdateCaseInterventionInput) {
     const intervention = await this.interventionRepo.findOne({ where: { id, caseId } });
     if (!intervention) throw new NotFoundException('Intervention not found');
-    const next = stripFinancialFields(data);
+    const storedType = intervention.interventionType;
+    const financial = data.interventionType !== undefined
+      ? await this.financialOf(data.interventionType, true)
+      : await this.financialOf(storedType, false);
+    const next = stripFinancialFields(data, financial);
     // The anchor fields (enrollment / program / type) must pass the same
     // membership checks as create when any of them moves — the update path used
     // to validate nothing, so an enrollment could be retargeted to another

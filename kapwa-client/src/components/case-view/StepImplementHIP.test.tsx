@@ -808,4 +808,30 @@ describe('StepImplementHIP — the merged intervention card', () => {
     expect(screen.queryByRole('button', { name: /View Certificate of Eligibility/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /View Petty Cash Voucher/i })).toBeNull();
   });
+
+  it('offers a locally added catalog service with its label and money fields', async () => {
+    const user = userEvent.setup();
+    mockApiGet.mockImplementation(async (key: unknown) => {
+      const k = typeof key === 'string' ? key : JSON.stringify(key);
+      if (k.includes('intervention-catalog')) {
+        return [{ code: 'relief_goods', label: 'Relief Goods', isFinancial: true, isActive: true }];
+      }
+      return [];
+    });
+
+    renderHIP();
+    fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
+    await screen.findByRole('dialog');
+
+    await pickSelect(user, 'Program / Service *', /Not under a program/i);
+    await user.click(screen.getByLabelText(/Service type/i));
+
+    // The custom code is offered under the label the admin typed, not the slug.
+    const options = (await screen.findAllByRole('option')).map(o => o.textContent ?? '');
+    expect(options).toContain('Relief Goods');
+
+    await user.click(screen.getByRole('option', { name: 'Relief Goods' }));
+    // Its money flag turns the financial half of the form on.
+    expect(await screen.findByLabelText(/Amount/i)).toBeTruthy();
+  });
 });

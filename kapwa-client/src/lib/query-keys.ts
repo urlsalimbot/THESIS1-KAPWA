@@ -235,6 +235,10 @@ export const queryKeys = {
   auth: {
     me: () => memo('auth.me', () => ['auth', 'me'] as const),
   },
+  interventionCatalog: {
+    all: ['intervention-catalog'] as const,
+    list: () => memo('interventionCatalog.list', () => ['intervention-catalog'] as const),
+  },
   users: {
     all: ['users'] as const,
     list: () => memo('users.list', () => ['users'] as const),

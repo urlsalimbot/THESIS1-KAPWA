@@ -41,6 +41,7 @@ export const ROUTE_PREFETCH: Record<string, () => Promise<unknown>> = {
   '/client-dedup': () => import('./pages/ClientDedupPage'),
   '/admin': () => import('./pages/AdminPage'),
   '/admin/programs': () => import('./pages/ProgramsPage'),
+  '/admin/interventions': () => import('./pages/InterventionCatalogPage'),
   '/admin/users': () => import('./pages/UsersPanelPage'),
   '/analytics': () => import('./pages/AnalyticsPage'),
   '/settings': () => import('./pages/SettingsPage'),
@@ -95,6 +96,7 @@ const CreateIrfPage = lazy(() => import('./pages/CreateIrfPage').then(m => ({ de
 const CreateProgramPage = lazy(() => import('./pages/CreateProgramPage').then(m => ({ default: m.CreateProgramPage })));
 const ProgramDetailPage = lazy(() => import('./pages/ProgramDetailPage').then(m => ({ default: m.ProgramDetailPage })));
 const ProgramsPage = lazy(() => import('./pages/ProgramsPage').then(m => ({ default: m.ProgramsPage })));
+const InterventionCatalogPage = lazy(() => import('./pages/InterventionCatalogPage').then(m => ({ default: m.InterventionCatalogPage })));
 const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
 const PublicProgramsPage = lazy(() => import('./pages/PublicProgramsPage').then(m => ({ default: m.PublicProgramsPage })));
 const PublicProgramDetailPage = lazy(() => import('./pages/PublicProgramDetailPage').then(m => ({ default: m.PublicProgramDetailPage })));
@@ -181,6 +183,7 @@ export const router = createBrowserRouter([
   { path: '/admin/programs/new', element: <Private roles={['admin']}><CreateProgramPage /></Private> },
   { path: '/admin/programs/:id', element: <Private roles={['admin']}><ProgramDetailPage /></Private> },
   { path: '/admin/programs', element: <Private roles={['admin']}><ProgramsPage /></Private> },
+  { path: '/admin/interventions', element: <Private roles={['admin']}><InterventionCatalogPage /></Private> },
   { path: '/coordinator', element: <Navigate to="/coordinator/dashboard" replace /> },
   { path: '/coordinator/dashboard', element: <Private roles={['coordinator']}><CoordinatorDashboardPage /></Private> },
   { path: '/coordinator/referrals', element: <Private roles={['coordinator']}><CoordinatorReferralListPage /></Private> },

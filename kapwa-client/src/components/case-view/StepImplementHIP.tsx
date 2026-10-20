@@ -3,6 +3,7 @@ import useSWR, { useSWRConfig } from 'swr';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
+import { useInterventionCatalog } from '@/hooks/useInterventionCatalog';
 import { interventionRequirementsMet, requiredDocumentKeys } from '@/lib/case-progress';
 import { INTERVENTION_TYPES, isFinancialIntervention, interventionFormLabel } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
@@ -89,6 +90,9 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
     id: string; programId: string; programName: string; services?: string[]; status?: string;
   }>>(queryKeys.cases.enrollments(caseId));
 
+  // Services an admin added locally: offerable on every case, with their own
+  // label and money flag (the built-ins get both from the code + i18n).
+  const { services: customServices } = useInterventionCatalog();
   const [addOpen, setAddOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const EMPTY_FORM = {
@@ -166,10 +170,16 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
       : (dialogProgram?.interventions && dialogProgram.interventions.length > 0)
         ? dialogProgram.interventions
         : [...INTERVENTION_TYPES];
+  const customByCode = new Map(
+    customServices.filter(s => s.isActive).map(s => [s.code, s] as const),
+  );
+  // Local services are global: they follow whatever the program's matrix offers.
+  const offerableServices = [...new Set([...serviceOptions, ...customByCode.keys()])];
   // A non-financial service renders no money: amount, mode and fund source are
   // financial-form fields and disappear with the service choice that made them
   // irrelevant.
-  const financial = isFinancialIntervention(form.interventionType);
+  const financial = isFinancialIntervention(form.interventionType)
+    || customByCode.get(form.interventionType)?.isFinancial === true;
   /* The scope the header's checklist is given: nothing selected means nothing
      to preview — the form is reset whenever the dialog closes, so this is empty
      for the whole of the dialog's closed life and the saved interventions are
@@ -566,10 +576,13 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
                   <SelectContent>
                   {/* Alphabetical, whatever the source order (enrollment services,
                       program services or the full catalog). */}
-                  {[...serviceOptions].sort((a, b) =>
-                    t(`interventionType.${a}`, a).localeCompare(t(`interventionType.${b}`, b)),
+                  {[...offerableServices].sort((a, b) =>
+                    t(`interventionType.${a}`, customByCode.get(a)?.label ?? a)
+                      .localeCompare(t(`interventionType.${b}`, customByCode.get(b)?.label ?? b)),
                   ).map((code) => (
-                    <SelectItem key={code} value={code}>{t(`interventionType.${code}`, code)}</SelectItem>
+                    <SelectItem key={code} value={code}>
+                      {t(`interventionType.${code}`, customByCode.get(code)?.label ?? code)}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
