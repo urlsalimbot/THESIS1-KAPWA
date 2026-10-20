@@ -483,10 +483,10 @@ async function seedTeamDemoCore(ds: DataSource): Promise<void> {
           const dayIdx = (i + j * 2 + 1) % 5;
           const res = await q.query(
             `INSERT INTO case_interventions (id, case_id, program_id, service_name, category, delivery_date, amount, mode_of_delivery, fund_source, notes, delivered_by, created_by, created_at)
-             SELECT $1::uuid,$2::text,NULL::uuid,$3::text,$4::text,$5::date,$6::numeric,$7::text,$8::text,$9::text,$10::text,$11::uuid,$12::timestamp
+             SELECT $1::uuid,$2::uuid,NULL::uuid,$3::text,$4::text,$5::date,$6::numeric,$7::text,$8::text,$9::text,$10::text,$11::uuid,$12::timestamp
              WHERE NOT EXISTS (
                SELECT 1 FROM case_interventions
-               WHERE case_id = $2 AND created_by = $11 AND service_name = $3 AND delivery_date = $5
+               WHERE case_id = $2::uuid AND created_by = $11 AND service_name = $3 AND delivery_date = $5
              )
              RETURNING 1`,
             [uuidv7(), caseId, svc.name, svc.category, week[dayIdx], svc.amount, svc.mode, svc.fund, `[team-demo] ${svc.name}`, `${sw.firstName} ${sw.lastName}`, userId, at(week[dayIdx], '10:00')],

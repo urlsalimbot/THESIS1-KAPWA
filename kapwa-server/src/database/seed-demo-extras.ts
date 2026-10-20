@@ -338,10 +338,18 @@ async function seedDedup(token: string): Promise<void> {
   const b = await createOperation(token, 'demo-dedup-b.csv', batchB);
 
   // Written out so the presenter can also upload it by hand during the demo.
-  const dir = join(__dirname, 'demo-data');
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, 'dedup-demo.csv'), batchB + '\n');
-  console.log(`dedup B: ${b} left in review (1 KAPWA match + 1 duplicate pair); sample at src/database/demo-data/dedup-demo.csv`);
+  // Best-effort: the image's /app may be read-only, and the demo data above is
+  // already saved — a missing hand-upload copy must not fail the seed.
+  let sampleAt = 'not written (read-only image)';
+  try {
+    const dir = join(__dirname, 'demo-data');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'dedup-demo.csv'), batchB + '\n');
+    sampleAt = 'src/database/demo-data/dedup-demo.csv';
+  } catch (e) {
+    console.warn(`  WARN could not write the dedup sample file: ${(e as Error).message}`);
+  }
+  console.log(`dedup B: ${b} left in review (1 KAPWA match + 1 duplicate pair); sample at ${sampleAt}`);
 }
 
 // --- Run --------------------------------------------------------------------
