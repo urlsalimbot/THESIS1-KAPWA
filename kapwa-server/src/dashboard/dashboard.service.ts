@@ -122,7 +122,7 @@ export class DashboardService {
              SELECT 1 FROM cases c2
              JOIN beneficiaries b2 ON b2.id = c2.beneficiary_id
              JOIN persons p2 ON p2.id = b2.person_id
-             WHERE c2.id::text = ci.case_id
+             WHERE c2.id = ci.case_id
                AND EXISTS (SELECT 1 FROM person_addresses pa2
                  WHERE pa2.person_id = p2.id AND (pa2.barangay ILIKE $3 OR pa2.raw ILIKE $3)))`
         : '';

@@ -98,7 +98,7 @@ export class AuditService {
               ci.fund_source, ci.notes, ci.mode_of_delivery,
               c.control_no, p.surname, p.first_name
        FROM case_interventions ci
-       LEFT JOIN cases c ON c.id = ci.case_id::uuid
+       LEFT JOIN cases c ON c.id = ci.case_id
        LEFT JOIN beneficiaries b ON b.id = c.beneficiary_id
        LEFT JOIN persons p ON p.id = b.person_id
        WHERE ci.delivery_date BETWEEN $1 AND $2

@@ -313,10 +313,14 @@ describe('AnalyticsService', () => {
       expect(result.summary.householdsCovered).toEqual({ suppressed: true });
     });
 
-    it('casts the case intervention join to text for the uuid case id', async () => {
+    it('joins interventions to the case on the uuid case id', async () => {
       repoMock.query.mockResolvedValue([]);
       await service.getDemographics({});
-      expect(String(repoMock.query.mock.calls[0][0])).toContain('ci.case_id = c.id::text');
+      const sql = String(repoMock.query.mock.calls[0][0]);
+      // case_interventions.case_id is a uuid + FK since CaseInterventionLinks…0104,
+      // so the join is uuid-to-uuid; the old text cast would now fail.
+      expect(sql).toContain('ci.case_id = c.id');
+      expect(sql).not.toContain('ci.case_id = c.id::text');
     });
   });
 
@@ -395,14 +399,14 @@ describe('AnalyticsService', () => {
       await expect(service.getConcentration({})).rejects.toThrow(UnprocessableEntityException);
     });
 
-    it('casts the case join to text for the uuid case id', async () => {
+    it('joins the case on the uuid case id', async () => {
       repoMock.query.mockResolvedValue([
         { barangay: 'Poblacion', cases: '6', interventions: '10', amount: '6000' },
         { barangay: 'Bigte', cases: '6', interventions: '8', amount: '4000' },
         { barangay: 'Matictic', cases: '0', interventions: '2', amount: '0' },
       ]);
       await service.getConcentration({});
-      expect(String(repoMock.query.mock.calls[0][0])).toContain('c.id::text = ci.case_id');
+      expect(String(repoMock.query.mock.calls[0][0])).toContain('c.id = ci.case_id');
     });
 
     it('returns a single filtered barangay without the three-barangay guard and with null HHI', async () => {
@@ -491,7 +495,7 @@ describe('AnalyticsService', () => {
       expect(bigte?.fourPsShare).toEqual({ suppressed: true });
     });
 
-    it('casts the case join and matches 4Ps members with EXISTS instead of a role join', async () => {
+    it('joins the case on its uuid and matches 4Ps members with EXISTS instead of a role join', async () => {
       repoMock.query
         .mockResolvedValueOnce([
           { barangay: 'Poblacion', served_households: '8', assistance: '8000', four_ps: '6' },
@@ -503,7 +507,8 @@ describe('AnalyticsService', () => {
         ]);
       await service.getEquity({});
       const sql = String(repoMock.query.mock.calls[0][0]);
-      expect(sql).toContain('c.id::text = ci.case_id');
+      expect(sql).toContain('c.id = ci.case_id');
+      expect(sql).not.toContain('c.id::text = ci.case_id');
       expect(sql).toContain('FROM beneficiary_roles br');
       expect(sql).toContain("ILIKE '%4ps%'");
       expect(sql).not.toContain('JOIN beneficiary_roles');

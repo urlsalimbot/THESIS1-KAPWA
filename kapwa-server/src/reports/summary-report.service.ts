@@ -34,15 +34,15 @@ const CASES_SQL = `
          COALESCE(ci.text, '') AS service_text,
          COALESCE(cr.text, '') AS referral_text,
          COALESCE(cr.agencies, '') AS referral_agencies,
-         (SELECT MAX(ci2.created_at) FROM case_interventions ci2 WHERE ci2.case_id = c.id::text) AS latest_intervention_at,
+         (SELECT MAX(ci2.created_at) FROM case_interventions ci2 WHERE ci2.case_id = c.id) AS latest_intervention_at,
          (SELECT MAX(cr2.created_at) FROM case_referrals cr2 WHERE cr2.case_id = c.id) AS latest_referral_at,
          (SELECT ci2.program_id FROM case_interventions ci2
-            WHERE ci2.case_id = c.id::text
+            WHERE ci2.case_id = c.id
             ORDER BY COALESCE(ci2.delivery_date, ci2.created_at) ASC NULLS LAST, ci2.created_at ASC
             LIMIT 1) AS program_id,
          (SELECT pr2.name FROM case_interventions ci2
             LEFT JOIN programs pr2 ON pr2.id = ci2.program_id
-            WHERE ci2.case_id = c.id::text
+            WHERE ci2.case_id = c.id
             ORDER BY COALESCE(ci2.delivery_date, ci2.created_at) ASC NULLS LAST, ci2.created_at ASC
             LIMIT 1) AS program_name,
          (csr.case_id IS NOT NULL) AS has_csr,
@@ -60,7 +60,7 @@ const CASES_SQL = `
     SELECT string_agg(ci2.service_name || ' ' || COALESCE(ci2.category, '') || ' ' || COALESCE(pr.name, '') || ' ' || COALESCE(pr.category, ''), ' ') AS text
     FROM case_interventions ci2
     LEFT JOIN programs pr ON pr.id = ci2.program_id
-    WHERE ci2.case_id = c.id::text
+    WHERE ci2.case_id = c.id
   ) ci ON TRUE
   LEFT JOIN LATERAL (
     SELECT

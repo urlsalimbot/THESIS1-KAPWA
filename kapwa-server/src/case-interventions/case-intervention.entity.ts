@@ -5,7 +5,7 @@ import { BaseEntity } from '../common/base.entity';
 export class CaseIntervention extends BaseEntity {
 
   /** NULL for batch-recorded servings (source='batch'); the beneficiary_id carries the person. */
-  @Column({ name: 'case_id', nullable: true })
+  @Column({ name: 'case_id', type: 'uuid', nullable: true })
   caseId?: string;
 
   /** Set for batch servings; case interventions keep this NULL. */

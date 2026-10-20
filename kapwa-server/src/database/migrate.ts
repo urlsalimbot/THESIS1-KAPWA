@@ -244,7 +244,7 @@ export async function migrate() {
 
   await q.query(`CREATE TABLE IF NOT EXISTS case_interventions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
-    case_id TEXT NOT NULL,
+    case_id UUID,
     program_id UUID,
     service_name TEXT NOT NULL,
     category TEXT,
@@ -394,6 +394,44 @@ export async function migrate() {
     END IF;
   END $$`);
 
+  // Case links on interventions (Mirrors CaseInterventionLinks…0104): case_id
+  // predates cases.id becoming uuid, and neither link was enforced.
+  await q.query(`DO $$ BEGIN
+    IF (SELECT data_type FROM information_schema.columns
+         WHERE table_name = 'case_interventions' AND column_name = 'case_id') = 'text' THEN
+      ALTER TABLE case_interventions ALTER COLUMN case_id TYPE UUID USING case_id::uuid;
+    END IF;
+  END $$`);
+  await q.query(`DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_case_interventions_case') THEN
+      ALTER TABLE case_interventions ADD CONSTRAINT fk_case_interventions_case FOREIGN KEY (case_id) REFERENCES cases(id);
+    END IF;
+  END $$`);
+  await q.query(`DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_case_interventions_program') THEN
+      ALTER TABLE case_interventions ADD CONSTRAINT fk_case_interventions_program FOREIGN KEY (program_id) REFERENCES programs(id) ON DELETE SET NULL;
+    END IF;
+  END $$`);
+  await q.query(`CREATE OR REPLACE FUNCTION case_interventions_check_program() RETURNS trigger AS $$
+    DECLARE enrolment_program UUID;
+    BEGIN
+      IF NEW.program_id IS NOT NULL AND NEW.program_enrollment_id IS NOT NULL THEN
+        SELECT program_id INTO enrolment_program
+          FROM program_enrollments WHERE id = NEW.program_enrollment_id;
+        IF enrolment_program IS NOT NULL AND enrolment_program <> NEW.program_id THEN
+          RAISE EXCEPTION
+            'the intervention names program % but its enrollment belongs to program %',
+            NEW.program_id, enrolment_program
+            USING ERRCODE = 'check_violation';
+        END IF;
+      END IF;
+      RETURN NEW;
+    END;
+  $$ LANGUAGE plpgsql`);
+  await q.query(`DROP TRIGGER IF EXISTS trg_case_interventions_program ON case_interventions`);
+  await q.query(`CREATE TRIGGER trg_case_interventions_program
+    BEFORE INSERT OR UPDATE ON case_interventions
+    FOR EACH ROW EXECUTE FUNCTION case_interventions_check_program()`);
   await q.query(`CREATE TABLE IF NOT EXISTS chat_messages ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), sender_id TEXT NOT NULL, recipient_id TEXT NOT NULL, content TEXT NOT NULL, conversation_id TEXT NOT NULL, is_read BOOLEAN DEFAULT FALSE, read_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW() )`);
 
   await q.query(`CREATE INDEX IF NOT EXISTS idx_beneficiary_person ON beneficiaries(person_id)`);

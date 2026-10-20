@@ -239,17 +239,16 @@ export class BeneficiariesService {
     }
 
     // Enrich with the intervention history: how often the office has served this
-    // person and when last. Joined through cases because
-    // case_interventions.case_id is TEXT while cases.id is UUID (same cast as
-    // getInterventions). Best-effort like the lookup above: the list must render
-    // even if this fails.
+    // person and when last. Joined through cases (case_id is a uuid + FK since
+    // CaseInterventionLinks…0104). Best-effort like the lookup above: the list
+    // must render even if this fails.
     if (benIds.length > 0) {
       try {
         const rows: Array<{ beneficiary_id: string; cnt: string; last: string | null }> =
           await this.benRepo.query(
             `SELECT c.beneficiary_id, COUNT(*)::text AS cnt, MAX(ci.delivery_date)::text AS last
                FROM case_interventions ci
-               JOIN cases c ON c.id::text = ci.case_id
+               JOIN cases c ON c.id = ci.case_id
               WHERE c.beneficiary_id = ANY($1::uuid[])
               GROUP BY c.beneficiary_id`,
             [benIds],
@@ -288,7 +287,6 @@ export class BeneficiariesService {
   async getInterventions(beneficiaryId: string) {
     const ben = await this.benRepo.findOne({ where: { id: beneficiaryId }, select: ['id'] });
     if (!ben) throw new NotFoundException('Beneficiary not found');
-    // case_interventions.case_id is TEXT while cases.id is UUID, hence the cast.
     return this.caseRepo.manager.query(
       `SELECT ci.id,
               ci.case_id AS "caseId",
@@ -299,7 +297,7 @@ export class BeneficiariesService {
               ci.fund_source AS "fundSource",
               ci.notes
          FROM case_interventions ci
-         JOIN cases c ON c.id::text = ci.case_id
+         JOIN cases c ON c.id = ci.case_id
         WHERE c.beneficiary_id = $1
         ORDER BY ci.delivery_date DESC NULLS LAST, ci.created_at DESC`,
       [beneficiaryId],
@@ -610,7 +608,7 @@ export class BeneficiariesService {
          FROM case_interventions ci
          JOIN program_required_documents prd ON prd.program_id = ci.program_id
          LEFT JOIN case_requirements cr
-                ON cr.case_id::text = ci.case_id AND cr.requirement_key = prd.document_key
+                ON cr.case_id = ci.case_id AND cr.requirement_key = prd.document_key
         WHERE ci.case_id = $1
         GROUP BY prd.document_key, cr.met
         ORDER BY prd.document_key`,
@@ -702,7 +700,7 @@ export class BeneficiariesService {
       `SELECT ci.id, ci.service_name AS "serviceName", ci.delivery_date AS "date",
               ci.amount, ci.fund_source AS "fundSource", c.control_no AS "controlNo"
          FROM case_interventions ci
-         JOIN cases c ON c.id::text = ci.case_id
+         JOIN cases c ON c.id = ci.case_id
         WHERE c.beneficiary_id = $1::uuid AND ci.amount IS NOT NULL AND ci.amount > 0
         ORDER BY ci.delivery_date DESC NULLS LAST`,
       [ben.id],

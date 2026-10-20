@@ -71,7 +71,7 @@ export class AnalyticsService {
        WHERE (($1::date IS NULL AND $2::date IS NULL)
               OR EXISTS (
                 SELECT 1 FROM cases c
-                JOIN case_interventions ci ON ci.case_id = c.id::text
+                JOIN case_interventions ci ON ci.case_id = c.id
                 WHERE c.beneficiary_id = b.id
                   AND ($1::date IS NULL OR ci.delivery_date >= $1::date)
                   AND ($2::date IS NULL OR ci.delivery_date <= $2::date)
@@ -187,7 +187,7 @@ export class AnalyticsService {
                 COUNT(ci.id) AS interventions,
                 COALESCE(SUM(ci.amount), 0) AS amount
          FROM case_interventions ci
-         JOIN cases c ON c.id::text = ci.case_id
+         JOIN cases c ON c.id = ci.case_id
          JOIN beneficiaries b ON b.id = c.beneficiary_id
          LEFT JOIN households h ON h.id = b.household_id
          WHERE ($1::date IS NULL OR ci.delivery_date >= $1::date)
@@ -251,7 +251,7 @@ export class AnalyticsService {
                   WHERE br.person_id = b.person_id AND br.category ILIKE '%4ps%'
                 )) AS four_ps
          FROM case_interventions ci
-         JOIN cases c ON c.id::text = ci.case_id
+         JOIN cases c ON c.id = ci.case_id
          JOIN beneficiaries b ON b.id = c.beneficiary_id
          LEFT JOIN households h ON h.id = b.household_id
          WHERE ($1::date IS NULL OR ci.delivery_date >= $1::date)
@@ -424,7 +424,7 @@ export class AnalyticsService {
     const rows: Array<{ case_id: string; service_name: string }> = await this.caseRepo.query(
       `SELECT ci.case_id, ci.service_name
        FROM case_interventions ci
-       JOIN cases c ON c.id::text = ci.case_id
+       JOIN cases c ON c.id = ci.case_id
        JOIN beneficiaries b ON b.id = c.beneficiary_id
        LEFT JOIN households h ON h.id = b.household_id
        WHERE ci.service_name IS NOT NULL AND ci.service_name <> ''
