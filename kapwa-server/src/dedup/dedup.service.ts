@@ -307,7 +307,7 @@ export class DedupService {
           const rows: any[] = await this.rowsRepo.manager.query(
                         `SELECT b.person_id::text AS person_id, COUNT(*)::int AS count
                FROM case_interventions i
-               JOIN cases c ON c.id::text = i.case_id
+               JOIN cases c ON c.id = i.case_id
                JOIN beneficiaries b ON b.id = c.beneficiary_id
               WHERE b.person_id::text = ANY($1::text[])
               GROUP BY b.person_id`,
@@ -376,7 +376,7 @@ export class DedupService {
             UNION ALL
            SELECT b.person_id::text, to_char(i.delivery_date, 'YYYY-MM-DD'), i.intervention_type
              FROM case_interventions i
-             JOIN cases c ON c.id::text = i.case_id
+             JOIN cases c ON c.id = i.case_id
              JOIN beneficiaries b ON b.id = c.beneficiary_id
             WHERE i.beneficiary_id IS NULL AND b.person_id::text = ANY($1::text[]) AND i.delivery_date IS NOT NULL`,
           [personIds])
@@ -925,7 +925,7 @@ export class DedupService {
           `SELECT b.person_id::text AS person_id, COUNT(*)::int AS count,
                   MAX(i.delivery_date)::text AS last_delivery
              FROM case_interventions i
-             JOIN cases c ON c.id::text = i.case_id
+             JOIN cases c ON c.id = i.case_id
              JOIN beneficiaries b ON b.id = c.beneficiary_id
             WHERE b.person_id::text = ANY($1::text[]) GROUP BY b.person_id`, [identities])
       : [];

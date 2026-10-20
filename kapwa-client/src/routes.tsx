@@ -204,7 +204,9 @@ export const router = createBrowserRouter([
   { path: '/referrals', element: <Private roles={['admin','social_worker','coordinator']}><ReferralsPage /></Private> },
   { path: '/messages', element: <Private roles={['admin','social_worker','coordinator','claimant']}><MessagesPage /></Private> },
   { path: '/messages/:userId', element: <Private roles={['admin','social_worker','coordinator','claimant']}><MessagesPage /></Private> },
-  { path: '/search', element: <Private><SearchResultsPage /></Private> },
+  // Staff-only: the results come from /beneficiaries, which the API restricts to
+  // admin + social worker (the topbar search is hidden from the other roles too).
+  { path: '/search', element: <Private roles={['admin', 'social_worker']}><SearchResultsPage /></Private> },
   { path: '/notifications', element: <Private><NotificationsPage /></Private> },
 
   { path: '/my-dashboard', element: <Private roles={['claimant']}><ClaimantDashboardPage /></Private> },

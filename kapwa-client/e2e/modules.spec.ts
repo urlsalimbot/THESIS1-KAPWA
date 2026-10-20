@@ -149,6 +149,26 @@ test('every admin module renders, and its detail pages open', async ({ page }) =
   await openDetail('payout schedule', '/cases', (u) => `${u}/payouts`);
   await openDetail('new IRF', '/cases', (u) => `/irf/new?caseId=${u.split('/').pop()}`);
 
+  await test.step('dedup match panel loads', async () => {
+    // The row-matches panel calls its own endpoint; opening the review page does
+    // not request it, which is how a 500 there slipped past this suite once.
+    const href = await openFirstRow(page, '/client-dedup');
+    if (!href) return empty.push('dedup match panel');
+    await page.getByRole('heading', { level: 1 }).waitFor({ timeout: 30_000 });
+    const panel = page.getByRole('button', { name: /review matches/i }).first();
+    if (!(await panel.count())) return empty.push('dedup match panel');
+    const failures: string[] = [];
+    const onResponse = (r: { url: () => string; status: () => number }) => {
+      const url = r.url();
+      if (url.includes('/matches') && r.status() >= 400) failures.push(`${r.status()} ${url}`);
+    };
+    page.on('response', onResponse);
+    await panel.click();
+    await page.waitForTimeout(1_500);
+    page.off('response', onResponse);
+    if (failures.length) problems.push(`dedup matches — ${failures.join(', ')}`);
+  });
+
   await test.step('beneficiary list filters', async () => {
     await page.goto('/beneficiaries');
     await page.getByRole('heading', { level: 1 }).waitFor({ timeout: 30_000 });
