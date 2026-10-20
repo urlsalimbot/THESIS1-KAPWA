@@ -77,19 +77,40 @@ describe('StepImplementHIP adhoc intervention', () => {
     expect((form as FormData).get('requirementKey')).toBeNull();
   });
 
-  it('requires an enrolled program — an unenrolled service cannot be recorded', async () => {
+  it('requires a program or an explicit ad-hoc choice before a service can be saved', async () => {
     renderHIP();
 
     fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
     const save = await screen.findByRole('button', { name: /Save Intervention/ });
     expect(save).toBeDisabled();
 
-    // No enrollments on this case: the program select has no choices and the
-    // service field never appears — an intervention is a service under a
-    // program ASSIGNED to this case, so nothing can be recorded.
-    expect(screen.queryByLabelText('Service *')).toBeNull();
+    // With nothing chosen there is no service to record — but the ad-hoc option
+    // is offered even when the case has no enrollments.
+    expect(screen.queryByLabelText(/Service Name/i)).toBeNull();
     fireEvent.click(save);
     expect(mockApiPost).not.toHaveBeenCalled();
+  });
+
+  it('records an ad-hoc service with no program when the case has no enrollments', async () => {
+    const user = userEvent.setup();
+    renderHIP();
+
+    fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
+    await screen.findByRole('dialog');
+
+    await pickSelect(user, 'Program / Service *', /Not under a program/i);
+    await user.type(screen.getByLabelText(/Service Name/i), 'Barangay medical mission');
+    // The catalog type is optional for an ad-hoc service.
+    fireEvent.click(screen.getByRole('button', { name: /Save Intervention/ }));
+
+    await waitFor(() => expect(mockApiPost).toHaveBeenCalledTimes(1));
+    const [path, payload] = mockApiPost.mock.calls[0];
+    expect(path).toBe('/cases/case-1/interventions');
+    expect(payload.serviceName).toBe('Barangay medical mission');
+    expect(payload.interventionType).toBeNull();
+    // No program anchors: the server records it against the case alone.
+    expect(payload).not.toHaveProperty('programId');
+    expect(payload).not.toHaveProperty('programEnrollmentId');
   });
 
   // The step 2/step 3 redundancy resolution: when the case has program
@@ -162,7 +183,7 @@ describe('StepImplementHIP adhoc intervention', () => {
       expect(payload.interventionType).toBe('crisis_counseling');
     });
 
-    it('flags an unenrolled case instead of silently recording unattached services', async () => {
+    it('points an unenrolled case at the ad-hoc path', async () => {
       mockApiGet.mockImplementation(async (key: unknown) => {
         const k = JSON.stringify(key);
         if (k.includes('interventions')) return [];
@@ -206,10 +227,13 @@ describe('StepImplementHIP adhoc intervention', () => {
 
       await user.click(screen.getAllByRole('combobox')[0]);
       const programs = (await screen.findAllByRole('option')).map(o => o.textContent ?? '');
+      // Enrolled programs A–Z, then the escape hatch for a service that was
+      // rendered with no program at all.
       expect(programs).toEqual([
         'AICS — Assistance to Individuals in Crisis Situation',
         'Medical Assistance Program',
         'Zambales Livelihood',
+        'Not under a program (ad-hoc service)',
       ]);
 
       await user.click(await screen.findByRole('option', { name: /^AICS/ }));

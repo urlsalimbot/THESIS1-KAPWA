@@ -73,33 +73,37 @@ export class CaseInterventionsService {
       throw new ForbiddenException('Beneficiary consent has been revoked — new interventions are not allowed');
     }
 
-    // An intervention is a service rendered under a program ASSIGNED to the
-    // case: the enrollment is mandatory, and it has to be this case's row for
-    // this program — otherwise the service rows under the wrong program.
-    const enrollmentRows = await this.interventionRepo.manager.query(
-      `SELECT program_id, status FROM program_enrollments WHERE id = $1 AND case_id = $2`,
-      [data.programEnrollmentId, caseId],
-    );
-    if (enrollmentRows.length === 0) {
-      throw new NotFoundException('Program enrollment not found on this case');
-    }
-    // New services need a LIVE enrollment: a completed or withdrawn program is
-    // history, and logging against it would weigh a closed program's documents
-    // (audit 3.2.7). An absent status reads as active (legacy rows default).
-    if ((enrollmentRows[0].status ?? 'active') !== 'active') {
-      throw new BadRequestException(
-        'This program enrollment is no longer active — new interventions require an active enrollment.',
+    // A service under a program is anchored to the case's enrollment: it has to
+    // be this case's row for this program, still live, or the service rows under
+    // the wrong program. No enrollment at all means an ad-hoc service: the case
+    // rendered it without a program, so no matrix and no form obligation apply.
+    let requiredForm: string | null = null;
+    if (data.programEnrollmentId) {
+      const enrollmentRows = await this.interventionRepo.manager.query(
+        `SELECT program_id, status FROM program_enrollments WHERE id = $1 AND case_id = $2`,
+        [data.programEnrollmentId, caseId],
       );
+      if (enrollmentRows.length === 0) {
+        throw new NotFoundException('Program enrollment not found on this case');
+      }
+      // New services need a LIVE enrollment: a completed or withdrawn program is
+      // history, and logging against it would weigh a closed program's documents
+      // (audit 3.2.7). An absent status reads as active (legacy rows default).
+      if ((enrollmentRows[0].status ?? 'active') !== 'active') {
+        throw new BadRequestException(
+          'This program enrollment is no longer active — new interventions require an active enrollment.',
+        );
+      }
+      if (data.programId && enrollmentRows[0].program_id !== data.programId) {
+        throw new ForbiddenException(
+          'The enrollment belongs to a different program than the one named on the intervention',
+        );
+      }
+      // Member of the program's matrix, and its form obligation on the row.
+      requiredForm = data.interventionType
+        ? await this.matrixObligation(enrollmentRows[0].program_id, data.interventionType)
+        : null;
     }
-    if (data.programId && enrollmentRows[0].program_id !== data.programId) {
-      throw new ForbiddenException(
-        'The enrollment belongs to a different program than the one named on the intervention',
-      );
-    }
-    // Member of the program's matrix, and its form obligation on the row.
-    const requiredForm = data.interventionType
-      ? await this.matrixObligation(enrollmentRows[0].program_id, data.interventionType)
-      : null;
 
     data = stripFinancialFields(data);
     const cleaned = Object.fromEntries(

@@ -70,6 +70,10 @@ interface StepImplementHIPProps {
   lockReadOnly?: boolean;
 }
 
+/** Select value for "this service belongs to no program" — the case rendered it
+ *  on its own, so the payload carries no program anchors. */
+const AD_HOC = 'adhoc';
+
 export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockReadOnly = false, stepLock }: StepImplementHIPProps) {
   const { t } = useTranslation();
   const { mutate: globalMutate } = useSWRConfig();
@@ -99,6 +103,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
     notes: '',
   };
   const [form, setForm] = useState(EMPTY_FORM);
+  const adHoc = form.programId === AD_HOC;
   /** Cancel discards a half-typed intervention, so the reset has to happen on
    *  the way out too — otherwise reopening the dialog shows stale values. */
   function closeAdd() {
@@ -189,20 +194,27 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
       // is a service under a program ASSIGNED to this case. The program list
       // here is active-only, so a deactivated program resolves to null: say so
       // instead of failing silently (audit 3.2.1).
-      if (!selectedEnrollment || !dialogProgram) {
+      if (!adHoc && (!selectedEnrollment || !dialogProgram)) {
         setSaving(false);
         toast.error(
           t('caseView.implement.noActiveProgram', 'This program is no longer active — reactivate it to record interventions.'),
         );
         return;
       }
-      const serviceName = dialogProgram?.name || form.serviceName;
-      const category = dialogProgram?.category || form.category || undefined;
+      if (adHoc && !form.serviceName.trim()) {
+        setSaving(false);
+        toast.error(t('caseView.implement.serviceNameRequired', 'Enter the name of the service rendered.'));
+        return;
+      }
+      const serviceName = adHoc ? form.serviceName.trim() : dialogProgram!.name;
+      const category = adHoc ? (form.category || undefined) : (dialogProgram!.category || form.category || undefined);
       await api.post(`/cases/${caseId}/interventions`, {
-        programId: selectedEnrollment.programId,
-        // Services are anchored to the case's program enrollment (the treatment
-        // plan); the enrollment is now mandatory.
-        programEnrollmentId: selectedEnrollment.id,
+        // An ad-hoc service carries no program anchors: the server records it
+        // against the case alone and demands no program documents.
+        ...(adHoc ? {} : {
+          programId: selectedEnrollment!.programId,
+          programEnrollmentId: selectedEnrollment!.id,
+        }),
         interventionType: form.interventionType || null,
         serviceName,
         category,
@@ -489,6 +501,11 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
                   .map(e => (
                     <SelectItem key={e.id} value={`enr:${e.id}`}>{e.programName}</SelectItem>
                   ))}
+                {/* A service the case rendered without a program — a medical
+                    mission, donated goods. It needs a name, not an enrollment. */}
+                <SelectItem value={AD_HOC}>
+                  {t('caseView.implement.adHocOption', 'Not under a program (ad-hoc service)')}
+                </SelectItem>
                 </SelectContent>
               </Select>
               {/* The checklist in the card behind this dialog lists the same
@@ -502,14 +519,33 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
               )}
               {enrollments.length === 0 && !caseData?.enrollmentsNotNeeded && (
                 <p className="rounded-md bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-                  {t('caseView.implement.noEnrollmentHint', 'This case has no program enrollment yet — an intervention can only be recorded under an assigned program. Add enrollments in the Program Enrollments step first.')}
+                  {t('caseView.implement.noEnrollmentHint', 'This case has no program enrollment yet — record the service as an ad-hoc intervention below, or add enrollments in the Program Enrollments step to anchor it to a program.')}
                 </p>
               )}
             </div>
 
+            {adHoc && (
+              <div className="space-y-1.5">
+                <Label htmlFor="intv-service-name">{t('caseView.implement.serviceName', 'Service Name *')}</Label>
+                <Input
+                  id="intv-service-name"
+                  value={form.serviceName}
+                  onChange={e => setForm(f => ({ ...f, serviceName: e.target.value }))}
+                  placeholder={t('caseView.implement.serviceNamePlaceholder', 'e.g., Counseling Session, Home Visit')}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('caseView.implement.adHocHint', 'Recorded against this case only — no program, and no program documents required.')}
+                </p>
+              </div>
+            )}
+
             {form.programId && (
               <div className="space-y-1.5">
-                <Label htmlFor="intv-service-type">{t('caseView.implement.serviceType', 'Service *')}</Label>
+                <Label htmlFor="intv-service-type">
+                  {adHoc
+                    ? t('caseView.implement.serviceTypeOptional', 'Service type (optional)')
+                    : t('caseView.implement.serviceType', 'Service *')}
+                </Label>
                 <Select
                   value={form.interventionType}
                   onValueChange={(v) => setForm(f => {
@@ -623,7 +659,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeAdd}>{t('caseView.cancel', 'Cancel')}</Button>
-            <Button onClick={handleAdd} disabled={saving || !selectedEnrollment || !form.interventionType}>
+            <Button onClick={handleAdd} disabled={saving || (!adHoc && (!selectedEnrollment || !form.interventionType))}>
               {saving ? t('caseView.saving', 'Saving...') : t('caseView.implement.saveIntervention', 'Save Intervention')}
             </Button>
           </DialogFooter>

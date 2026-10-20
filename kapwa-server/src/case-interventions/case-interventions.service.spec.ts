@@ -156,4 +156,24 @@ describe('CaseInterventionsService — program matrix membership + form obligati
     ).rejects.toThrow(/enrollment not found/i);
     expect(interventionRepo.save).not.toHaveBeenCalled();
   });
+
+  it('records an ad-hoc service with no program and no form obligation', async () => {
+    const { interventionRepo, matrixRepo, svc } = mockService();
+    (interventionRepo.manager.query as jest.Mock).mockResolvedValueOnce([]); // consent: none revoked
+
+    const saved = await svc.create('c1', { serviceName: 'Barangay medical mission', notes: 'Ad-hoc' } as any, 'u1');
+
+    expect(saved).toMatchObject({
+      caseId: 'c1',
+      serviceName: 'Barangay medical mission',
+      createdBy: 'u1',
+      requiredForm: null,
+    });
+    expect(saved.programId).toBeUndefined();
+    expect(saved.programEnrollmentId).toBeUndefined();
+    // One query — the consent gate. An ad-hoc service consults no enrollment and
+    // no program matrix, because there is neither.
+    expect(interventionRepo.manager.query).toHaveBeenCalledTimes(1);
+    expect(matrixRepo.findOne).not.toHaveBeenCalled();
+  });
 });
