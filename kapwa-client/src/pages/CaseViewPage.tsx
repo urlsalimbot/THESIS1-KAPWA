@@ -140,11 +140,12 @@ function actorLabel(name?: string | null, role?: string | null): string | null {
 }
 
 /**
- * The GIS is printable from activation onward, not only while active — it is the
- * printed record of an approved case, and closure/aftercare is when reprints are
- * wanted. Mirrors the server's PRINTABLE_CASE_STATUSES (the API enforces it).
+ * Case documents (GIS, SCSR, CSR) are printable from activation onward — they are
+ * the printed record of an approved case, and transition/closure/aftercare is when
+ * reprints and the case-study report are wanted. Mirrors the server's
+ * PRINTABLE_CASE_STATUSES (the API enforces it).
  */
-const GIS_PRINTABLE_STATUSES = new Set(['active', 'transitioning', 'closed', 'aftercare']);
+const CASE_PRINTABLE_STATUSES = new Set(['active', 'transitioning', 'closed', 'aftercare']);
 
 export function CaseViewPage() {
   const { t } = useTranslation();
@@ -817,8 +818,8 @@ export function CaseViewPage() {
                       variant="outline"
                       size="sm"
                       className="gap-1.5"
-                      disabled={!GIS_PRINTABLE_STATUSES.has(caseData.status)}
-                      title={!GIS_PRINTABLE_STATUSES.has(caseData.status)
+                      disabled={!CASE_PRINTABLE_STATUSES.has(caseData.status)}
+                      title={!CASE_PRINTABLE_STATUSES.has(caseData.status)
                         ? t('cases.gisLocked', 'Available once the case has been activated (currently {{status}})', { status: caseData.status })
                         : undefined}
                     >
@@ -856,7 +857,7 @@ export function CaseViewPage() {
                         </DropdownMenuItem>
                       </>
                     )}
-                    {caseData.status === 'closed' && (
+                    {CASE_PRINTABLE_STATUSES.has(caseData.status) && (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onSelect={() => runDownload(downloadScsrPdf(id!, 'burial'))}>
