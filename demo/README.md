@@ -45,17 +45,18 @@ and the rest behave the same.
 
 Same sheet (`Barangay list`) and the same six headers, so **Define** pre-fills
 with no remapping. **80 data rows** plus the header row. Birthdays are text
-(`YYYY-MM-DD`), as in the 15-row file.
+(`YYYY-MM-DD`), as in the 15-row file. Middle names are **full names or blank,
+never initials** — in this file and in the production client data.
 
 | Rows | Content | Expected in review |
 |---|---|---|
 | 2–9 | Eight exact matches against seeded production clients — Castillo, Dimagiba, Garcia, Mendoza, Villanueva, Ramos, Santos, Reyes — with their real birthdays and barangays | **KAPWA matches** → "same person" records the service on the existing client |
-| 10 | One deliberate **fuzzy** match: `Fernandes, Liza` against production's `Fernandez, Liza` — same birthday, middle initial and barangay, one letter apart in the surname | **KAPWA match** — a probable, not exact, hit: the system offers the candidate and the human confirms |
+| 10 | One deliberate **fuzzy** match: `Fernandes, Liza` against production's `Fernandez, Liza` — same birthday and barangay, neither has a middle name, one letter apart in the surname | **KAPWA match** — a probable, not exact, hit: the system offers the candidate and the human confirms |
 | 11–22 | Six people entered twice: full middle name vs middle initial in five pairs, and `Jocelyn` / `Jocelyne` in the sixth | **6 · Duplicates in this list** — one row per pair is set aside |
 | 23–81 | 59 new clients across all 13 barangays, 1950–2004 birth years | **No match / New client** → created on finalize |
 
 **Numbers to expect (default 0.75 threshold):** **9 KAPWA matches** (8 exact at
-0.85–0.90 plus the fuzzy match at 0.85), **6 duplicate pairs** (0.85–0.86), and
+0.85–0.90 plus the fuzzy match at 0.80), **6 duplicate pairs** (0.85–0.86), and
 **59 new clients**. The matching signals are name similarity, birthday and
 barangay; a served household can only raise a score. The full rules — weights,
 candidate gate, duplicate ordering, and limits — are in

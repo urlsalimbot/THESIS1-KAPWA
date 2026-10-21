@@ -43,7 +43,7 @@ Sign in as **admin@mswdo.test / admin123**. The admin lands on the Admin Panel.
 
 - **Dashboard** — served today, pending review, disbursed this month, households served, and the
   recent-cases table with its **Barangay** column. The admin is not scoped: the whole municipality.
-- **Cases** → **View** on *Pedro P. Reyes* (`MSWD-2026-00001`). The case file shows the guided
+- **Cases** → **View** on *Pedro Poblete Reyes* (`MSWD-2026-00001`). The case file shows the guided
   workflow, the assessment, the interventions delivered (₱3,000 medical, ₱1,500 educational,
   ₱2,500 AICS), and the Documents card with working **Download** buttons.
 - **Approvals** — the pipeline: Phase-In (13 cases), Implementation (200), Phase-Out (0).

@@ -120,13 +120,17 @@ the stored current address, the address is updated and counted as a
 
 ## 7. Worked examples — the 80-row demo file
 
-| Row(s) | Signals | Score | Outcome at 0.75 |
+Both production and this workbook keep a middle name as a **full name or
+blank**; no initials.
+
+| Rows | Signals | Score | Outcome at 0.75 |
 |---|---|---|---|
-| 2–9, exact matches (e.g. Garcia, Jose D) | name 1.00 + birthday + barangay + middle | **0.90** | KAPWA match |
-| 2–9, middle differs (e.g. Castillo, Nena C) | name 1.00 + birthday + barangay | **0.85** | KAPWA match |
-| 10, `Fernandes, Liza` vs `Fernandez, Liza` | name similarity 0.90 (surname cosine ≈ 0.80, first 1.00) + birthday + barangay + middle | **0.85** | KAPWA match (fuzzy) |
-| 11–22, middle initial vs full name | name 1.00 + birthday + barangay | **0.85** | duplicate pair |
+| 2–9, exact match with a full middle name on both sides (Castillo `Cruz`, Dimagiba `Dimayuga`, Reyes `Poblete`) | name 1.00 + birthday + barangay + middle | **0.90** | KAPWA match |
+| 2–9, exact match, no middle name on either side (Garcia, Mendoza, Villanueva, Ramos, Santos) | name 1.00 + birthday + barangay | **0.85** | KAPWA match |
+| 10, `Fernandes, Liza` vs `Fernandez, Liza` | name 0.90 (surname cosine ≈ 0.80, first 1.00) + birthday + barangay | **0.80** | KAPWA match (fuzzy) |
+| 11–22, middle name present vs absent | name 1.00 + birthday + barangay | **0.85** | duplicate pair |
 | 11–22, `Jocelyn` vs `Jocelyne` | first-name cosine ≈ 0.71 + birthday + barangay + middle | **0.86** | duplicate pair |
+| 11–22, `Dela Peña` vs `Dela Pena` | name 1.00 + birthday + barangay; middle not equal (accent kept) | **0.85** | duplicate pair |
 | 23–81, new clients | name similarity low against every candidate | **< 0.75** | new client |
 
 Expected for that file: **9 KAPWA matches, 6 duplicate pairs, 59 new clients**

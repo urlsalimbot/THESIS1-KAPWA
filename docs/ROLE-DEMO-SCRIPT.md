@@ -126,7 +126,7 @@ Re-check nothing below the fold: if a take changes this data, re-run the beats i
 
 ## 2. Chapter 1 — MSWDO Admin (0:45–6:00)
 
-**Who this is:** Rosario G. Mendoza, MSWDO office head. The only role with no scope limits.
+**Who this is:** Rosario Mendoza, MSWDO office head. The only role with no scope limits.
 
 **The one claim this chapter must prove:** *the admin sees all 13 barangays and is the
 only role that can approve, issue documents, and manage accounts.*
@@ -253,7 +253,7 @@ different in 3.2; this proves the *data* is scoped too.
 
 ## 5. Chapter 4 — Claimant / Claimant-Beneficiary (14:30–18:30)
 
-**Who this is:** Pedro P. Reyes — a tricycle driver in Bigte, an active Indigent case, and
+**Who this is:** Pedro Poblete Reyes — a tricycle driver in Bigte, an active Indigent case, and
 in the demo he is also his own claimant, so the beneficiary and the account are the same
 person. `seed-demo.ts` links them three ways, which is why this dashboard has real data.
 
