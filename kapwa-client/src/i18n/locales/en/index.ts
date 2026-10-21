@@ -3084,8 +3084,6 @@ const en = {
     "keepThisRow": "Keep this row",
     "revertDecision": "Revert decision",
     "decisionReverted": "Decision reverted — the match is pending again.",
-    "undoEligibility": "Undo decision",
-    "eligibilityReverted": "Eligibility decision undone.",
     "keptRow": "This row is kept — the pair is set aside.",
     "kindBarangay": "Barangay update",
     "kindDecision": "Decision",

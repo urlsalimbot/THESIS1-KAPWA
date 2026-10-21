@@ -3088,8 +3088,6 @@ const fil: EnLocale = {
     "keepThisRow": "Panatilihin ang row na ito",
     "revertDecision": "Ibalik ang desisyon",
     "decisionReverted": "Naibalik ang desisyon — pending muli ang match.",
-    "undoEligibility": "I-undo ang desisyon",
-    "eligibilityReverted": "Naibalik ang desisyong eligibility.",
     "keptRow": "Napanatili ang row na ito — itinatabi ang kapares.",
     "kindBarangay": "Update sa barangay",
     "kindDecision": "Desisyon",

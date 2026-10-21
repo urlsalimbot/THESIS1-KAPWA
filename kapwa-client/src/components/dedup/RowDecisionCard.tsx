@@ -117,8 +117,6 @@ interface RowDecisionCardProps {
   onDecide?: (matchId: string, decision: MatchDecision) => void | Promise<void>;
   /** Undo a decided match (same person / duplicate / new client). */
   onRevert?: (matchId: string) => void | Promise<void>;
-  /** Undo the row's waive/confirm decision on a disqualified row. */
-  onRevertEligibility?: () => void | Promise<void>;
   busy?: boolean;
 }
 
@@ -193,7 +191,6 @@ export function RowDecisionCard({
   embedded = false,
   onDecide,
   onRevert,
-  onRevertEligibility,
   busy = false,
 }: RowDecisionCardProps) {
   const disqualifiedUndecided = row.eligibility === 'disqualified' && !row.eligibilityDecision;
@@ -226,13 +223,6 @@ export function RowDecisionCard({
               )}
             </div>
           </div>
-          {row.eligibilityDecision && onRevertEligibility && (
-            <div className="pt-1">
-              <Button size="sm" variant="outline" onClick={() => onRevertEligibility()} disabled={busy}>
-                <RotateCcw size={13} className="mr-1" /> {t('dedup.undoEligibility', 'Undo decision')}
-              </Button>
-            </div>
-          )}
           {disqualifiedUndecided && (
             <p className="text-xs text-muted-foreground">
               {t('dedup.decideBelow', 'Decide the match below to keep or set aside this row.')}
@@ -280,7 +270,7 @@ export function RowDecisionCard({
                       ? t('dedup.badgeDeprioritized', 'Deprioritized')
                       : t('dedup.badgeMatched', 'Matched')}
                 </Badge>
-                {c.status !== 'pending' && onRevert && !row.eligibilityDecision && (
+                {c.status !== 'pending' && onRevert && (
                   <Button size="sm" variant="ghost" onClick={() => onRevert(c.id)} disabled={busy}>
                     <RotateCcw size={13} className="mr-1" /> {t('dedup.revertDecision', 'Revert decision')}
                   </Button>

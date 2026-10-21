@@ -101,21 +101,6 @@ describe('RowDecisionCard', () => {
     expect(onRevert).toHaveBeenCalledWith('m1');
   });
 
-  it('lets an operator undo an eligibility decision', async () => {
-    const onRevertEligibility = vi.fn().mockResolvedValue(undefined);
-    render(
-      <RowDecisionCard
-        row={{ ...row, eligibilityDecision: 'waive', status: 'retained' }}
-        candidates={[personCandidate]}
-        onRevertEligibility={onRevertEligibility}
-      />,
-    );
-    await userEvent.click(screen.getByRole('button', { name: /undo decision/i }));
-    expect(onRevertEligibility).toHaveBeenCalled();
-    // The row-level undo owns the whole eligibility decision; no per-match revert.
-    expect(screen.queryByRole('button', { name: /revert decision/i })).toBeNull();
-  });
-
   it('shows no disqualification panel for allowed rows', () => {
     render(
       <RowDecisionCard

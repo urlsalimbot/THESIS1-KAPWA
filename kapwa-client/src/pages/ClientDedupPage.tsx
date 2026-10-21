@@ -627,15 +627,6 @@ function ExpandedRowPanel({
             }
           : undefined
       }
-      onRevertEligibility={
-        canRevert
-          ? async () => {
-              await api.post(`/client-dedup/operations/${operationId}/rows/${row.id}/eligibility/revert`);
-              toast.success(t('dedup.eligibilityReverted', 'Eligibility decision undone.'));
-              await onChanged();
-            }
-          : undefined
-      }
       onDecide={async (matchId: string, decision) => {
         const body =
           decision.kind === 'keep_row'
