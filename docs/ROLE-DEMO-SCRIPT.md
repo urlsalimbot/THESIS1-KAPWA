@@ -61,9 +61,11 @@ narrative thread in the film, and it only works if both sides are Bigte.
    optional analytics beat in Appendix B. Do not promise a screen that will not load.
 2. **Social workers are city-wide; do not film them as barangay-scoped.** MSWDO field
    staff are in scope for every barangay and hold no single primary assignment. The
-   social worker can filter the Cases list by *any* barangay and get rows. The one case
-   he cannot open is a **restricted** record without a legal basis — that is shot **2.9**,
-   and it now renders a visible refusal banner rather than an empty table.
+   social worker can filter the Cases list by *any* barangay and get rows. In the
+   seeded demo data Bigte (2 cases) and Poblacion (4 cases) both return rows; San
+   Lorenzo and Tigbe are valid filters with **no** seeded cases, so do not pick them
+   for shot 2.8. What restricts him is the sensitivity of the record — that is shot
+   **2.9**, and it renders redacted person details rather than an empty page.
 3. **Do not film the admin device wipe.** `POST /admin/wipe/device/:deviceId` is real and
    irreversible: it bumps the user's `tokenVersion` and clears their bound device, forcing
    re-authentication. The Admin Panel has a wipe screen. Keep it closed. There is no honest
@@ -83,6 +85,29 @@ narrative thread in the film, and it only works if both sides are Bigte.
   resolve on camera rather than cutting.
 - **If a beat cannot be shown for real, cut it and say why.** A movie that quietly fakes
   one beat is worthless as evidence for every other beat.
+
+### 0.5 Demo data verified in production (2026-10-21)
+
+Checked through the UI against `https://kapwa.software`, so these beats have real content
+on the night:
+
+- **Public:** 38 programs; 7 announcements (5 published, one pinned; 2 drafts).
+- **Admin:** 30 active accounts; Approval Pipeline Phase-In **13** · Implementation **200**
+  · Phase-Out **0**; Audit Log tab present under Admin Panel.
+- **Social worker (`worker1`):** 13 permitted barangays. Cases filter returns rows for
+  Bigte (2), Poblacion (4), Matictic (2), FVR (2), San Mateo (2), Partida (1), Minuyan (1);
+  San Lorenzo and Tigbe have none.
+- **Coordinator (Bigte):** 2 tracker cases, 1 pending referral (`RFRL-2026-0001`), access-card
+  history rows scoped to Bigte.
+- **Claimant (Pedro):** case `MSWD-2026-00001` — AICS, **Enrolled**, Bigte — with a filled
+  assessment, three service records (₱3,000 medical, ₱1,500 educational, ₱2,500 AICS),
+  **four pending documentary needs**, two uploaded documents (downloadable), and access card
+  `NORZ-AC-2026-0001` carrying eight ledger entries across all six categories. Consent is
+  active.
+- **Restricted record:** IRF `BLT-2026-0001` is redacted and legal-basis gated.
+- **Access-card print** now shows the barangay line (fixed 2026-10-21).
+
+Re-check nothing below the fold: if a take changes this data, re-run the beats in order.
 
 ---
 
@@ -148,8 +173,8 @@ what restricts him is the sensitivity of the record, not its location.*
 | 2.5 | Intake → consent checkbox | Click the consent checkbox. | "Consent is recorded at the moment of intake and is tracked in a consent ledger. It can be revoked later, and revocation immediately blocks the beneficiary's data." |
 | 2.6 | **Daily Tracker** | Open the tracker. | "The day's log — the worker's record of what was handled." |
 | 2.7 | **Cases** list | Open Cases. | "Here is something worth being precise about. Juan is a city-wide MSWDO officer, so his case list is not narrowed to one barangay. He is in scope for all thirteen, the way the office actually works." |
-| 2.8 | Cases → **barangay filter** → Bigte, then **San Lorenzo** | Set the filter to **Bigte**, then to **San Lorenzo**. Both return rows. | "Barangay is a lens he chooses, not a wall around him. Bigte, San Lorenzo, any of them — the records come back, because a field worker has to be able to follow a resident wherever they live." |
-| 2.9 | **DENIAL: a restricted record** | Open a record marked restricted without passing a legal basis. The **red refusal banner** appears under the topbar. | "What does restrict him is not geography — it is the sensitivity of the record. This one is restricted, and it needs a legal basis to open. The system tells him so, in words, on the screen. It does not just hand him an empty page and let him wonder." |
+| 2.8 | Cases → **barangay filter** → Bigte, then **Poblacion** | Set the filter to **Bigte**, then to **Poblacion**. Both return rows. | "Barangay is a lens he chooses, not a wall around him. Bigte, Poblacion, any of them — the records come back, because a field worker has to be able to follow a resident wherever they live." |
+| 2.9 | **DENIAL: a restricted record** | Open the incident report (IRF) *BLT-2026-0001*. The persons are redacted and both unlock controls stay inert until a legal basis and reference number are supplied. | "What does restrict him is not geography — it is the sensitivity of the record. This one is restricted. The names are withheld on the server, and the unlock control does not even engage until a legal basis is entered — so the data never reaches the browser at all." |
 | 2.10 | Case → **Request review** | Open a case, find the review control. | "Here is where admin and social worker genuinely diverge. Sending a case *up* for review is the social worker's move alone — not even the admin can do this one. The two roles are not a seniority ladder; they are different halves of the same workflow." |
 | 2.11 | **DENIAL: the approval is missing** | Point at where approval would be; it is not there for him. | "But he cannot *approve*. The approve control is absent, and the endpoint behind it rejects his role even if he reaches it by URL. No social worker can sign off their own case." |
 | 2.12 | **DENIAL: try an admin URL** | Type `/admin` into the address bar and press Enter. | "Let me prove the route guard is real and not just a hidden menu. I am typing the admin address directly." |
@@ -171,17 +196,19 @@ count of three after the VO finishes.
 > (`abac.guard.ts`, coordinator branch), which is why beat 3.11 shows a single barangay in
 > every row. Two roles, two different scoping models, both deliberate.
 >
-> **2.9 is now a real on-screen denial, not an ambiguous empty table.** The guard throws a
-> `ForbiddenException` carrying its reason, the API client broadcasts any 403 on
-> `kapwa:access:denied`, and `AccessDeniedBanner` renders it as a persistent red strip under
-> the topbar with a dismiss button. Say the sentence "access denied" in the VO and hold on
-> the banner — a viewer who sees the words knows the refusal is enforced, not a loading
-> failure.
+> **2.9 is the redaction proof, not a red banner.** The guard refuses the
+> restricted fields server-side: the IRF route renders *Person details redacted*
+> with "Provide legal basis to unlock", and both unlock controls stay disabled
+> until a legal basis and reference number are chosen. Verified in production on
+> 2026-10-21 against `BLT-2026-0001`. Do **not** promise a red "Access denied"
+> strip on this beat — the client never sends the forbidden request, which is the
+> stronger claim anyway. If you want the raw 403, show the API call in a
+> terminal cut labelled as such.
 >
-> **Pick the restricted record before you film.** Which routes carry
-> `@ResourceSensitivity('restricted')` is a one-line grep; confirm the chosen record
-> actually returns 403 without a `legalBasis` parameter before the shoot, or you will be
-> standing in front of a page that loads fine.
+> **Pick the record before you film.** Which routes carry
+> `@ResourceSensitivity('restricted')` is a one-line grep; confirm the chosen
+> record actually withholds data without a `legalBasis` parameter before the
+> shoot, or you will be standing in front of a page that loads fine.
 
 ---
 
@@ -203,7 +230,7 @@ inside the case lifecycle.*
 | 3.4 | **Referrals** → New | Open the referral form. | "The coordinator's main job is referrals — identifying a resident in need and referring them to MSWDO." |
 | 3.5 | Referral form | Fill it in at human pace; **do not submit**. | "They describe the client's situation and send it to the office. It is a referral *in*, which is the opposite direction from the inter-agency referrals MSWDO sends out." |
 | 3.6 | **Access Cards** | Open the access cards view; glance at the **Barangay** column but do not dwell. | "Coordinators can also see and log activity on the household access cards for their barangay. Notice this table has a barangay column too — I will come back to that." |
-| 3.7 | **Announcements** | Open Announcements. | "Coordinators can write announcements for their own barangay — they are a communication channel, not just a referral form." |
+| 3.7 | **Public announcements** | Open the public announcements page (same one from shot P.3). | "Coordinators read the announcements the office publishes — the barangay's channel to residents. Writing them is an office function, reserved to the admin and social workers." |
 | 3.8 | **DENIAL: try the cases list** | Type `/cases` into the address bar. | "Now, what a coordinator cannot do. Cases are the heart of the system. Let me try to open them." |
 | 3.9 | Bounced to `/coordinator/dashboard` | Hold. | "Bounced back. The coordinator has no case lifecycle access at all — no intake, no assessment, no approval, no interventions." |
 | 3.10 | **Referrals** list | Reopen Referrals; point at the **Barangay** column. | "Now the scoping, which the menu cannot show you. Every list a coordinator opens carries a barangay column." |
@@ -240,15 +267,15 @@ is reachable at all.*
 |---|---|---|---|
 | 4.1 | Logout → login `pedro.claimant@test.com` | Sign in. | "Finally, the person at the centre of all of this. Pedro Reyes is a tricycle driver in Bigte. He is a beneficiary of the program, and in this account he is also his own claimant — so this is the same person as the case we opened in shot 1.8." |
 | 4.2 | **My Dashboard** | Let it land. | "This is his dashboard. Everything on it is his." |
-| 4.3 | Dashboard — case status | Point at his case. | "He can see where his own case stands. He is never shown the internal assessment notes, the intervention record, or the fund source." |
+| 4.3 | Dashboard — case status | Point at his case card and the service history below it. | "He can see where his own case stands, and the services actually delivered to him. He is never shown the internal assessment notes or the fund source." |
 | 4.4 | **My Access Card** | Open it. | "His household access card, with the services rendered to his family over the year." |
 | 4.5 | Access card — service ledger | Scroll the six-category ledger slowly. | "Every service is logged against his card — case services, referrals, community services, seminars, payouts, and compliance. It is his record, in his hands." |
-| 4.6 | **Required documents** | Open the requirements section. | "Where MSWDO needs a document from him, he uploads it. He is not a passive recipient; he completes his part of the case." |
+| 4.6 | **Documentary Needs** | Scroll to *Documentary Needs*, then to *My Documents*. | "Where MSWDO needs a document from him, the requirement appears here with an upload control, and every file he submits is listed below with its own download. He is not a passive recipient; he completes his part of the case." |
 | 4.7 | **Consent** | Open his consent record. | "He can see his consent status and grant it himself. Consent is his to give and his to withdraw." |
 | 4.8 | **DENIAL: try the beneficiaries list** | Type `/beneficiaries` into the address bar. | "Now the most important limit of all. That was the master list of every resident MSWDO serves. Let me try to open it." |
 | 4.9 | Bounced to `/my-dashboard` | Hold it still. | "Bounced straight back to my own dashboard." |
 | 4.10 | Address bar — someone else's case | **Before this take**, copy a case URL from the address bar during shot 1.8 and paste it into the Presenter's note app. Paste it here and press Enter. | "And I cannot reach another person's record by typing their identifier, either. Every claimant action on this system is scoped to the beneficiary he represents." |
-| 4.11 | **The consent ledger closes the loop** | Return to his consent screen. | "This is the control that makes it real: if consent is revoked, his own data stops being served to him immediately. The system is built so that a resident's data follows the resident's consent." |
+| 4.11 | **The consent ledger closes the loop** | Return to his consent screen: active consent, the RA 10173 notice, and the recorded purpose/channel. | "This is the control that makes it real: consent is recorded with its purpose and channel, and once it is revoked — the office revokes it on his record — his data stops being served. The resident's data follows the resident's consent." |
 
 **Beat 4.11 is the emotional and technical climax.** It ties the Data Privacy Act theme
 from shot 2.5 back to the person it protects.
@@ -286,7 +313,7 @@ from a recording, the claim is unsupported.
 | Social worker can request review, not approve | 2.10, 2.11 | `cases.controller.ts:157-158` — `request-review` is social_worker **only** |
 | Social workers are scoped to the whole municipality | 2.7, 2.8 | `abac.guard.ts` social-worker branch — no geographic denial; `seed-accounts.ts` seeds all 13 barangays as permitted |
 | Restricted data needs a legal basis | 2.9 | `abac.guard.ts` — `restricted` sensitivity requires `legalBasis`, else `ForbiddenException` |
-| A refusal is visible, not a silent empty list | 2.9 | `api.ts` broadcasts 403 on `kapwa:access:denied`; `AccessDeniedBanner` renders it persistently |
+| A refusal is visible, not a silent empty list | 2.9 | restricted IRF fields render redacted ("Person details are protected") and the unlock controls stay inert until a legal basis is supplied — the request is never sent |
 | Routes reject the wrong role, not just the menu | 2.12, 2.13, 3.8, 4.8 | `ProtectedRoute.tsx:26` — redirect on role mismatch |
 | Coordinator has no case lifecycle access | 3.8, 3.9 | `routes.tsx` — no `/cases` route for `coordinator` |
 | Coordinator's lists are auto-scoped to one barangay | 3.10, 3.11 | `abac.guard.ts:62-64` — guard injects the assigned barangay when none is supplied |
