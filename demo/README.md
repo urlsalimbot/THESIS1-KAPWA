@@ -38,3 +38,28 @@ existing clients retained rather than duplicated.
 If the database was seeded less than a full run ago (no Dela Cruz/Santos/Reyes),
 the three "existing client" rows become new clients instead — the duplicate pair
 and the rest behave the same.
+
+---
+
+## The 80-row file (`dedup-demo-80.xlsx`)
+
+Same sheet (`Barangay list`) and the same six headers, so **Define** pre-fills
+with no remapping. **80 data rows** plus the header row. Birthdays are text
+(`YYYY-MM-DD`), as in the 15-row file.
+
+| Rows | Content | Expected in review |
+|---|---|---|
+| 2–9 | Eight exact matches against seeded production clients — Castillo, Dimagiba, Garcia, Mendoza, Villanueva, Ramos, Santos, Reyes — with their real birthdays and barangays | **KAPWA matches** → "same person" records the service on the existing client |
+| 10 | One deliberate near match: `Fernandez, Lisa` (production spells it **Liza**), same birthday and barangay | Depending on the matcher's threshold this appears as a KAPWA match or a new client — a good beat for "the system surfaces a probable match, a human decides" |
+| 11–22 | Six people entered twice: middle name vs initial, one birthday off by a day, and two spelling variants (`Quimson`/`Quimzon`, `Jocelyn`/`Joceline`) | **6 · Duplicates in this list** — one row per pair is set aside |
+| 23–81 | 59 new clients across all 13 barangays, 1950–2004 birth years | **No match / New client** → created on finalize |
+
+**Numbers to expect:** about **9 KAPWA matches** (8 guaranteed exact + the near
+match), **6 duplicate pairs**, and **59 new clients**.
+
+**Before you finalize:** uploading and reviewing creates no client records.
+**Finalizing creates the 59 new clients** and updates the eight matched ones —
+that is the intended demonstration, but do not finalize if you want to keep the
+production client list exactly as it is. After finalize, the confirmation card
+shows the counts and the downloadable priority list (`CD-YYYY-MMM-NNN.xlsx`).
+
