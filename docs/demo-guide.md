@@ -49,7 +49,7 @@ Sign in as **admin@mswdo.test / admin123**. The admin lands on the Admin Panel.
 - **Completing the assessment is the step's Lock button** — it saves the fields, seals the step
   and moves the case from Enrolled to Assessed. There is no separate “Complete Assessment”
   button; an FRVA or SWDI score is required before the Lock opens.
-- **Approvals** — the pipeline: Phase-In (13 cases), Implementation (200), Phase-Out (0).
+- **Approvals** — the pipeline: Phase-In (13 cases), Implementation (1), Phase-Out (0).
   Approving a case is admin-only.
 - **Announcements** — 5 published (one pinned) and 2 drafts. The published ones are what the
   public saw in the prologue.

@@ -63,8 +63,7 @@ narrative thread in the film, and it only works if both sides are Bigte.
    staff are in scope for every barangay and hold no single primary assignment. The
    social worker can filter the Cases list by *any* barangay and get rows. In the
    seeded demo data Bigte (2 cases) and Poblacion (4 cases) both return rows; San
-   Lorenzo and Tigbe are valid filters with **no** seeded cases, so do not pick them
-   for shot 2.8. What restricts him is the sensitivity of the record — that is shot
+   Lorenzo is a valid filter with **no** seeded cases, so do not pick it for shot 2.8. What restricts him is the sensitivity of the record — that is shot
    **2.9**, and it renders redacted person details rather than an empty page.
 3. **Do not film the admin device wipe.** `POST /admin/wipe/device/:deviceId` is real and
    irreversible: it bumps the user's `tokenVersion` and clears their bound device, forcing
@@ -92,11 +91,11 @@ Checked through the UI against `https://kapwa.software`, so these beats have rea
 on the night:
 
 - **Public:** 38 programs; 7 announcements (5 published, one pinned; 2 drafts).
-- **Admin:** 30 active accounts; Approval Pipeline Phase-In **13** · Implementation **200**
+- **Admin:** 30 active accounts; Approval Pipeline Phase-In **13** · Implementation **1**
   · Phase-Out **0**; Audit Log tab present under Admin Panel.
 - **Social worker (`worker1`):** 13 permitted barangays. Cases filter returns rows for
-  Bigte (2), Poblacion (4), Matictic (2), FVR (2), San Mateo (2), Partida (1), Minuyan (1);
-  San Lorenzo and Tigbe have none.
+  Bigte (2), Poblacion (4), Matictic (2), FVR (2), San Mateo (2), Partida (1), Minuyan (1), Tigbe (1);
+  San Lorenzo has none.
 - **Coordinator (Bigte):** 2 tracker cases, 1 pending referral (`RFRL-2026-0001`), access-card
   history rows scoped to Bigte.
 - **Claimant (Pedro):** case `MSWD-2026-00001` — AICS, **Enrolled**, Bigte — with a filled

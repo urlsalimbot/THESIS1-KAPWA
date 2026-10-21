@@ -22,8 +22,7 @@
  * Idempotent: each block checks first and skips what is already there, so a
  * second run is a no-op.
  *
- * Prerequisites: `npm run seed` + `npm run seed:demo` (+ `seed:analytics` before
- * this, or clustering refuses: it needs 20 households). The API must be running.
+ * Prerequisites: `npm run seed` + `npm run seed:demo`. The API must be running.
  *
  * Run: npm run seed:extras
  */
@@ -250,25 +249,6 @@ async function seedFourPs(token: string): Promise<void> {
   console.log(`4Ps: ${cases.length} case(s) with compliance + ${scheduled} tranche(s) scheduled, ${met} condition(s) met`);
 }
 
-// --- Analytics: a real clustering run instead of hand-written clusters ------
-
-async function seedClustering(token: string): Promise<void> {
-  if (await exists(`SELECT 1 FROM analysis_runs WHERE status = 'completed'`)) {
-    return console.log('clustering: a completed run already exists');
-  }
-  const r = await call(token, 'POST', '/analytics/clustering/runs', { kRange: [2, 4] }, 'clustering');
-  if (!ok(r)) {
-    // The one refusal worth explaining: clustering needs enough households, and
-    // only the analytics seed creates them.
-    const hint = r.json?.message?.code === 'insufficient_data'
-      ? ` (needs ${r.json.message.required} households, has ${r.json.message.actual} — run npm run seed:analytics first)`
-      : '';
-    return console.log(`clustering: not seeded — API said ${r.status}${hint}`);
-  }
-  const clusters = (await AppDataSource.query('SELECT count(*)::int AS n FROM analysis_run_clusters WHERE run_id = $1', [r.json.id]))[0].n;
-  console.log(`clustering: ${clusters} cluster(s) over ${r.json.metrics?.dataset_size ?? '?'} households`);
-}
-
 // --- Client dedup: one finished run, one waiting for the operator -----------
 
 const DEDUP_HEADER = 'Last Name,First Name,Middle Name,Birthday,Barangay,Remarks';
@@ -375,7 +355,6 @@ async function main(): Promise<void> {
     await seedChat(tokens);
     await seedTeamInvites(tokens);
     await seedFourPs(tokens.admin);
-    await seedClustering(tokens.admin);
     await seedDedup(tokens.admin);
   } finally {
     await AppDataSource.destroy();

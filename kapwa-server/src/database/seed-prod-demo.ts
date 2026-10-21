@@ -1,7 +1,7 @@
 /**
  * Production demo roster seed — the exact MSWDO shape used by the demo
- * deployment (deliberately NOT loaded with the fabricated seed-demo or
- * seed-analytics datasets):
+ * deployment (deliberately NOT loaded with the fabricated seed-demo
+ * dataset):
  *
  *   1 admin, 5 social workers (city-wide MSWDO scope), 13 barangay
  *   coordinators (one per barangay, primary assignment), 5 claimants, each
