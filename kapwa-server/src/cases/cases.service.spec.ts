@@ -794,7 +794,7 @@ describe('CasesService', () => {
     // isolate the step-lock rule and nothing else.
     const assessed = (extra: Record<string, unknown> = {}) => ({
       id: '1', status: CaseStatus.ASSESSED, controlNo: 'KAPWA-2026-00001',
-      frvaScore: 62, beneficiaryId: null, assignedWorkerId: null, updatedAt: new Date(),
+      beneficiaryId: null, assignedWorkerId: null, updatedAt: new Date(),
       ...extra,
     } as unknown as Case);
 
@@ -904,16 +904,6 @@ describe('CasesService', () => {
       stepLocksRepoMock.find.mockResolvedValue([]);
 
       await expect(service.transition('1', CaseStatus.IN_REVIEW)).rejects.toThrow(/Lock every step/);
-    });
-
-    // The FRVA/SWDI complaint is cheaper and more specific, so it must still be
-    // the one a worker with a half-filled form sees.
-    it('leaves the FRVA/SWDI complaint in front of the lock complaint', async () => {
-      repoMock.findOne.mockResolvedValue(assessed({ frvaScore: null, swdiScore: null }));
-      stepLocksRepoMock.find.mockResolvedValue([]);
-
-      await expect(service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker' }))
-        .rejects.toThrow('FRVA or SWDI score must be provided before review');
     });
 
     /**

@@ -298,7 +298,7 @@ describe('CaseActionBar', () => {
 
   // Two edges are deliberately absent, and this is the test that keeps it that
   // way. `StepAssessment` owns `enrolled -> assessed` (sealing the step performs
-  // it, gated on the FRVA/SWDI score) and `StepTransition` owns
+  // it) and `StepTransition` owns
   // `active -> transitioning` (it sits beside the transition plan). Rendering
   // either here would mean a second, *ungated* button for the same transition —
   // the bypass shape Override 2 is about — or copying three server preconditions

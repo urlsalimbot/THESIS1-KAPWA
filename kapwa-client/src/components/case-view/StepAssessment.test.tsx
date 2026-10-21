@@ -22,7 +22,7 @@ function renderAssessment(
       caseId="c1"
       caseData={{ id: 'c1', status: 'enrolled', ...caseData }}
       assessment={{
-        problemsPresented: '', socialWorkerAssessment: '', clientCategory: '', frvaScore: null, swdiScore: null,
+        problemsPresented: '', socialWorkerAssessment: '', clientCategory: '',
         ...assessment,
       }}
       onAssessmentChange={() => {}}
@@ -44,17 +44,16 @@ function filledCaseData(over: Record<string, unknown> = {}) {
   };
 }
 
-/** The narrative fields and a DSWD tool score — what "complete" now means. */
+/** The narrative fields that complete the assessment. */
 const doneAssessment = {
   problemsPresented: 'Poverty',
   socialWorkerAssessment: 'Needs financial aid',
   clientCategory: 'Child and Youth',
-  frvaScore: 45,
 };
 
 describe('StepAssessment — completion is the seal, not a button', () => {
   it('never renders a Complete Assessment control, even when the step is complete', () => {
-    renderAssessment(filledCaseData({ frvaScore: 45 }), doneAssessment);
+    renderAssessment(filledCaseData(), doneAssessment);
 
     expect(screen.queryByRole('button', { name: /Complete Assessment/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /Proceed to/i })).toBeNull();
@@ -65,20 +64,6 @@ describe('StepAssessment — completion is the seal, not a button', () => {
 
     expect(screen.queryByRole('button', { name: /Save Assessment/ })).toBeNull();
     expect(screen.getByRole('button', { name: /^lock$/i })).toBeTruthy();
-  });
-
-  it('names the missing score instead of hiding the requirement', () => {
-    renderAssessment(filledCaseData(), {
-      problemsPresented: 'Poverty', socialWorkerAssessment: 'Needs financial aid', clientCategory: 'Child and Youth',
-    });
-
-    expect(screen.getByText(/Add an FRVA or SWDI score/)).toBeTruthy();
-  });
-
-  it('drops the score hint once a score exists', () => {
-    renderAssessment(filledCaseData({ frvaScore: 45 }), doneAssessment);
-
-    expect(screen.queryByText(/Add an FRVA or SWDI score/)).toBeNull();
   });
 
   it('marks the assessment completed once the case is assessed', () => {
@@ -110,17 +95,9 @@ describe('StepAssessment — sealing step 1', () => {
     expect(screen.getByText(/Complete this step before sealing it/)).toBeTruthy();
   });
 
-  it('disables Lock when the fields are complete but no score is recorded', () => {
-    renderAssessment(filledCaseData(), {
-      problemsPresented: 'Poverty', socialWorkerAssessment: 'Needs financial aid', clientCategory: 'Child and Youth',
-    });
-
-    expect(screen.getByRole('button', { name: /^lock$/i })).toBeDisabled();
-  });
-
-  it('enables Lock once the fields and a score are recorded', () => {
+  it('enables Lock once the narrative fields are complete', () => {
     // The bar reads the *draft*, which is what makes one press save and seal.
-    renderAssessment(filledCaseData({ frvaScore: 45 }), doneAssessment);
+    renderAssessment(filledCaseData(), doneAssessment);
 
     expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
     expect(screen.queryByText(/Complete this step before sealing it/)).toBeNull();
@@ -166,22 +143,18 @@ describe('StepAssessment — card layout', () => {
     return node;
   };
 
-  it('keeps the DSWD tools inside the assessment card rather than a card of their own', () => {
+  it('keeps the remaining assessment fields inside the single card', () => {
     renderAssessment(filledCaseData(), doneAssessment);
 
     const cardTitle = screen.getByRole('heading', { name: 'Assessment & Diagnosis' });
-    const toolsTitle = screen.getByRole('heading', { name: 'DSWD Assessment Tools' });
     const lock = screen.getByRole('button', { name: /^lock$/i });
-
     const root = commonAncestor(cardTitle, lock);
     expect(root).not.toBeNull();
     const card = childOf(root as Element, cardTitle);
     expect(card).not.toBeNull();
-    expect(card?.contains(toolsTitle)).toBe(true);
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(1);
-
-    expect(cardTitle.tagName).toBe('H3');
-    expect(toolsTitle.tagName).toBe('H4');
+    expect(card?.contains(screen.getByLabelText('Family Dialogue Notes'))).toBe(true);
+    expect(screen.queryByLabelText(/FRVA|SWDI/)).toBeNull();
 
     const category = screen.getByText('Client Category *');
     const problems = screen.getByText('Problem/s Presented *');

@@ -119,7 +119,7 @@ export const STEP_LABEL_KEYS: Record<string, { key: string; fallback: string }> 
 };
 
 const STEP_DESCRIPTIONS: Record<string, { key: string; fallback: string }> = {
-  assessment: { key: 'caseView.stepper.assessmentDesc', fallback: 'Interview and FRVA/SWDI analysis' },
+  assessment: { key: 'caseView.stepper.assessmentDesc', fallback: 'Interview and assessment analysis' },
   enrollments: { key: 'caseView.stepper.enrollmentsDesc', fallback: 'Enroll the case in the MSWDO programs it needs; programs selected here anchor interventions' },
   interventions: { key: 'caseView.stepper.implementHipDesc', fallback: 'Select intervention; client documents; COE/PCV release' },
   referrals: { key: 'caseView.stepper.serviceDeliveryDesc', fallback: 'Referral needed: yes or no' },
@@ -271,12 +271,10 @@ export function stepperStepDone(
   if (!statusAtLeast(caseData, STEP_FLOORS[key] ?? 0)) return false;
   switch (key) {
     case 'assessment':
-      // Sealing step 1 completes the assessment, and the server refuses the
-      // following lifecycle hop without a DSWD tool score — so the seal (and the
-      // stepper) must ask for the same thing.
+      // The assessment is done when its four narrative fields are present;
+      // sealing step 1 is what completes it.
       return !!caseData?.problemsPresented && !!caseData?.socialWorkerAssessment
-        && !!caseData?.clientCategory && !!caseData?.caseCategory
-        && (Number(caseData?.frvaScore) > 0 || Number(caseData?.swdiScore) > 0);
+        && !!caseData?.clientCategory && !!caseData?.caseCategory;
     // Program Enrollments: at least one enrollment, or the recorded
     // "no program needed" decision; when enrolled, the enrolled programs'
     // documentary requirements must already be met.

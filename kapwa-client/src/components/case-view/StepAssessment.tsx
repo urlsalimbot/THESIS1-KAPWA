@@ -2,7 +2,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { useSWRConfig } from 'swr';
 import { Separator } from '@/components/ui/separator';
 import { CLIENT_CATEGORIES_V2, CASE_CATEGORY_GROUPS } from '@/lib/constants';
-import { ClipboardList, Lock, Stethoscope } from 'lucide-react';
+import { Lock, Stethoscope } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { StepLockBar, type StepLock } from './StepLockBar';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,7 +10,6 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Input } from '@/components/ui/input';
 
 interface StepAssessmentProps {
   caseId: string;
@@ -38,22 +37,15 @@ export function StepAssessment({
 }: StepAssessmentProps) {
   const { t } = useTranslation();
   const { mutate } = useSWRConfig();
-  // The step is done when the narrative fields and a DSWD tool score exist.
-  // Sealing it (the bar below) is what completes the assessment and advances
-  // the case, so the score has to be part of the seal's own gate too.
-  const assessmentDone = !!caseData?.problemsPresented && !!caseData?.socialWorkerAssessment && !!caseData?.clientCategory && !!caseData?.caseCategory;
   // The category is editable only while the case is `enrolled`: it defines the
   // step template, and the server refuses a change after that (audit 1.4).
   const categoryLocked = !!caseData?.status && caseData.status !== 'enrolled';
-  const hasScore = !!(caseData?.frvaScore || caseData?.swdiScore);
   return (
     <div className="space-y-4">
-      {/* One card. The narrative and the tools it is scored with belong to the
-          same assessment, so the DSWD tools are a section inside this card
-          rather than a second card beside it. The category takes its own column
-          beside the two narratives: a worker picks the client's category with
-          the problems and the assessment it rests on still in view, instead of
-          reading them off a list that runs past them. */}
+      {/* One card: the category takes its own column beside the two narratives,
+          so a worker picks the client's category with the problems and the
+          assessment it rests on still in view, instead of reading them off a
+          list that runs past them. */}
       <div className="rounded-lg border bg-card">
         <div className="px-4 py-3 flex items-center gap-2">
           <Stethoscope size={16} className="text-primary" />
@@ -152,56 +144,19 @@ export function StepAssessment({
 
           <Separator />
 
-          {/* The tools the narrative is scored with. `h4` — one level below the
-              card's own `h3`, like the intervention entries in step 2 — so the
-              group is findable by name without claiming to be a card of its
-              own, which is what put it out here in the first place. */}
-          <div>
-            <div className="flex items-center gap-2">
-              <ClipboardList size={14} className="text-primary" />
-              <h4 className="text-sm font-semibold">{t('caseView.assessment.dswdTools', 'DSWD Assessment Tools')}</h4>
-            </div>
-            <div className="mt-3 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label htmlFor="frva-score" className="text-sm font-medium">{t('caseView.assessment.frvaScore', 'FRVA Score (0-100)')}</label>
-                  <Input id="frva-score" type="number" min="0" max="100"
-                    value={assessment.frvaScore || ''}
-                    onChange={e => onAssessmentChange(a => ({ ...a, frvaScore: e.target.value ? Number(e.target.value) : null }))}
-                    placeholder={t('caseView.assessment.frvaPlaceholder', 'Family Risk & Vulnerability Assessment')} disabled={readOnly} />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="swdi-score" className="text-sm font-medium">{t('caseView.assessment.swdiScore', 'SWDI Score (0-100)')}</label>
-                  <Input id="swdi-score" type="number" min="0" max="100"
-                    value={assessment.swdiScore || ''}
-                    onChange={e => onAssessmentChange(a => ({ ...a, swdiScore: e.target.value ? Number(e.target.value) : null }))}
-                    placeholder={t('caseView.assessment.swdiPlaceholder', 'Social Welfare Development Index')} disabled={readOnly} />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="family-dialogue-notes" className="text-sm font-medium">{t('caseView.assessment.familyDialogueNotes', 'Family Dialogue Notes')}</label>
-                <Textarea
-                  id="family-dialogue-notes"
-                  className="min-h-[80px]"
-                  value={assessment.familyDialogueNotes || ''}
-                  onChange={e => onAssessmentChange(a => ({ ...a, familyDialogueNotes: e.target.value }))}
-                  placeholder={t('caseView.assessment.familyDialoguePlaceholder', 'Notes from family dialogue session...')} disabled={readOnly} />
-              </div>
-            </div>
+          <div className="space-y-1.5">
+            <label htmlFor="family-dialogue-notes" className="text-sm font-medium">{t('caseView.assessment.familyDialogueNotes', 'Family Dialogue Notes')}</label>
+            <Textarea
+              id="family-dialogue-notes"
+              className="min-h-[80px]"
+              value={assessment.familyDialogueNotes || ''}
+              onChange={e => onAssessmentChange(a => ({ ...a, familyDialogueNotes: e.target.value }))}
+              placeholder={t('caseView.assessment.familyDialoguePlaceholder', 'Notes from family dialogue session...')} disabled={readOnly} />
           </div>
 
           {/* No Save or Complete button here: the seal bar below is this
               step's submit. Sealing the Assessment step saves the fields, locks
-              the step and advances the case to Assessed, so the score that the
-              next lifecycle hop needs is named before the worker reaches Lock. */}
-          {!readOnly && assessmentDone && !hasScore && caseData?.status === 'enrolled' && (
-            <>
-              <Separator />
-              <span className="text-xs text-muted-foreground">
-                {t('caseView.assessment.scoreRequiredHint', 'Add an FRVA or SWDI score above to complete the assessment.')}
-              </span>
-            </>
-          )}
+              the step and advances the case to Assessed. */}
           {caseData?.status === 'assessed' && (
             <span className="text-xs text-success font-medium">{t('caseView.assessment.assessmentCompleted', '✓ Assessment completed')}</span>
           )}

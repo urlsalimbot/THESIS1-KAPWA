@@ -480,14 +480,10 @@ export class CasesService {
     if (c.status === CaseStatus.ENROLLED && newStatus === CaseStatus.ASSESSED && (!c.problemsPresented || !c.socialWorkerAssessment || !c.clientCategory || !c.caseCategory)) {
       throw new BadRequestException('Assessment must be completed before transitioning to assessed');
     }
-    if (c.status === CaseStatus.ASSESSED && newStatus === CaseStatus.IN_REVIEW && (!c.frvaScore && !c.swdiScore)) {
-      throw new BadRequestException('FRVA or SWDI score must be provided before review');
-    }
     // A case cannot be flagged for admin review until the worker has sealed
     // every step *that is due at this lifecycle position*. This edge is the
-    // hand-off — CASE_FSM_ROLES gives it to the social worker — and it was gated
-    // only on an FRVA/SWDI score, so a worker could flag a case with no
-    // intervention recorded at all.
+    // hand-off — CASE_FSM_ROLES gives it to the social worker — so a flag with
+    // no intervention recorded at all would hand over an unfinished case.
     //
     // "Due", not all five: at `assessed` the Phase-Out steps are floored at
     // `active` and `transitioning`, so their Lock buttons are disabled and the
@@ -498,9 +494,8 @@ export class CasesService {
     // seal service's done-predicate floors each step with, so the steps this
     // gate names are exactly the steps that can be sealed here.
     //
-    // Sits after the FRVA/SWDI check so the cheaper, more specific complaint
-    // still wins, and reads `stepLocksRepo` directly rather than
-    // `CaseStepLocksService`, which injects this service and would be a cycle.
+    // Reads `stepLocksRepo` directly rather than `CaseStepLocksService`, which
+    // injects this service and would be a cycle.
     //
     // The guard keys on the role being *admin*, never on a role being present:
     // `canTransition` short-circuits admin to true, and an admin that could not

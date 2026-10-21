@@ -34,8 +34,8 @@ type Copy = { key: string; fallback: string };
 
 /**
  * An edge a step card already performs, gated on data only that card can see —
- * sealing `StepAssessment` (its Lock, after the FRVA/SWDI score) advances
- * `enrolled -> assessed`; `StepTransition` on the saved transition plan. Recorded
+ * sealing `StepAssessment` (its Lock) advances `enrolled -> assessed`;
+ * `StepTransition` on the saved transition plan. Recorded
  * so the map says "this edge exists, and not here"; carries no copy, because
  * nothing renders it.
  *
@@ -93,7 +93,7 @@ type CaseHop = SuppressedEdge | RenderedHop;
  *
  * Named hops rather than one generic "Advance": a control whose effect depends on
  * state the user cannot see is exactly the accident this bar replaces, and the
- * server's validation rules (assessment fields, FRVA/SWDI, the all-locked gate,
+ * server's validation rules (assessment fields, the all-locked gate,
  * activation documents, self-reliance plan) make those effects materially
  * different.
  *
@@ -105,8 +105,7 @@ type CaseHop = SuppressedEdge | RenderedHop;
  */
 const FORWARD_HOPS: Partial<Record<CaseStatus, CaseHop>> = {
   // `StepAssessment` owns this hop: sealing the step (the card's Lock) performs
-  // it once the narrative fields and an FRVA/SWDI score exist. The bar renders
-  // nothing here.
+  // it once the narrative fields exist. The bar renders nothing here.
   enrolled: { to: 'assessed', path: '/cases/%s/status', ownedByStepCard: true },
   assessed: {
     to: 'in_review',

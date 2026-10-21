@@ -75,8 +75,6 @@ interface StepDoneCase {
   problemsPresented?: string | null;
   socialWorkerAssessment?: string | null;
   clientCategory?: string | null;
-  frvaScore?: number | null;
-  swdiScore?: number | null;
   selfRelianceLevel?: number | null;
   sustainabilityPlan?: string | null;
   closureOutcome?: string | null;
@@ -231,16 +229,6 @@ export class CaseStepLocksService {
       const required = Object.keys(CASE_STATUS_INDEX).find((k) => CASE_STATUS_INDEX[k] === floor);
       return `"${label}" cannot be sealed yet — it opens once the case reaches ${required} (the case is ${c.status}).`;
     }
-    // The score is what the next lifecycle hop needs; name it rather than
-    // sending the worker back to a step that looks complete.
-    if (stepKey === 'assessment') {
-      const hasFields = !!c.problemsPresented && !!c.socialWorkerAssessment
-        && !!c.clientCategory && !!c.caseCategory;
-      const hasScore = Number(c.frvaScore) > 0 || Number(c.swdiScore) > 0;
-      if (hasFields && !hasScore) {
-        return `"${label}" is not complete yet — add an FRVA or SWDI score before sealing it.`;
-      }
-    }
     // The two documentary gates name the missing keys — "not complete yet"
     // sends a doc-blocked worker back to work they cannot identify (audit:
     // the deactivated-program case left them with no actionable error at all).
@@ -345,13 +333,7 @@ export class CaseStepLocksService {
     switch (key) {
       case 'assessment':
         return !!caseData.problemsPresented && !!caseData.socialWorkerAssessment
-          && !!caseData.clientCategory && !!caseData.caseCategory
-          // Sealing this step now performs enrolled -> assessed, and the FSM
-          // refuses assessed -> in_review without a DSWD tool score. Requiring
-          // it here is what keeps the seal from advancing a case the next step
-          // cannot finish. (The old "Complete Assessment" button had the same
-          // gate.)
-          && (Number(caseData.frvaScore) > 0 || Number(caseData.swdiScore) > 0);
+          && !!caseData.clientCategory && !!caseData.caseCategory;
       // Program Enrollments: at least one enrollment, or the explicit recorded
       // "no program needed" decision (spec §3.3); when enrolled, the enrolled
       // programs' documentary requirements must already be met.
@@ -445,8 +427,6 @@ export class CaseStepLocksService {
         problemsPresented: c.problemsPresented,
         socialWorkerAssessment: c.socialWorkerAssessment,
         clientCategory: c.clientCategory,
-        frvaScore: c.frvaScore,
-        swdiScore: c.swdiScore,
         selfRelianceLevel: c.selfRelianceLevel,
         sustainabilityPlan: c.sustainabilityPlan,
         closureOutcome: c.closureOutcome,

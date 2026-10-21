@@ -46,13 +46,6 @@ import { StepDiscernment, StepProtectionOrder, StepSoloParent, StepAdoption } fr
 import { StepCourtHearings } from '@/components/case-view/StepCourtHearings';
 import { InterAgencyReferral } from '@/components/referrals/referral-utils';
 
-/** Decimal columns arrive from the API as strings ("78.00"); coerce or drop. */
-function toNumberOrUndefined(v: unknown): number | undefined {
-  if (v === '' || v === null || v === undefined) return undefined;
-  const n = typeof v === 'number' ? v : Number(v);
-  return Number.isFinite(n) ? n : undefined;
-}
-
 // Server field name -> where that field lives in the assessment card. The card
 // sits well below the fold, so a rejected save has to pull the worker to the
 // first field the API actually complained about.
@@ -61,8 +54,6 @@ const ASSESSMENT_FIELD_TARGETS: Record<string, string> = {
   socialWorkerAssessment: '#social-worker-assessment',
   clientCategory: 'input[name="clientCategory"]',
   caseCategory: '#case-category',
-  frvaScore: '[placeholder="Family Risk & Vulnerability Assessment"]',
-  swdiScore: '[placeholder="Social Welfare Development Index"]',
 };
 
 /** Scroll the first rejected assessment field into view and focus it. */
@@ -443,8 +434,6 @@ export function CaseViewPage() {
     socialWorkerAssessment: caseData?.socialWorkerAssessment || '',
     clientCategory: caseData?.clientCategory || '',
     caseCategory: caseData?.caseCategory || '',
-    frvaScore: caseData?.frvaScore || null,
-    swdiScore: caseData?.swdiScore || null,
     familyDialogueNotes: caseData?.familyDialogueNotes || '',
     natureOfService: caseData?.natureOfService || ([] as string[]),
     financialSubsidies: caseData?.financialSubsidies || ({} as Record<string, unknown>),
@@ -488,10 +477,6 @@ export function CaseViewPage() {
         amountAssistance: typeof assessment.amountAssistance === 'string'
           ? (assessment.amountAssistance === '' ? undefined : parseFloat(assessment.amountAssistance.replace(/,/g, '')))
           : assessment.amountAssistance,
-        // Decimal columns come back from the API as strings ("78.00"); the
-        // schema requires numbers, so coerce before sending.
-        frvaScore: toNumberOrUndefined(assessment.frvaScore),
-        swdiScore: toNumberOrUndefined(assessment.swdiScore),
         familyDialogueNotes: assessment.familyDialogueNotes || undefined,
       });
       assessmentDirtyRef.current = false;
@@ -515,8 +500,6 @@ export function CaseViewPage() {
         socialWorkerAssessment: caseData.socialWorkerAssessment || '',
         clientCategory: caseData.clientCategory || '',
         caseCategory: caseData.caseCategory || '',
-        frvaScore: caseData.frvaScore || null,
-        swdiScore: caseData.swdiScore || null,
         familyDialogueNotes: caseData.familyDialogueNotes || '',
         natureOfService: (caseData.natureOfService || []) as string[],
         financialSubsidies: (caseData.financialSubsidies || {}) as Record<string, unknown>,

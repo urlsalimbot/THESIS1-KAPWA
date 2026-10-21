@@ -150,14 +150,13 @@ describe('CaseStepLocksService', () => {
     firstName: 'Lorna', middleName: 'B.', lastName: 'Santos', nameExtension: null,
   } as unknown as User;
 
-  // The assessment step is done only when problemsPresented,
-  // socialWorkerAssessment, clientCategory, caseCategory and an FRVA/SWDI score
-  // are all set, so an empty case is the cheapest way to make a step not-done.
+  // The assessment step is done when problemsPresented, socialWorkerAssessment,
+  // clientCategory and caseCategory are all set, so an empty case is the
+  // cheapest way to make a step not-done.
   const notDoneCase = { id: 'c1', status: 'enrolled' } as unknown as Case;
   const doneCase = {
     id: 'c1', status: 'enrolled',
     problemsPresented: 'a', clientCategory: 'b', socialWorkerAssessment: 'c', caseCategory: 'd',
-    frvaScore: 45,
   } as unknown as Case;
 
   const adminUser = {
@@ -404,14 +403,6 @@ describe('CaseStepLocksService', () => {
     expect(casesService.transition).not.toHaveBeenCalled();
   });
 
-  it('refuses to seal the assessment without a DSWD tool score', async () => {
-    findById.mockResolvedValue({
-      ...doneCase, frvaScore: null, swdiScore: null,
-    } as unknown as Case);
-
-    await expect(service.lock('c1', 'assessment', swUser)).rejects.toThrow(/FRVA or SWDI score/);
-    expect(lockRepo.insertQb.execute).not.toHaveBeenCalled();
-  });
 
   it('is idempotent when the same step is locked twice', async () => {
     findById.mockResolvedValue(doneCase);

@@ -86,8 +86,6 @@ const ALLOWED_IDENTICAL = new Set([
   'bulkActions.progress',
   'cards.accessCardTitle',
   'cards.barangay',
-  'caseView.assessment.frvaPlaceholder',
-  'caseView.assessment.swdiPlaceholder',
   'caseView.closure.pettyCashVoucher',
   'caseView.implement.fundSource.dswd',
   'caseView.implement.viewCertificate',
