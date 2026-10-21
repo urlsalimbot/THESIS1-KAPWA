@@ -163,11 +163,9 @@ const en = {
     },
     "approving": "Approving...",
     "assessment": {
-    "queuedOffline": "Assessment queued — will sync when online.",
       "assessmentCompleted": "✓ Assessment completed",
       "assessmentDiagnosis": "Assessment & Diagnosis",
       "clientCategory": "Client Category *",
-      "completeAssessment": "✓ Complete Assessment → Proceed to Intervention",
       "dswdTools": "DSWD Assessment Tools",
       "familyDialogueNotes": "Family Dialogue Notes",
       "familyDialoguePlaceholder": "Notes from family dialogue session...",

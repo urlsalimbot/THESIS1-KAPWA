@@ -33,10 +33,11 @@ type CaseStatus =
 type Copy = { key: string; fallback: string };
 
 /**
- * An edge a step card already offers, gated on data only that card can see —
- * `StepAssessment` on the FRVA/SWDI score, `StepTransition` on the saved
- * transition plan. Recorded so the map says "this edge exists, and not here";
- * carries no copy, because nothing renders it.
+ * An edge a step card already performs, gated on data only that card can see —
+ * sealing `StepAssessment` (its Lock, after the FRVA/SWDI score) advances
+ * `enrolled -> assessed`; `StepTransition` on the saved transition plan. Recorded
+ * so the map says "this edge exists, and not here"; carries no copy, because
+ * nothing renders it.
  *
  * It is not "because two buttons are untidy". Offering them here would mean
  * either shipping a control whose precondition the client cannot check (the
@@ -103,8 +104,9 @@ type CaseHop = SuppressedEdge | RenderedHop;
  * hop is caught as behaviour, which is the failure that actually matters.
  */
 const FORWARD_HOPS: Partial<Record<CaseStatus, CaseHop>> = {
-  // `StepAssessment`'s "Complete Assessment": the card holding the fields, and
-  // it already withholds the control until an FRVA/SWDI score exists.
+  // `StepAssessment` owns this hop: sealing the step (the card's Lock) performs
+  // it once the narrative fields and an FRVA/SWDI score exist. The bar renders
+  // nothing here.
   enrolled: { to: 'assessed', path: '/cases/%s/status', ownedByStepCard: true },
   assessed: {
     to: 'in_review',

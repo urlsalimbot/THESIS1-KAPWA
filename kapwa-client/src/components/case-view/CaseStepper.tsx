@@ -271,8 +271,12 @@ export function stepperStepDone(
   if (!statusAtLeast(caseData, STEP_FLOORS[key] ?? 0)) return false;
   switch (key) {
     case 'assessment':
+      // Sealing step 1 completes the assessment, and the server refuses the
+      // following lifecycle hop without a DSWD tool score — so the seal (and the
+      // stepper) must ask for the same thing.
       return !!caseData?.problemsPresented && !!caseData?.socialWorkerAssessment
-        && !!caseData?.clientCategory && !!caseData?.caseCategory;
+        && !!caseData?.clientCategory && !!caseData?.caseCategory
+        && (Number(caseData?.frvaScore) > 0 || Number(caseData?.swdiScore) > 0);
     // Program Enrollments: at least one enrollment, or the recorded
     // "no program needed" decision; when enrolled, the enrolled programs'
     // documentary requirements must already be met.

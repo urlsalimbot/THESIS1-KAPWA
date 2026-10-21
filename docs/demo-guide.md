@@ -46,6 +46,9 @@ Sign in as **admin@mswdo.test / admin123**. The admin lands on the Admin Panel.
 - **Cases** → **View** on *Pedro Poblete Reyes* (`MSWD-2026-00001`). The case file shows the guided
   workflow, the assessment, the interventions delivered (₱3,000 medical, ₱1,500 educational,
   ₱2,500 AICS), and the Documents card with working **Download** buttons.
+- **Completing the assessment is the step's Lock button** — it saves the fields, seals the step
+  and moves the case from Enrolled to Assessed. There is no separate “Complete Assessment”
+  button; an FRVA or SWDI score is required before the Lock opens.
 - **Approvals** — the pipeline: Phase-In (13 cases), Implementation (200), Phase-Out (0).
   Approving a case is admin-only.
 - **Announcements** — 5 published (one pinned) and 2 drafts. The published ones are what the

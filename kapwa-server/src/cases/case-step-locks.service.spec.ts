@@ -8,7 +8,7 @@ import { COMMON_STEPS, CASE_STEP_FLOORS, CASE_STATUS_INDEX } from './case-step-l
 import { CaseStepLock } from './case-step-lock.entity';
 import { CasesService } from './cases.service';
 import { CasesExportService } from './cases-export.service';
-import { Case } from './case.entity';
+import { Case, CaseStatus } from './case.entity';
 import { CaseHistory } from './case-history.entity';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
 import { ProgramEnrollment } from '../case-enrollments/program-enrollment.entity';
@@ -151,13 +151,19 @@ describe('CaseStepLocksService', () => {
   } as unknown as User;
 
   // The assessment step is done only when problemsPresented,
-  // socialWorkerAssessment, clientCategory and caseCategory are all set, so an
-  // empty case is the cheapest way to make a step not-done.
+  // socialWorkerAssessment, clientCategory, caseCategory and an FRVA/SWDI score
+  // are all set, so an empty case is the cheapest way to make a step not-done.
   const notDoneCase = { id: 'c1', status: 'enrolled' } as unknown as Case;
   const doneCase = {
     id: 'c1', status: 'enrolled',
     problemsPresented: 'a', clientCategory: 'b', socialWorkerAssessment: 'c', caseCategory: 'd',
+    frvaScore: 45,
   } as unknown as Case;
+
+  const adminUser = {
+    id: 'u3', role: 'admin', agencyId: null,
+    firstName: 'Rosario', middleName: null, lastName: 'Mendoza', nameExtension: null,
+  } as unknown as User;
 
   const findById = jest.fn();
   const interventionCount = jest.fn().mockResolvedValue(0);
@@ -294,6 +300,10 @@ describe('CaseStepLocksService', () => {
 
     jest.spyOn(casesService, 'findById').mockImplementation(findById as any);
     jest.spyOn(casesService, 'getInterventionCount' as any).mockImplementation(interventionCount as any);
+    // Sealing the assessment performs the lifecycle hop the removed button
+    // used to; the hop itself is covered by its own service tests.
+    jest.spyOn(casesService, 'requestReview').mockResolvedValue(doneCase as any);
+    jest.spyOn(casesService, 'transition').mockResolvedValue(doneCase as any);
   });
 
   it('rejects locking a step that is not done, naming the predicate', async () => {
@@ -351,6 +361,56 @@ describe('CaseStepLocksService', () => {
     expect(saved.stepKey).toBe('assessment');
     expect(saved.lockedBy).toBe('u1');
     expect(saved.lockedByName).toBe('Juan Dela Cruz');
+  });
+
+  it('sealing the assessment advances an enrolled case through request-review for a social worker', async () => {
+    findById.mockResolvedValue(doneCase);
+
+    await service.lock('c1', 'assessment', swUser);
+
+    expect(casesService.requestReview).toHaveBeenCalledWith('c1', 'social_worker', 'u1');
+    expect(casesService.transition).not.toHaveBeenCalled();
+  });
+
+  it('sealing the assessment advances an enrolled case through the admin transition for an admin', async () => {
+    findById.mockResolvedValue(doneCase);
+
+    await service.lock('c1', 'assessment', adminUser);
+
+    expect(casesService.transition).toHaveBeenCalledWith(
+      'c1',
+      CaseStatus.ASSESSED,
+      expect.objectContaining({ userRole: 'admin', actorId: 'u3' }),
+    );
+    expect(casesService.requestReview).not.toHaveBeenCalled();
+  });
+
+  it('does not advance a case that is no longer enrolled', async () => {
+    findById.mockResolvedValue({ ...doneCase, status: CaseStatus.ASSESSED } as unknown as Case);
+
+    await service.lock('c1', 'assessment', swUser);
+
+    expect(casesService.requestReview).not.toHaveBeenCalled();
+    expect(casesService.transition).not.toHaveBeenCalled();
+  });
+
+  it('does not advance the case when another step is sealed', async () => {
+    findById.mockResolvedValue(doneCase);
+    referralCount.mockResolvedValue(1);
+
+    await service.lock('c1', 'referrals', swUser);
+
+    expect(casesService.requestReview).not.toHaveBeenCalled();
+    expect(casesService.transition).not.toHaveBeenCalled();
+  });
+
+  it('refuses to seal the assessment without a DSWD tool score', async () => {
+    findById.mockResolvedValue({
+      ...doneCase, frvaScore: null, swdiScore: null,
+    } as unknown as Case);
+
+    await expect(service.lock('c1', 'assessment', swUser)).rejects.toThrow(/FRVA or SWDI score/);
+    expect(lockRepo.insertQb.execute).not.toHaveBeenCalled();
   });
 
   it('is idempotent when the same step is locked twice', async () => {

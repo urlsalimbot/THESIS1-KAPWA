@@ -7,7 +7,38 @@
       "problemsPresented": "a",
       "clientCategory": "b",
       "socialWorkerAssessment": "c",
+      "caseCategory": "d",
+      "frvaScore": 45
+    },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": true
+  },
+  {
+    "name": "assessment not done: no DSWD tool score",
+    "step": "assessment",
+    "caseData": {
+      "status": "enrolled",
+      "problemsPresented": "a",
+      "clientCategory": "b",
+      "socialWorkerAssessment": "c",
       "caseCategory": "d"
+    },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "assessment done: SWDI score alone is enough",
+    "step": "assessment",
+    "caseData": {
+      "status": "enrolled",
+      "problemsPresented": "a",
+      "clientCategory": "b",
+      "socialWorkerAssessment": "c",
+      "caseCategory": "d",
+      "frvaScore": 0,
+      "swdiScore": 62
     },
     "interventionCount": 0,
     "opts": {},
@@ -20,7 +51,8 @@
       "status": "enrolled",
       "problemsPresented": "a",
       "socialWorkerAssessment": "c",
-      "caseCategory": "d"
+      "caseCategory": "d",
+      "frvaScore": 45
     },
     "interventionCount": 0,
     "opts": {},
@@ -108,7 +140,8 @@
       "problemsPresented": "a",
       "clientCategory": "b",
       "socialWorkerAssessment": "c",
-      "caseCategory": "d"
+      "caseCategory": "d",
+      "frvaScore": 45
     },
     "interventionCount": 0,
     "opts": {},
@@ -380,7 +413,8 @@
     "caseData": {
       "status": "enrolled",
       "problemsPresented": "",
-      "clientCategory": "b"
+      "clientCategory": "b",
+      "frvaScore": 45
     },
     "interventionCount": 0,
     "opts": {},
@@ -392,7 +426,8 @@
     "caseData": {
       "status": "enrolled",
       "problemsPresented": "a",
-      "clientCategory": ""
+      "clientCategory": "",
+      "frvaScore": 45
     },
     "interventionCount": 0,
     "opts": {},

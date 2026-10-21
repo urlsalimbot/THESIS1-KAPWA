@@ -635,9 +635,7 @@ export function CaseViewPage() {
         case 'assessment':
           return <StepAssessment key={stepLockKey(id!, key)} {...common} assessment={assessment}
             onAssessmentChange={handleAssessmentChange} onSave={saveAssessment}
-            userRole={user?.role}
             readOnly={bodyReadOnly(caseClosed || !['enrolled', 'assessed'].includes(caseData?.status), key)}
-            transitionReadOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)}
             lockReadOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)} />;
         case 'enrollments':
           return <StepEnrollments key={stepLockKey(id!, key)} {...common} userRole={user?.role}

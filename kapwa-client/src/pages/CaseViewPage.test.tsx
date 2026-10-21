@@ -1179,6 +1179,7 @@ describe('CaseViewPage — every step starts at the top', () => {
     socialWorkerAssessment: 'Needs financial assistance',
     clientCategory: 'Indigent',
     caseCategory: 'Individual in Crisis Situation (AICS)',
+    frvaScore: 65,
     enrollmentsNotNeeded: true,
   };
 
@@ -1309,6 +1310,7 @@ describe('findFirstPendingStep', () => {
     problemsPresented: 'a',
     socialWorkerAssessment: 's',
     clientCategory: 'b',
+    frvaScore: 65,
     discernmentAssessedAt: '2026-01-01',
     discernmentResult: 'referred',
   };

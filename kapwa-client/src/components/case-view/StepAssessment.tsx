@@ -1,12 +1,5 @@
-import { useState } from 'react';
-import { api } from '@/lib/api';
-import { isOnline } from '@/lib/sync';
-import { queueFsmTransition } from '@/lib/offline-queue';
-import { toast } from 'sonner';
-import { humanizeError } from '@/lib/errors';
 import { queryKeys } from '@/lib/query-keys';
 import { useSWRConfig } from 'swr';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { CLIENT_CATEGORIES_V2, CASE_CATEGORY_GROUPS } from '@/lib/constants';
 import { ClipboardList, Lock, Stethoscope } from 'lucide-react';
@@ -26,18 +19,7 @@ interface StepAssessmentProps {
   onAssessmentChange: (updater: (prev: any) => any) => void;
   /** The step's save, run by the seal bar before it seals the step. */
   onSave: () => void;
-  userRole?: string;
   readOnly?: boolean;
-  /**
-   * Whether this step's forward transition ("Complete Assessment") is withheld.
-   * Split from `readOnly` because a sealed step is read-only *because* of its
-   * seal, and the seal guards the step's fields — not the lifecycle hop they
-   * complete. Folding the seal into one flag hid the transition the moment the
-   * worker sealed the step, so the natural "seal, then submit" order blocked the
-   * very advance the seal was preparing for. Defaults to `readOnly`, so a caller
-   * that omits it keeps the previous behaviour.
-   */
-  transitionReadOnly?: boolean;
   /** This step's own seal row, or null — the case view resolves it. */
   stepLock?: StepLock | null;
   /**
@@ -52,49 +34,18 @@ interface StepAssessmentProps {
 }
 
 export function StepAssessment({
-  caseId, caseData, assessment, onAssessmentChange, onSave, userRole, readOnly, transitionReadOnly = readOnly, lockReadOnly = false, stepLock,
+  caseId, caseData, assessment, onAssessmentChange, onSave, readOnly, lockReadOnly = false, stepLock,
 }: StepAssessmentProps) {
   const { t } = useTranslation();
   const { mutate } = useSWRConfig();
-  const [transitioning, setTransitioning] = useState(false);
-  // "Done" here is what the stepper and the review gate also require: the
-  // narrative fields AND a DSWD tool score. Without the score the FSM blocks
-  // assessed -> in_review, so offering "Complete Assessment" without it would
-  // let a worker advance the case into a state the next step cannot finish.
+  // The step is done when the narrative fields and a DSWD tool score exist.
+  // Sealing it (the bar below) is what completes the assessment and advances
+  // the case, so the score has to be part of the seal's own gate too.
   const assessmentDone = !!caseData?.problemsPresented && !!caseData?.socialWorkerAssessment && !!caseData?.clientCategory && !!caseData?.caseCategory;
   // The category is editable only while the case is `enrolled`: it defines the
   // step template, and the server refuses a change after that (audit 1.4).
   const categoryLocked = !!caseData?.status && caseData.status !== 'enrolled';
   const hasScore = !!(caseData?.frvaScore || caseData?.swdiScore);
-  const canTransition = assessmentDone && hasScore && caseData?.status === 'enrolled' && (userRole === 'social_worker' || userRole === 'admin');
-
-  async function markAssessmentComplete() {
-    setTransitioning(true);
-    try {
-      if (!isOnline()) {
-        // Offline: queue the FSM transition — it syncs when connectivity returns.
-        await queueFsmTransition(caseId, 'assessed');
-        toast.success(t('caseView.assessment.queuedOffline', 'Assessment queued — will sync when online.'));
-        return;
-      }
-      // US-020: a social worker's route is the audited `request-review` endpoint,
-      // which carries its own "assessment completed" gate. It is SW-only by
-      // contract (cases.service.ts rejects every other role), so admin — allowed
-      // to transition by the FSM — keeps the generic status transition.
-      if (userRole === 'social_worker') {
-        await api.patch(`/cases/${caseId}/request-review`);
-      } else {
-        await api.patch(`/cases/${caseId}/status`, { status: 'assessed' });
-      }
-      await mutate(queryKeys.cases.detail(caseId));
-    } catch (e) {
-      // A refused/network-failed advance is the primary action of step 1 —
-      // a console line was the only trace (audit: silent failure).
-      toast.error(t('caseView.assessment.completeFailed', 'Could not complete the assessment'), { description: humanizeError(e) });
-    } finally {
-      setTransitioning(false);
-    }
-  }
   return (
     <div className="space-y-4">
       {/* One card. The narrative and the tools it is scored with belong to the
@@ -239,29 +190,20 @@ export function StepAssessment({
             </div>
           </div>
 
-          {/* No Save control here: the seal bar below is this step's submit, and
-              it saves the whole assessment object on its way to sealing. The
-              transition is gated on `transitionReadOnly`, not `readOnly`, so a
-              sealed step still offers the advance it was sealed in aid of. */}
-          {(!readOnly || !transitionReadOnly) && (
+          {/* No Save or Complete button here: the seal bar below is this
+              step's submit. Sealing the Assessment step saves the fields, locks
+              the step and advances the case to Assessed, so the score that the
+              next lifecycle hop needs is named before the worker reaches Lock. */}
+          {!readOnly && assessmentDone && !hasScore && caseData?.status === 'enrolled' && (
             <>
               <Separator />
-              <div className="flex items-center gap-2">
-                {!readOnly && assessmentDone && !hasScore && caseData?.status === 'enrolled' && (
-                  <span className="text-xs text-muted-foreground">
-                    {t('caseView.assessment.scoreRequiredHint', 'Add an FRVA or SWDI score above to complete the assessment.')}
-                  </span>
-                )}
-                {!transitionReadOnly && canTransition && (
-                  <Button onClick={markAssessmentComplete} disabled={transitioning} variant="default">
-                    {transitioning ? t('caseView.completing', 'Completing...') : t('caseView.assessment.completeAssessment', '✓ Complete Assessment → Proceed to Review')}
-                  </Button>
-                )}
-                {!transitionReadOnly && caseData?.status === 'assessed' && (
-                  <span className="text-xs text-success font-medium">{t('caseView.assessment.assessmentCompleted', '✓ Assessment completed')}</span>
-                )}
-              </div>
+              <span className="text-xs text-muted-foreground">
+                {t('caseView.assessment.scoreRequiredHint', 'Add an FRVA or SWDI score above to complete the assessment.')}
+              </span>
             </>
+          )}
+          {caseData?.status === 'assessed' && (
+            <span className="text-xs text-success font-medium">{t('caseView.assessment.assessmentCompleted', '✓ Assessment completed')}</span>
           )}
         </div>
       </div>

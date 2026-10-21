@@ -48,7 +48,7 @@ const NOT_DONE_HINT = /Complete this step before sealing it/;
 // The assessment step reads problemsPresented + socialWorkerAssessment +
 // clientCategory + caseCategory, so this case is done at assessment and nowhere
 // else.
-const doneCaseData = { status: 'enrolled', problemsPresented: 'a', socialWorkerAssessment: 's', clientCategory: 'b', caseCategory: 'c' };
+const doneCaseData = { status: 'enrolled', problemsPresented: 'a', socialWorkerAssessment: 's', clientCategory: 'b', caseCategory: 'c', frvaScore: 45 };
 const lockedRow = { stepKey: 'assessment', lockedByName: 'Juan Dela Cruz', lockedAt: '2026-10-01T09:00:00Z' };
 
 function renderBar(props: Partial<React.ComponentProps<typeof StepLockBar>> = {}) {

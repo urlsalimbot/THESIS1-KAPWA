@@ -1766,11 +1766,9 @@ const fil: EnLocale = {
     "cardWorkerLabel": "Pangalan ng Worker / Lagda",
     "approving": "Inaaprubahan...",
     "assessment": {
-    "queuedOffline": "Nakapila ang assessment — mag-sy-sync kapag online na.",
       "assessmentCompleted": "✓ Nakumpleto ang assessment",
       "assessmentDiagnosis": "Assessment at Diagnosis",
       "clientCategory": "Kategorya ng Kliyente *",
-      "completeAssessment": "✓ Kumpletuhin ang Assessment → Magpatuloy sa Intervention",
       "dswdTools": "Mga Tool ng DSWD Assessment",
       "familyDialogueNotes": "Mga Tala ng Family Dialogue",
       "familyDialoguePlaceholder": "Mga tala mula sa sesyon ng family dialogue...",

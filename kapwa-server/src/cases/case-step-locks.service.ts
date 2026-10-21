@@ -11,6 +11,7 @@ import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-refe
 import { User } from '../auth/user.entity';
 import { CaseEvent } from '../case-events/case-event.entity';
 import { InterventionRequiredDocument } from './intervention-required-document.entity';
+import { CaseStatus } from './case.entity';
 
 /**
  * Re-exported, not declared here: `CasesService` has to name the open steps in
@@ -74,6 +75,8 @@ interface StepDoneCase {
   problemsPresented?: string | null;
   socialWorkerAssessment?: string | null;
   clientCategory?: string | null;
+  frvaScore?: number | null;
+  swdiScore?: number | null;
   selfRelianceLevel?: number | null;
   sustainabilityPlan?: string | null;
   closureOutcome?: string | null;
@@ -159,6 +162,10 @@ export class CaseStepLocksService {
       .execute();
 
     await this.auditLog?.log('case.step_lock', caseId, caller.id, { stepKey });
+    // Sealing the Assessment step *is* completing the assessment: the step card
+    // no longer carries a separate "Complete Assessment" button, so this is the
+    // only UI path from enrolled to assessed.
+    await this.advanceAssessmentIfEnrolled(caseId, stepKey, caller);
     // `RETURNING *` yields raw column names, so map them onto the entity's
     // property names rather than handing back a snake_case object the caller
     // would have to know about. The fallback covers a driver that reports no
@@ -172,6 +179,38 @@ export class CaseStepLocksService {
       lockedByName: row.locked_by_name ?? this.displayName(caller),
       lockedAt: row.locked_at,
     } as DeepPartial<CaseStepLock>);
+  }
+
+  /**
+   * Sealing the assessment advances `enrolled -> assessed`, mirroring the
+   * transition the removed "Complete Assessment" button performed: the social
+   * worker's audited `request-review` route, the admin's generic status
+   * transition. It only fires while the case is still enrolled, so re-sealing
+   * an assessed case is a no-op.
+   *
+   * The seal has already committed here. Two staff sealing at once can race
+   * this transition, so a failure is swallowed when the case has in fact
+   * reached `assessed`; anything else is still reported.
+   */
+  private async advanceAssessmentIfEnrolled(caseId: string, stepKey: string, caller: User): Promise<void> {
+    if (stepKey !== 'assessment') return;
+    if (caller.role !== 'social_worker' && caller.role !== 'admin') return;
+    const before = await this.cases.findById(caseId);
+    if (before.status !== CaseStatus.ENROLLED) return;
+    try {
+      if (caller.role === 'social_worker') {
+        await this.cases.requestReview(caseId, caller.role, caller.id);
+      } else {
+        await this.cases.transition(caseId, CaseStatus.ASSESSED, {
+          userRole: caller.role,
+          actorId: caller.id,
+          reason: 'Assessment sealed',
+        });
+      }
+    } catch (err) {
+      const after = await this.cases.findById(caseId);
+      if (after.status !== CaseStatus.ASSESSED) throw err;
+    }
   }
 
   /**
@@ -191,6 +230,16 @@ export class CaseStepLocksService {
     if (index !== undefined && index < floor) {
       const required = Object.keys(CASE_STATUS_INDEX).find((k) => CASE_STATUS_INDEX[k] === floor);
       return `"${label}" cannot be sealed yet — it opens once the case reaches ${required} (the case is ${c.status}).`;
+    }
+    // The score is what the next lifecycle hop needs; name it rather than
+    // sending the worker back to a step that looks complete.
+    if (stepKey === 'assessment') {
+      const hasFields = !!c.problemsPresented && !!c.socialWorkerAssessment
+        && !!c.clientCategory && !!c.caseCategory;
+      const hasScore = Number(c.frvaScore) > 0 || Number(c.swdiScore) > 0;
+      if (hasFields && !hasScore) {
+        return `"${label}" is not complete yet — add an FRVA or SWDI score before sealing it.`;
+      }
     }
     // The two documentary gates name the missing keys — "not complete yet"
     // sends a doc-blocked worker back to work they cannot identify (audit:
@@ -296,7 +345,13 @@ export class CaseStepLocksService {
     switch (key) {
       case 'assessment':
         return !!caseData.problemsPresented && !!caseData.socialWorkerAssessment
-          && !!caseData.clientCategory && !!caseData.caseCategory;
+          && !!caseData.clientCategory && !!caseData.caseCategory
+          // Sealing this step now performs enrolled -> assessed, and the FSM
+          // refuses assessed -> in_review without a DSWD tool score. Requiring
+          // it here is what keeps the seal from advancing a case the next step
+          // cannot finish. (The old "Complete Assessment" button had the same
+          // gate.)
+          && (Number(caseData.frvaScore) > 0 || Number(caseData.swdiScore) > 0);
       // Program Enrollments: at least one enrollment, or the explicit recorded
       // "no program needed" decision (spec §3.3); when enrolled, the enrolled
       // programs' documentary requirements must already be met.
@@ -390,6 +445,8 @@ export class CaseStepLocksService {
         problemsPresented: c.problemsPresented,
         socialWorkerAssessment: c.socialWorkerAssessment,
         clientCategory: c.clientCategory,
+        frvaScore: c.frvaScore,
+        swdiScore: c.swdiScore,
         selfRelianceLevel: c.selfRelianceLevel,
         sustainabilityPlan: c.sustainabilityPlan,
         closureOutcome: c.closureOutcome,

@@ -109,7 +109,6 @@ function Steps({
         assessment={caseData}
         onAssessmentChange={() => {}}
         onSave={() => {}}
-        userRole="social_worker"
         readOnly={bodyReadOnly('assessment')}
         lockReadOnly={lockReadOnly('assessment')}
         stepLock={lockFor('assessment')}

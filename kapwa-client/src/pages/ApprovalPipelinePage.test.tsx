@@ -77,6 +77,7 @@ const { mockApiGet, mockApiPost, mockApiPut, mockCases } = vi.hoisted(() => ({
       beneficiary: { firstName: 'Eva', surname: 'Lopez' },
       updatedAt: '2026-06-23T00:00:00Z',
       problemsPresented: 'Presented',
+      frvaScore: 45,
       clientCategory: 'Indigent',
       socialWorkerAssessment: 'Assessed',
       discernmentAssessedAt: '2026-06-20',
