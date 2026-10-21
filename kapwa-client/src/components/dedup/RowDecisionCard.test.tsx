@@ -23,7 +23,7 @@ const personCandidate: DedupCandidate = {
 
 describe('RowDecisionCard', () => {
   it('renders the matched candidate as evidence with cases, interventions and recent remarks', () => {
-    render(<RowDecisionCard row={row} candidates={[personCandidate]} onEligibility={vi.fn()} />);
+    render(<RowDecisionCard row={row} candidates={[personCandidate]} />);
     expect(screen.getByText(/C-2026-001/)).toBeTruthy();
     expect(screen.getByText(/2 interventions/i)).toBeTruthy();
     expect(screen.getByText(/recent remarks/i)).toBeTruthy();
@@ -43,7 +43,7 @@ describe('RowDecisionCard', () => {
         ],
       },
     };
-    render(<RowDecisionCard row={row} candidates={[household]} onEligibility={vi.fn()} />);
+    render(<RowDecisionCard row={row} candidates={[household]} />);
     expect(screen.getByText(/household already served/i)).toBeTruthy();
     expect(screen.getByText(/Maria/)).toBeTruthy();
     expect(screen.getByText(/C-2026-009/)).toBeTruthy();
@@ -51,23 +51,19 @@ describe('RowDecisionCard', () => {
     expect(screen.queryByText(/recent remarks/i)).toBeNull();
   });
 
-  it('shows the disqualification with its reason and offers waive/confirm while undecided', async () => {
-    const onEligibility = vi.fn().mockResolvedValue(undefined);
+  it('shows the disqualification and points to the match decision, with no waive/confirm controls', () => {
     render(
       <RowDecisionCard
         row={{ ...row, eligibilityDecision: undefined }}
         candidates={[personCandidate]}
-        onEligibility={onEligibility}
       />,
     );
     expect(screen.getByText(/Disqualified — review needed/i)).toBeTruthy();
     expect(screen.getByText(/within the last 30 days/)).toBeTruthy();
+    expect(screen.getByText(/Decide the match below/i)).toBeTruthy();
 
-    await userEvent.click(screen.getByRole('button', { name: /waive — serve anyway/i }));
-    expect(onEligibility).toHaveBeenCalledWith('waive');
-
-    await userEvent.click(screen.getByRole('button', { name: /confirm disqualified/i }));
-    expect(onEligibility).toHaveBeenCalledWith('confirm');
+    expect(screen.queryByRole('button', { name: /waive/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /confirm/i })).toBeNull();
   });
 
   it('offers no buttons once the disqualification is decided', () => {
@@ -75,7 +71,7 @@ describe('RowDecisionCard', () => {
       <RowDecisionCard
         row={{ ...row, eligibilityDecision: 'confirm' }}
         candidates={[personCandidate]}
-        onEligibility={vi.fn()}
+       
       />,
     );
     expect(screen.getByText(/confirmed, not served/i)).toBeTruthy();
@@ -86,7 +82,7 @@ describe('RowDecisionCard', () => {
       <RowDecisionCard
         row={{ ...row, eligibilityDecision: 'waive', status: 'retained' }}
         candidates={[personCandidate]}
-        onEligibility={vi.fn()}
+       
       />,
     );
     expect(screen.getByText(/waived, served after review/i)).toBeTruthy();
@@ -120,30 +116,12 @@ describe('RowDecisionCard', () => {
     expect(screen.queryByRole('button', { name: /revert decision/i })).toBeNull();
   });
 
-  it('requires a decision on every pending match of a disqualified row', async () => {
-    const onMatchEligibility = vi.fn().mockResolvedValue(undefined);
-    const pending: DedupCandidate = { ...personCandidate, status: 'pending' };
-    render(
-      <RowDecisionCard
-        row={{ ...row, eligibilityDecision: undefined }}
-        candidates={[pending]}
-        onEligibility={vi.fn()}
-        onMatchEligibility={onMatchEligibility}
-      />,
-    );
-    expect(screen.getByText('Review needed')).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: /^waive$/i }));
-    expect(onMatchEligibility).toHaveBeenCalledWith('m1', 'waive');
-    await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
-    expect(onMatchEligibility).toHaveBeenCalledWith('m1', 'confirm');
-  });
-
   it('shows no disqualification panel for allowed rows', () => {
     render(
       <RowDecisionCard
         row={{ ...row, eligibility: 'allowed', eligibilityReason: undefined, status: 'retained' }}
         candidates={[personCandidate]}
-        onEligibility={vi.fn()}
+       
       />,
     );
     expect(screen.queryByText(/review needed/i)).toBeNull();
@@ -151,7 +129,7 @@ describe('RowDecisionCard', () => {
   });
 
   it('says so when a row has no candidate matches', () => {
-    render(<RowDecisionCard row={row} candidates={[]} onEligibility={vi.fn()} />);
+    render(<RowDecisionCard row={row} candidates={[]} />);
     expect(screen.getByText(/no candidate matches/i)).toBeTruthy();
   });
 });
@@ -162,7 +140,7 @@ describe('RowDecisionCard — traffic light and keep decision', () => {
       <RowDecisionCard
         row={{ ...row, eligibilityCode: 'recent_intervention' }}
         candidates={[personCandidate]}
-        onEligibility={vi.fn()}
+       
       />,
     );
     expect(screen.getByText('Served within the last 30 days')).toBeTruthy();
@@ -217,7 +195,7 @@ describe('RowDecisionCard — traffic light and keep decision', () => {
     expect(onDecide).toHaveBeenCalledWith('m1', { kind: 'new_client' });
   });
 
-  it('names the differ-only-in-barangay duplicate pair in phase 1, with keep controls', () => {
+  it('names the differ-only-in-barangay duplicate pair in phase 1, with keep controls', async () => {
     const dup: DedupCandidate = {
       id: 'm3', targetType: 'import_row', score: 0.8, status: 'pending',
       signals: { surnamePhoneticMatch: true, dobMatch: true, simSurname: 0.95, barangayMatch: false },
@@ -232,7 +210,11 @@ describe('RowDecisionCard — traffic light and keep decision', () => {
       />,
     );
     expect(screen.getByText(/barangay differs/i)).toBeTruthy();
-    expect(screen.getByRole('button', { name: /keep this row/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /keep row 9 instead/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^waive$/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^confirm$/i })).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: /keep this row/i }));
+    expect(onDecide).toHaveBeenCalledWith('m3', { kind: 'keep_row' });
   });
 });

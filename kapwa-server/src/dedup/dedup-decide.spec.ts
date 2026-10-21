@@ -107,8 +107,49 @@ describe('DedupService decisions', () => {
 
     const out = await service.decide('op1', 'm2', { keep: 'other_import_row', remark: 'Row 2 is the canonical listing.' }, 'u1');
     expect(out.row.status).toBe('deprioritized');
+    expect(out.row.remarks).toBe('Deprioritized — duplicate of row 2: Row 2 is the canonical listing.');
     const primarySave = rowsRepo.save.mock.calls.find((c: any) => c[0].id === 'r1');
     expect(primarySave[0].status).toBe('primary');
+  });
+
+  it('keeping this row deprioritizes the other duplicate so only the kept row imports', async () => {
+    opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing' });
+    matchesRepo.findOne.mockResolvedValue({ id: 'm2', rowId: 'r2', targetType: 'import_row', targetImportRowId: 'r1', status: 'pending' });
+    rowsRepo.findOne.mockImplementation(async ({ where }: any) =>
+      where.id === 'r2'
+        ? {
+            id: 'r2', operationId: 'op1', rowIndex: 3, status: 'pending',
+            eligibility: 'disqualified', eligibilityDecision: null, eligibilityCode: 'intra_list',
+          }
+        : { id: 'r1', operationId: 'op1', rowIndex: 2, status: 'no_match', eligibility: 'allowed', originalRemarks: 'Walk-in' });
+    matchesRepo.find.mockResolvedValue([{ id: 'm2', rowId: 'r2', status: 'primary', targetType: 'import_row' }]);
+
+    const out = await service.decide('op1', 'm2', { keep: 'import_row' }, 'u1');
+
+    expect(out.match.status).toBe('primary');
+    expect(out.row.status).toBe('primary');
+    expect(out.row.eligibilityDecision).toBe('waive');
+    const loserSave = rowsRepo.save.mock.calls.find((c: any) => c[0].id === 'r1');
+    expect(loserSave[0].status).toBe('deprioritized');
+    expect(loserSave[0].remarks).toBe('Walk-in | Deprioritized — duplicate of row 3');
+  });
+
+  it('keeps a pair winner retained when it also matches an existing record', async () => {
+    opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing' });
+    matchesRepo.findOne.mockResolvedValue({ id: 'm2', rowId: 'r2', targetType: 'import_row', targetImportRowId: 'r1', status: 'pending' });
+    rowsRepo.findOne.mockImplementation(async ({ where }: any) =>
+      where.id === 'r2'
+        ? { id: 'r2', operationId: 'op1', rowIndex: 3, status: 'pending', matchedPersonId: 'p9', eligibility: 'allowed' }
+        : { id: 'r1', operationId: 'op1', rowIndex: 2, status: 'no_match', eligibility: 'allowed' });
+    matchesRepo.find.mockResolvedValue([
+      { id: 'm2', rowId: 'r2', status: 'primary', targetType: 'import_row' },
+      { id: 'm1', rowId: 'r2', status: 'primary', targetType: 'db_person', targetPersonId: 'p9' },
+    ]);
+
+    const out = await service.decide('op1', 'm2', { keep: 'import_row' }, 'u1');
+
+    expect(out.row.status).toBe('retained');
+    expect(out.row.matchedPersonId).toBe('p9');
   });
 
   it('same person + keep re-points the row at the chosen person', async () => {
@@ -140,8 +181,11 @@ describe('DedupService decisions', () => {
     matchesRepo.findOne.mockResolvedValue({ id: 'm2', rowId: 'r2', targetType: 'import_row', targetImportRowId: 'r1', status: 'deprioritized', remark: 'dup' });
     rowsRepo.findOne.mockImplementation(async ({ where }: any) =>
       where.id === 'r2'
-        ? { id: 'r2', operationId: 'op1', status: 'deprioritized', originalRemarks: 'Walk-in' }
-        : { id: 'r1', operationId: 'op1', status: 'primary' });
+        ? {
+            id: 'r2', operationId: 'op1', status: 'deprioritized', originalRemarks: 'Walk-in',
+            eligibility: 'disqualified', eligibilityDecision: 'confirm',
+          }
+        : { id: 'r1', operationId: 'op1', status: 'primary', originalRemarks: 'Walk-in earlier' });
     matchesRepo.find.mockImplementation(async ({ where }: any) =>
       where.rowId === 'r2' ? [{ id: 'm2', rowId: 'r2', status: 'pending', targetType: 'import_row' }] : []);
 
@@ -150,8 +194,10 @@ describe('DedupService decisions', () => {
     expect(out.match.status).toBe('pending');
     expect(out.row!.status).toBe('pending');
     expect(out.row!.remarks).toBe('Walk-in');
+    expect(out.row!.eligibilityDecision).toBeNull();
     const pairedSave = rowsRepo.save.mock.calls.find((c: any) => c[0].id === 'r1');
     expect(pairedSave[0].status).toBe('no_match');
+    expect(pairedSave[0].remarks).toBe('Walk-in earlier');
   });
 
   it('reverting a same-person decision clears the link it wrote to the record', async () => {

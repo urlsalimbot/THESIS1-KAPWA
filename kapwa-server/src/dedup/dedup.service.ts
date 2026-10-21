@@ -127,27 +127,63 @@ export class DedupService {
       if (match.targetType !== 'import_row') {
         throw new BadRequestException('Use the same-person decision for record and household matches');
       }
-      match.status = body.keep === 'import_row' ? 'primary' : 'deprioritized';
+      const keepThis = body.keep === 'import_row';
+      match.status = keepThis ? 'primary' : 'deprioritized';
       if (remark) match.remark = remark;
       await this.matchesRepo.save(match);
+
+      const paired = match.targetImportRowId
+        ? await this.rowsRepo.findOne({ where: { id: match.targetImportRowId } })
+        : null;
       row.decidedBy = actorId;
       row.decidedAt = now;
-      if (body.keep === 'import_row') {
+      if (keepThis) {
         row.matchedPersonId = match.targetPersonId ?? row.matchedPersonId;
         row.remarks = [row.originalRemarks, remark].filter(Boolean).join(' | ') || undefined;
       } else {
-        const dupOf = `row ${match.targetImportRowId}`;
-        row.remarks = [row.originalRemarks, `Deprioritized — duplicate of ${dupOf}${remark ? `: ${remark}` : ''}`]
-          .filter(Boolean).join(' | ');
-        if (match.targetImportRowId) {
-          const paired = await this.rowsRepo.findOne({ where: { id: match.targetImportRowId } });
-          if (paired) {
-            paired.status = 'primary';
-            await this.rowsRepo.save(paired);
-          }
-        }
+        row.remarks = [
+          row.originalRemarks,
+          `Deprioritized — duplicate of row ${paired?.rowIndex ?? match.targetImportRowId}${remark ? `: ${remark}` : ''}`,
+        ].filter(Boolean).join(' | ');
       }
       row.status = await this.deriveRowStatus(row.id);
+      // A pair winner that also matches an existing record is retained: finalize
+      // must update that record, not create a second person for the same client.
+      if (row.status === 'primary' && row.matchedPersonId) row.status = 'retained';
+
+      // The pair has exactly one winner. The loser carries no match row of its
+      // own, so its status must be stamped here: deriving it from its (empty)
+      // match set would leave it `no_match`, and finalize would import both
+      // duplicates. This is the "only the finalized priority list is imported"
+      // rule for an intra-list pair.
+      if (paired) {
+        if (keepThis) {
+          paired.status = 'deprioritized';
+          paired.remarks = [
+            paired.originalRemarks,
+            `Deprioritized — duplicate of row ${row.rowIndex}`,
+          ].filter(Boolean).join(' | ');
+        } else {
+          paired.status = paired.matchedPersonId ? 'retained' : 'primary';
+          // Clear a note a previous keep-this decision left on the winner.
+          paired.remarks = paired.originalRemarks || undefined;
+        }
+        // The pair decision is also the row's eligibility decision; without
+        // this the removed waive/confirm controls would leave a disqualified
+        // row blocking finalize forever.
+        if (paired.eligibility === 'disqualified' && !paired.eligibilityDecision) {
+          paired.eligibilityDecision = keepThis ? 'confirm' : 'waive';
+          paired.eligibilityDecidedBy = actorId;
+          paired.eligibilityDecidedAt = now;
+        }
+        await this.rowsRepo.save(paired);
+      }
+
+      if (row.eligibility === 'disqualified' && !row.eligibilityDecision) {
+        row.eligibilityDecision = keepThis ? 'waive' : 'confirm';
+        row.eligibilityDecidedBy = actorId;
+        row.eligibilityDecidedAt = now;
+      }
       await this.rowsRepo.save(row);
       return { row, match };
     }
@@ -196,6 +232,7 @@ export class DedupService {
       ].filter(Boolean).join(' | ');
     }
     row.status = await this.deriveRowStatus(row.id);
+    if (row.status === 'primary' && row.matchedPersonId) row.status = 'retained';
 
     // A disqualified row's eligibility gate is the same question the tree
     // answers: keeping them (position unchanged) serves them — the waive; moving
@@ -241,15 +278,28 @@ export class DedupService {
       if (revertedPersonId && row.matchedPersonId === revertedPersonId) row.matchedPersonId = null;
       // Deprioritizing a duplicate appended a note; undo it with the decision.
       if (match.targetType === 'import_row') row.remarks = row.originalRemarks || undefined;
+      // The decision also mirrored the row's eligibility answer; reopening the
+      // match must reopen that gate or finalize would stay falsely clearable.
+      if (row.eligibility === 'disqualified') {
+        row.eligibilityDecision = null;
+        row.eligibilityDecidedBy = undefined;
+        row.eligibilityDecidedAt = undefined;
+      }
       row.status = await this.deriveRowStatus(row.id);
       await this.rowsRepo.save(row);
     }
-    // Pair decisions also stamped the other row primary; reset it too or the
-    // "other row" keeps winning after the decision is undone.
+    // Pair decisions also stamped the other row (winner or loser); reset it too
+    // or the other row keeps the old result after the decision is undone.
     if (wasPaired) {
       const paired = await this.rowsRepo.findOne({ where: { id: wasPaired } });
       if (paired) {
         paired.status = await this.deriveRowStatus(paired.id);
+        paired.remarks = paired.originalRemarks || undefined;
+        if (paired.eligibility === 'disqualified') {
+          paired.eligibilityDecision = null;
+          paired.eligibilityDecidedBy = undefined;
+          paired.eligibilityDecidedAt = undefined;
+        }
         await this.rowsRepo.save(paired);
       }
     }
@@ -490,8 +540,8 @@ export class DedupService {
     // reference them (row_id is a uuid FK to client_import_rows).
     const rowIdByToken = new Map(rowInputs.map((ri, i) => [ri.id, rowEntities[i].id]));
     // Allowed rows resolve immediately (matches are evidence). A DISQUALIFIED
-    // row keeps its matches pending: every disqualified match requires the
-    // operator's waive/confirm before finalize can run.
+    // row keeps its matches pending: the operator decides them (keep /
+    // deprioritize / new client) before finalize can run.
     const now = new Date();
     // Key on the PERSISTED row ids: @BeforeInsert rewrites the pre-generated
     // token ids at save time, and the engine's outcome axis is the ROW INDEX

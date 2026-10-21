@@ -109,10 +109,6 @@ interface RowDecisionCardProps {
   loading?: boolean;
   /** Render without the card wrapper/header — for embedding inside a dialog. */
   embedded?: boolean;
-  /** Operator review of a disqualified row: waive (serve anyway) or confirm. */
-  onEligibility?: (decision: 'waive' | 'confirm') => void | Promise<void>;
-  /** Decide ONE match of a disqualified row (aggregate action decides all). */
-  onMatchEligibility?: (matchId: string, decision: 'waive' | 'confirm') => void | Promise<void>;
   /**
    * The match decision (see `MatchDecision`): which row wins in phase 1, and
    * the same-person / position tree in phase 2. Deprioritizing keeps demand a
@@ -184,19 +180,17 @@ function SignalChips({ signals }: { signals?: Record<string, unknown> }) {
 }
 
 /**
- * One import row's review surface under the eligibility rules: candidates are
- * evidence (person/household/import-row identity with their signals), and the
- * row-level interaction is the DISQUALIFICATION review — a disqualified row
- * stays in the list as deprioritized until the operator waives or confirms it
- * (finalize is blocked until then).
+ * One import row's review surface: candidates are evidence (person/household/
+ * import-row identity with their signals), and the decision lives on each
+ * candidate — keep/deprioritize/new client (phase 2) or which row of the pair
+ * wins (phase 1). A disqualified row stays in the list as deprioritized until
+ * its matches are decided; finalize is blocked until then.
  */
 export function RowDecisionCard({
   row,
   candidates,
   loading = false,
   embedded = false,
-  onEligibility,
-  onMatchEligibility,
   onDecide,
   onRevert,
   onRevertEligibility,
@@ -239,16 +233,10 @@ export function RowDecisionCard({
               </Button>
             </div>
           )}
-          {disqualifiedUndecided && onEligibility && (
-            <div className="flex gap-2 pt-1">
-              {/* A duplicate of another row in the same list is decided by the
-                  pair buttons, never waived: serving both is what creates the
-                  duplicate. */}
-              {row.eligibilityCode !== 'intra_list' && (
-                <Button size="sm" variant="outline" onClick={() => onEligibility('waive')} disabled={busy}>{t('dedup.waive', 'Waive — serve anyway')}</Button>
-              )}
-              <Button size="sm" variant="default" onClick={() => onEligibility('confirm')} disabled={busy}>{t('dedup.confirm', 'Confirm disqualified')}</Button>
-            </div>
+          {disqualifiedUndecided && (
+            <p className="text-xs text-muted-foreground">
+              {t('dedup.decideBelow', 'Decide the match below to keep or set aside this row.')}
+            </p>
           )}
         </div>
       )}
@@ -261,15 +249,10 @@ export function RowDecisionCard({
         candidates.map((c) => {
           const light = codeMeta(row.eligibilityCode);
           // Phase 1: decide which row of the pair wins. Phase 2: the
-          // same-person tree — it replaces the old keep and waive/confirm
-          // controls, so a red (recently served) card resolves its eligibility
-          // through keep/deprioritize/new-client instead.
+          // same-person tree — the tree (not a separate waive/confirm action)
+          // resolves eligibility through keep/deprioritize/new-client.
           const phase1 = c.status === 'pending' && onDecide != null && c.targetType === 'import_row';
           const phase2 = c.status === 'pending' && onDecide != null && (c.targetType === 'db_person' || c.targetType === 'household');
-          // Match-level waive/confirm survives only on phase-1 duplicates and
-          // legacy rows without a code; phase-2 rows decide via the tree.
-          const legacyMatchReview =
-            c.status === 'pending' && onMatchEligibility != null && (row.eligibilityCode === 'intra_list' || !row.eligibilityCode);
           return (
             <div
               key={c.id}
@@ -297,26 +280,6 @@ export function RowDecisionCard({
                       ? t('dedup.badgeDeprioritized', 'Deprioritized')
                       : t('dedup.badgeMatched', 'Matched')}
                 </Badge>
-                {legacyMatchReview && (
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onMatchEligibility(c.id, 'waive')}
-                      disabled={busy}
-                    >
-                      Waive
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="default"
-                      onClick={() => onMatchEligibility(c.id, 'confirm')}
-                      disabled={busy}
-                    >
-                      Confirm
-                    </Button>
-                  </div>
-                )}
                 {c.status !== 'pending' && onRevert && !row.eligibilityDecision && (
                   <Button size="sm" variant="ghost" onClick={() => onRevert(c.id)} disabled={busy}>
                     <RotateCcw size={13} className="mr-1" /> {t('dedup.revertDecision', 'Revert decision')}

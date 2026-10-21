@@ -618,25 +618,6 @@ function ExpandedRowPanel({
       candidates={data?.data ?? []}
       loading={isLoading}
       embedded={embedded}
-      onEligibility={async (decision: 'waive' | 'confirm') => {
-        await api.post(`/client-dedup/operations/${operationId}/rows/${row.id}/eligibility`, {
-          decision,
-        });
-        toast.success(
-          decision === 'waive'
-            ? t('dedup.waiveRow', 'Row waived — it will be served this batch.')
-            : t('dedup.confirmRow', 'Disqualification confirmed — the row stays deprioritized.'),
-        );
-        await onChanged();
-      }}
-      onMatchEligibility={async (matchId: string, decision: 'waive' | 'confirm') => {
-        await api.post(`/client-dedup/operations/${operationId}/rows/${row.id}/eligibility`, {
-          decision,
-          matchId,
-        });
-        toast.success(decision === 'waive' ? t('dedup.waiveMatch', 'Match waived.') : t('dedup.confirmMatch', 'Match confirmed as disqualified.'));
-        await onChanged();
-      }}
       onRevert={
         canRevert
           ? async (matchId: string) => {
