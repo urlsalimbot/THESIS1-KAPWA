@@ -117,8 +117,7 @@ export class MinioService implements OnModuleInit {
       'worker-signatures',
       'client-receipts',
       'irf-attachments',
-      'coa-exports',
-      'backups',
+          'backups',
       'documents',
     ];
 

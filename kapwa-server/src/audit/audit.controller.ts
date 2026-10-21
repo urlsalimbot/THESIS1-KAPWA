@@ -41,13 +41,4 @@ export class AuditController {
     return this.auditService.getConsentLedger(beneficiaryId, limitNum);
   }
 
-  @Get('coa-export')
-  @Roles('admin')
-  @ApiOperation({ summary: 'Export for COA' })
-  async exportForCoa(
-    @Query('startDate') startDate: string,
-    @Query('endDate') endDate: string
-  ) {
-    return this.auditService.exportForCoa(new Date(startDate), new Date(endDate));
-  }
 }

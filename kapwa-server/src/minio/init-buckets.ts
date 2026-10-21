@@ -13,7 +13,6 @@ const REQUIRED_BUCKETS = [
   'worker-signatures',
   'client-receipts',
   'irf-attachments',
-  'coa-exports',
   'backups',
   'documents',
 ];

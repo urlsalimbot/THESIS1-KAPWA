@@ -190,7 +190,7 @@ aws s3api put-public-access-block --bucket kapwa-app-frontend \
 the prefix from §3.2:
 
 ```
-for b in worker-signatures client-receipts irf-attachments coa-exports backups documents; do
+for b in worker-signatures client-receipts irf-attachments backups documents; do
   aws s3api create-bucket --bucket "kapwa-prod-$b" --region ap-southeast-1 \
     --create-bucket-configuration LocationConstraint=ap-southeast-1
   aws s3api put-public-access-block --bucket "kapwa-prod-$b" \

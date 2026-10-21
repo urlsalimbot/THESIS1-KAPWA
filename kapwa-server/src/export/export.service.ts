@@ -26,9 +26,8 @@ export class ExportService {
   ) {}
 
   async exportAuditLogCsv(startDate?: Date, endDate?: Date): Promise<{ buffer: Buffer; filename: string }> {
-    const data = await this.auditService.exportForCoa(startDate, endDate);
     const rows = await this.auditService.getAuditLog(undefined, undefined, 10000);
-    this.logger.warn(`EXPORT: audit-log CSV, ${data.summary.count} interventions, ${rows.length} log rows`);
+    this.logger.warn(`EXPORT: audit-log CSV, ${rows.length} log rows`);
 
     const { stringify } = require('csv-stringify/sync');
     const csv = stringify(

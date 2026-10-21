@@ -7,7 +7,6 @@ export const KNOWN_BUCKETS = [
   'worker-signatures',
   'client-receipts',
   'irf-attachments',
-  'coa-exports',
   'backups',
   'documents',
 ] as const;

@@ -235,7 +235,7 @@ CREATE TABLE consent_ledger (
 | IRF Module | SW/WCPD Liaison | Blotter #, Category, Item A/B/C fields, Auth signatures, masked victim view, secure export |
 | Claimant Dashboard | Claimant (beneficiary representative) | Status tracker, Case details, Service history timeline, Digital Access Card view (read-only), Required-document uploads, Disbursement records/receipts, Consent handling (grant/revoke), Notifications |
 | Program Configurator | Admin | Name/Category/Waiting period/Requirements/Workflow builder, JSON Schema form preview |
-| Fund & SLA Dashboard | Mayor/Auditor | Released vs allocated %, unique households, overdue approvals, COA export |
+| Fund & SLA Dashboard | Mayor/Auditor | Released vs allocated %, unique households, overdue approvals |
 
 ---
 

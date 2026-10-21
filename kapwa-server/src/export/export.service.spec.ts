@@ -13,7 +13,6 @@ describe('ExportService', () => {
 
   beforeEach(async () => {
     auditService = {
-      exportForCoa: jest.fn(),
       getAuditLog: jest.fn(),
     } as any;
 
@@ -51,10 +50,6 @@ describe('ExportService', () => {
 
   describe('exportAuditLogCsv', () => {
     it('generates CSV with correct columns', async () => {
-      auditService.exportForCoa.mockResolvedValue({
-        summary: { totalAmount: 0, count: 0 },
-        interventions: [],
-      } as any);
       auditService.getAuditLog.mockResolvedValue([
         { action: 'case.create', reference_id: 'c1', user_name: 'Rosario Mendoza', created_at: new Date('2026-09-09T00:00:00Z') },
       ] as any);
