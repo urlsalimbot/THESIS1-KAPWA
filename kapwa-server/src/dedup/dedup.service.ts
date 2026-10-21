@@ -1,4 +1,6 @@
 import { Injectable, Optional, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { ClientImportOperation, ClientImportRow, ClientImportMatch, BeneficiaryRemark } from './dedup.entity';
@@ -17,6 +19,8 @@ import { BeneficiaryRemarksService } from './beneficiary-remarks.service';
 /** Writes the stored priority-list Excel (Task 8 supplies the implementation). */
 export interface DedupOutputWriter {
   write(op: ClientImportOperation, rows: ClientImportRow[]): Promise<string>;
+  /** The same workbook in memory — used when the stored file no longer exists. */
+  build(op: ClientImportOperation, rows: ClientImportRow[]): Promise<Buffer>;
 }
 export const DEDUP_OUTPUT_WRITER = 'DEDUP_OUTPUT_WRITER';
 
@@ -473,6 +477,32 @@ export class DedupService {
     op.status = 'reviewing';
     await this.opsRepo.save(op);
     return { rows: rowEntities.length, matches: matchEntities.length };
+  }
+
+  /**
+   * The finalized operation's priority list. The stored file wins; if this
+   * container no longer has it (the finalize ran elsewhere, or the task was
+   * replaced), the rows are still in the database, so the workbook is rebuilt
+   * rather than 404ing. Ordering matches the writer, so both paths are identical.
+   */
+  async readPriorityList(operationId: string): Promise<{ buffer: Buffer; filename: string }> {
+    const op = await this.opsRepo.findOne({ where: { id: operationId } });
+    if (!op) throw new NotFoundException('Operation not found');
+    if (!op.outputFile) throw new NotFoundException('This operation has not been finalized yet');
+
+    const file = path.resolve(process.cwd(), op.outputFile);
+    try {
+      return { buffer: await fs.promises.readFile(file), filename: path.basename(file) };
+    } catch {
+      // Fall through: rebuild from the source of truth.
+    }
+
+    if (!this.outputWriter) throw new NotFoundException('The output file is missing and cannot be rebuilt');
+    const rows = await this.rowsRepo.find({ where: { operationId }, order: { rowIndex: 'ASC' } });
+    return {
+      buffer: await this.outputWriter.build(op, rows),
+      filename: `client-dedup-${op.id}.xlsx`,
+    };
   }
 
   async list(page = 1, limit = 10, status?: string) {

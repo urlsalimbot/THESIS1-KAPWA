@@ -1,11 +1,12 @@
 import { Reflector } from '@nestjs/core';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException, StreamableFile } from '@nestjs/common';
 import { DedupController } from './dedup.controller';
 import { RemarksController } from './remarks.controller';
 
 const dedup: any = {
   create: jest.fn(), upload: jest.fn(), list: jest.fn(), detail: jest.fn(),
   rows: jest.fn(), rowMatches: jest.fn(), decide: jest.fn(), revert: jest.fn(), finalize: jest.fn(),
+  readPriorityList: jest.fn(),
 };
 const remarks: any = { list: jest.fn(), add: jest.fn() };
 
@@ -41,8 +42,24 @@ describe('DedupController', () => {
   });
 
   it('404s the output while the operation is not finalized', async () => {
-    dedup.detail.mockResolvedValue({ id: 'op1', outputFile: null });
+    dedup.readPriorityList.mockRejectedValue(new NotFoundException('This operation has not been finalized yet'));
     await expect(controller.output('op1', { set: jest.fn() } as any)).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('streams the priority list the service returns — stored file or rebuilt', async () => {
+    const set = jest.fn();
+    dedup.readPriorityList.mockResolvedValue({
+      buffer: Buffer.from('PK-workbook'),
+      filename: 'client-dedup-op1.xlsx',
+    });
+
+    const out: any = await controller.output('op1', { set } as any);
+
+    expect(out).toBeInstanceOf(StreamableFile);
+    expect(set).toHaveBeenCalledWith(expect.objectContaining({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': 'attachment; filename="client-dedup-op1.xlsx"',
+    }));
   });
 });
 

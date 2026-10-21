@@ -91,16 +91,26 @@ export function outputGrid(op: ClientImportOperation, rows: ClientImportRow[]): 
 
 @Injectable()
 export class DedupOutputService implements DedupOutputWriter {
-  async write(op: ClientImportOperation, rows: ClientImportRow[]): Promise<string> {
+  /**
+   * The workbook itself, in memory. The download endpoint rebuilds from here
+   * when the stored file is gone: containers are disposable, and a finalize that
+   * ran in another container (a seed, a replaced task) leaves only the rows.
+   */
+  async build(op: ClientImportOperation, rows: ClientImportRow[]): Promise<Buffer> {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const ExcelJS = require('exceljs');
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Priority List');
     for (const line of outputGrid(op, rows)) sheet.addRow(line);
+    return (await workbook.xlsx.writeBuffer()) as Buffer;
+  }
+
+  async write(op: ClientImportOperation, rows: ClientImportRow[]): Promise<string> {
+    const buffer = await this.build(op, rows);
     const dir = exportDir();
     fs.mkdirSync(dir, { recursive: true });
     const file = path.join(dir, `client-dedup-${op.id}.xlsx`);
-    await workbook.xlsx.writeFile(file);
+    await fs.promises.writeFile(file, buffer);
     // Absolute path: the download endpoint re-resolves against cwd, and an
     // absolute input to path.resolve is returned unchanged.
     return file;

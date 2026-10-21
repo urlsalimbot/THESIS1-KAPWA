@@ -54,6 +54,19 @@ describe('DedupOutputService writer', () => {
   const op = { id: 'op-x', source: 's', interventionType: 'food_pack', columnMap: { baseline: { lastName: 'Last Name', firstName: 'First Name', middleName: 'Middle Name', birthDate: 'Birthday', barangay: 'Barangay', remarks: 'Remarks' }, extras: [] } } as unknown as ClientImportOperation;
   const rows = [{ id: 'r1', rowIndex: 2, lastName: 'Reyes', firstName: 'Pedro', status: 'no_match' }] as ClientImportRow[];
 
+  it('builds the same workbook in memory (the download rebuild path)', async () => {
+    // Used when the container no longer holds the stored file: the buffer must be
+    // a real xlsx, not an empty one.
+    const svc = new DedupOutputService();
+    const op = { id: 'op1', columnMap: { baseline: {}, extras: [] } } as any;
+    const rows = [{ rowIndex: 2, status: 'no_match', lastName: 'Reyes', firstName: 'Pedro' }] as any;
+
+    const buf = await svc.build(op, rows);
+
+    expect(buf.subarray(0, 2).toString()).toBe('PK');
+    expect(buf.length).toBeGreaterThan(1000);
+  });
+
   it('honours DEDUP_EXPORT_DIR and stores an absolute path', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dedup-export-'));
     process.env.DEDUP_EXPORT_DIR = dir;

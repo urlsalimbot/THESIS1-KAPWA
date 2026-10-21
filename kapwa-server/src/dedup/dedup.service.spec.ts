@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { DedupService } from './dedup.service';
 import { ColumnMap } from './dedup-parse.service';
 
@@ -43,6 +44,36 @@ describe('DedupService', () => {
   const rowsRepo = mockRepo();
   const matchesRepo = mockRepo();
   const service = new DedupService(opsRepo as any, rowsRepo as any, matchesRepo as any, stubAdapter as any);
+
+
+  describe('readPriorityList', () => {
+    const writer = { write: jest.fn(), build: jest.fn().mockResolvedValue(Buffer.from('PK-built')) };
+    const svc = new DedupService(
+      opsRepo as any, rowsRepo as any, matchesRepo as any, stubAdapter as any,
+      undefined, undefined, undefined, undefined, writer as any,
+    );
+
+    it('rebuilds from the rows when the container no longer has the file', async () => {
+      // The finalize may have run in another container (a seed, a replaced task),
+      // so the recorded path can point at a file this process never sees.
+      opsRepo.findOne.mockResolvedValue({ id: 'op1', outputFile: '/nonexistent/dir/client-dedup-op1.xlsx' });
+      rowsRepo.find.mockResolvedValue([{ rowIndex: 2, status: 'no_match', lastName: 'Reyes', firstName: 'Pedro' }]);
+
+      const out = await svc.readPriorityList('op1');
+
+      expect(out.filename).toBe('client-dedup-op1.xlsx');
+      expect(out.buffer.toString()).toBe('PK-built');
+      expect(writer.build).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'op1' }),
+        expect.arrayContaining([expect.objectContaining({ lastName: 'Reyes' })]),
+      );
+    });
+
+    it('404s before the operation is finalized', async () => {
+      opsRepo.findOne.mockResolvedValue({ id: 'op1', outputFile: null });
+      await expect(svc.readPriorityList('op1')).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
 
   beforeEach(() => { jest.clearAllMocks(); });
 

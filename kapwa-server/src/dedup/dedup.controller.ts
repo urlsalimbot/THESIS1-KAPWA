@@ -3,8 +3,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { Response } from 'express';
-import * as fs from 'fs';
-import * as path from 'path';
 import { MAX_FILE_SIZE } from '../common/constants';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -102,14 +100,14 @@ export class DedupController {
   @Get('operations/:id/output')
   @ApiOperation({ summary: 'Download the stored priority-list Excel' })
   async output(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
-    const op: any = await this.dedup.detail(id);
-    if (!op.outputFile) throw new NotFoundException('This operation has not been finalized yet');
-    const file = path.resolve(process.cwd(), op.outputFile);
-    if (!fs.existsSync(file)) throw new NotFoundException('The output file is missing on disk');
+    // Served from the stored file when this container still has it, otherwise
+    // rebuilt from the operation's rows (containers are disposable).
+    const { buffer, filename } = await this.dedup.readPriorityList(id);
     res.set({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': `attachment; filename="${path.basename(file)}"`,
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': String(buffer.length),
     });
-    return new StreamableFile(fs.createReadStream(file));
+    return new StreamableFile(buffer);
   }
 }
