@@ -89,10 +89,13 @@ export function AnnouncementsPage() {
               key={a.id}
               className={`${a.status === 'draft' ? 'opacity-75' : ''} hover:shadow-md transition-shadow`}
             >
-              <Button variant="ghost"
+              {/* A plain button, not <Button>: the button base is a fixed-height
+                  inline-flex centred row with whitespace-nowrap, which clipped and
+                  overlapped this card's multi-line content. */}
+              <button
                 type="button"
                 onClick={() => navigate(`/announcements/manage/${a.id}`)}
-                className="w-full text-left"
+                className="w-full rounded-lg text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 aria-label={t('announcements.openAria', 'Open {{title}}', { title: a.title })}
               >
                 <div className="flex items-start gap-4 p-4">
@@ -131,7 +134,7 @@ export function AnnouncementsPage() {
                     <ArrowRight size={14} />
                   </span>
                 </div>
-              </Button>
+              </button>
             </Card>
           ))}
         </div>
