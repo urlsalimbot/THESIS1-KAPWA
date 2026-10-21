@@ -92,6 +92,34 @@ describe('RowDecisionCard', () => {
     expect(screen.getByText(/waived, served after review/i)).toBeTruthy();
   });
 
+  it('lets an operator revert a decided match back to pending', async () => {
+    const onRevert = vi.fn().mockResolvedValue(undefined);
+    render(
+      <RowDecisionCard
+        row={{ ...row, eligibility: 'allowed', eligibilityReason: undefined, status: 'retained' }}
+        candidates={[personCandidate]}
+        onRevert={onRevert}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /revert decision/i }));
+    expect(onRevert).toHaveBeenCalledWith('m1');
+  });
+
+  it('lets an operator undo an eligibility decision', async () => {
+    const onRevertEligibility = vi.fn().mockResolvedValue(undefined);
+    render(
+      <RowDecisionCard
+        row={{ ...row, eligibilityDecision: 'waive', status: 'retained' }}
+        candidates={[personCandidate]}
+        onRevertEligibility={onRevertEligibility}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /undo decision/i }));
+    expect(onRevertEligibility).toHaveBeenCalled();
+    // The row-level undo owns the whole eligibility decision; no per-match revert.
+    expect(screen.queryByRole('button', { name: /revert decision/i })).toBeNull();
+  });
+
   it('requires a decision on every pending match of a disqualified row', async () => {
     const onMatchEligibility = vi.fn().mockResolvedValue(undefined);
     const pending: DedupCandidate = { ...personCandidate, status: 'pending' };

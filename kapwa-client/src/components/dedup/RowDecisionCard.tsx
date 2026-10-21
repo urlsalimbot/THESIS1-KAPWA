@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import i18n from '@/i18n';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, RotateCcw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -119,6 +119,10 @@ interface RowDecisionCardProps {
    * reason — the server rejects an empty one.
    */
   onDecide?: (matchId: string, decision: MatchDecision) => void | Promise<void>;
+  /** Undo a decided match (same person / duplicate / new client). */
+  onRevert?: (matchId: string) => void | Promise<void>;
+  /** Undo the row's waive/confirm decision on a disqualified row. */
+  onRevertEligibility?: () => void | Promise<void>;
   busy?: boolean;
 }
 
@@ -194,6 +198,8 @@ export function RowDecisionCard({
   onEligibility,
   onMatchEligibility,
   onDecide,
+  onRevert,
+  onRevertEligibility,
   busy = false,
 }: RowDecisionCardProps) {
   const disqualifiedUndecided = row.eligibility === 'disqualified' && !row.eligibilityDecision;
@@ -226,6 +232,13 @@ export function RowDecisionCard({
               )}
             </div>
           </div>
+          {row.eligibilityDecision && onRevertEligibility && (
+            <div className="pt-1">
+              <Button size="sm" variant="outline" onClick={() => onRevertEligibility()} disabled={busy}>
+                <RotateCcw size={13} className="mr-1" /> {t('dedup.undoEligibility', 'Undo decision')}
+              </Button>
+            </div>
+          )}
           {disqualifiedUndecided && onEligibility && (
             <div className="flex gap-2 pt-1">
               {/* A duplicate of another row in the same list is decided by the
@@ -303,6 +316,11 @@ export function RowDecisionCard({
                       Confirm
                     </Button>
                   </div>
+                )}
+                {c.status !== 'pending' && onRevert && !row.eligibilityDecision && (
+                  <Button size="sm" variant="ghost" onClick={() => onRevert(c.id)} disabled={busy}>
+                    <RotateCcw size={13} className="mr-1" /> {t('dedup.revertDecision', 'Revert decision')}
+                  </Button>
                 )}
               </div>
               {phase1 && <Phase1Keep candidate={c} onDecide={onDecide} busy={busy} />}

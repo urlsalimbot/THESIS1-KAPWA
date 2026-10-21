@@ -440,7 +440,13 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
                 {expandedRow.remarks ? ` — ${expandedRow.remarks}` : ''}
               </DialogDescription>
             </DialogHeader>
-            <ExpandedRowPanel operationId={operationId} row={expandedRow} onChanged={refresh} embedded />
+            <ExpandedRowPanel
+              operationId={operationId}
+              row={expandedRow}
+              onChanged={refresh}
+              canRevert={detail?.status === 'reviewing'}
+              embedded
+            />
           </DialogContent>
         </Dialog>
       )}
@@ -589,11 +595,14 @@ function ExpandedRowPanel({
   operationId,
   row,
   onChanged,
+  canRevert = false,
   embedded = false,
 }: {
   operationId: string;
   row: DedupRow;
   onChanged: () => Promise<unknown> | void;
+  /** Decisions are reversible only while the operation is still in review. */
+  canRevert?: boolean;
   embedded?: boolean;
 }) {
   const { data, isLoading } = useSWR(
@@ -628,6 +637,24 @@ function ExpandedRowPanel({
         toast.success(decision === 'waive' ? t('dedup.waiveMatch', 'Match waived.') : t('dedup.confirmMatch', 'Match confirmed as disqualified.'));
         await onChanged();
       }}
+      onRevert={
+        canRevert
+          ? async (matchId: string) => {
+              await api.post(`/client-dedup/operations/${operationId}/matches/${matchId}/revert`);
+              toast.success(t('dedup.decisionReverted', 'Decision reverted — the match is pending again.'));
+              await onChanged();
+            }
+          : undefined
+      }
+      onRevertEligibility={
+        canRevert
+          ? async () => {
+              await api.post(`/client-dedup/operations/${operationId}/rows/${row.id}/eligibility/revert`);
+              toast.success(t('dedup.eligibilityReverted', 'Eligibility decision undone.'));
+              await onChanged();
+            }
+          : undefined
+      }
       onDecide={async (matchId: string, decision) => {
         const body =
           decision.kind === 'keep_row'

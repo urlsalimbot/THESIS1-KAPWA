@@ -122,6 +122,37 @@ describe('CaseInterventionsService — program matrix membership + form obligati
     expect(interventionRepo.save).not.toHaveBeenCalled();
   });
 
+  it('accepts an active custom catalog service under an enrollment even though it is in no matrix', async () => {
+    const { interventionRepo, matrixRepo, catalogRepo, svc } = mockService();
+    (interventionRepo.manager.query as jest.Mock)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ program_id: 'p1' }]);
+    matrixRepo.findOne.mockResolvedValue(null);
+    catalogRepo.findOne.mockResolvedValue({ code: 'qa_catalog_probe', label: 'QA Catalog Probe', isActive: true, isFinancial: false });
+
+    await svc.create('c1', {
+      programId: 'p1', programEnrollmentId: 'enr-1', serviceName: 'QA Catalog Probe', interventionType: 'qa_catalog_probe',
+    }, 'u1');
+
+    const saved = interventionRepo.save.mock.calls[0][0];
+    expect(saved.interventionType).toBe('qa_catalog_probe');
+    expect(saved.requiredForm).toBeNull();
+  });
+
+  it('refuses a retired custom service even though it used to be offered', async () => {
+    const { interventionRepo, matrixRepo, catalogRepo, svc } = mockService();
+    (interventionRepo.manager.query as jest.Mock)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ program_id: 'p1' }]);
+    matrixRepo.findOne.mockResolvedValue(null);
+    catalogRepo.findOne.mockResolvedValue({ code: 'retired', label: 'Retired Service', isActive: false, isFinancial: false });
+
+    await expect(svc.create('c1', {
+      programId: 'p1', programEnrollmentId: 'enr-1', serviceName: 'Retired Service', interventionType: 'retired',
+    }, 'u1')).rejects.toThrow(/no longer offered/);
+    expect(interventionRepo.save).not.toHaveBeenCalled();
+  });
+
   it('persists the matrix row\u2019s required-form obligation on create', async () => {
     const { interventionRepo, matrixRepo, svc } = mockService();
     (interventionRepo.manager.query as jest.Mock)

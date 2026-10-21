@@ -88,6 +88,12 @@ export class DedupController {
     return this.dedup.revert(id, matchId);
   }
 
+  @Post('operations/:id/rows/:rowId/eligibility/revert')
+  @ApiOperation({ summary: 'Undo a row eligibility decision' })
+  async revertEligibility(@Param('id') id: string, @Param('rowId') rowId: string) {
+    return this.dedup.revertEligibility(id, rowId);
+  }
+
   @Post('operations/:id/finalize')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Queue the finalize (202) — blocked while any match is pending' })

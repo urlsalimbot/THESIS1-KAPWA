@@ -135,6 +135,51 @@ describe('DedupService decisions', () => {
     expect(out.row!.status).toBe('pending');
   });
 
+  it('reverting a duplicate decision also releases the paired row it had marked primary', async () => {
+    opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing' });
+    matchesRepo.findOne.mockResolvedValue({ id: 'm2', rowId: 'r2', targetType: 'import_row', targetImportRowId: 'r1', status: 'deprioritized', remark: 'dup' });
+    rowsRepo.findOne.mockImplementation(async ({ where }: any) =>
+      where.id === 'r2'
+        ? { id: 'r2', operationId: 'op1', status: 'deprioritized', originalRemarks: 'Walk-in' }
+        : { id: 'r1', operationId: 'op1', status: 'primary' });
+    matchesRepo.find.mockImplementation(async ({ where }: any) =>
+      where.rowId === 'r2' ? [{ id: 'm2', rowId: 'r2', status: 'pending', targetType: 'import_row' }] : []);
+
+    const out = await service.revert('op1', 'm2');
+
+    expect(out.match.status).toBe('pending');
+    expect(out.row!.status).toBe('pending');
+    expect(out.row!.remarks).toBe('Walk-in');
+    const pairedSave = rowsRepo.save.mock.calls.find((c: any) => c[0].id === 'r1');
+    expect(pairedSave[0].status).toBe('no_match');
+  });
+
+  it('reverting a same-person decision clears the link it wrote to the record', async () => {
+    opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing' });
+    matchesRepo.findOne.mockResolvedValue({ id: 'm1', rowId: 'r1', targetType: 'db_person', targetPersonId: 'p9', status: 'primary' });
+    rowsRepo.findOne.mockResolvedValue({ id: 'r1', operationId: 'op1', status: 'retained', matchedPersonId: 'p9' });
+    matchesRepo.find.mockResolvedValue([{ id: 'm1', rowId: 'r1', status: 'pending', targetType: 'db_person' }]);
+
+    const out = await service.revert('op1', 'm1');
+
+    expect(out.row!.matchedPersonId).toBeNull();
+    expect(out.row!.status).toBe('pending');
+  });
+
+  it('undoes an eligibility decision and returns its matches to pending', async () => {
+    opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing' });
+    rowsRepo.findOne.mockResolvedValue({ id: 'r1', operationId: 'op1', eligibilityDecision: 'waive', status: 'primary' });
+    matchesRepo.find
+      .mockResolvedValueOnce([{ id: 'm1', rowId: 'r1', status: 'primary', targetType: 'db_person' }])
+      .mockResolvedValue([{ id: 'm1', rowId: 'r1', status: 'pending', targetType: 'db_person' }]);
+
+    const out = await service.revertEligibility('op1', 'r1');
+
+    expect(out.row.eligibilityDecision).toBeNull();
+    expect(out.row.status).toBe('pending');
+    expect(matchesRepo.save.mock.calls[0][0].status).toBe('pending');
+  });
+
   it('refuses decisions when the operation is not in review', async () => {
     opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'finalized' });
     await expect(service.decide('op1', 'm1', { keep: 'import_row' }, 'u1')).rejects.toThrow(/not in review|finalized/i);

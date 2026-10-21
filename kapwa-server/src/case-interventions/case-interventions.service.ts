@@ -47,12 +47,21 @@ export class CaseInterventionsService {
    */
   private async matrixObligation(programId: string, interventionType: string): Promise<string | null> {
     const row = await this.matrixRepo.findOne({ where: { programId, interventionType } });
-    if (!row) {
-      throw new BadRequestException(
-        `"${interventionType}" is not a service the enrolled program renders — pick one from the program's matrix.`,
-      );
+    if (row) return row.requiredForm ?? null;
+    // Custom services are local additions offered for every case; they are not
+    // in any programme's matrix. The catalog already enforces active/inactive,
+    // so an active custom code is allowed here with no form obligation. Built-in
+    // services still have to come from the enrolled programme's matrix.
+    const custom = await this.catalogRepo.findOne({ where: { code: interventionType } });
+    if (custom) {
+      if (!custom.isActive) {
+        throw new BadRequestException(`The service "${custom.label}" is no longer offered — pick another one`);
+      }
+      return null;
     }
-    return row.requiredForm ?? null;
+    throw new BadRequestException(
+      `"${interventionType}" is not a service the enrolled program renders — pick one from the program's matrix.`,
+    );
   }
 
   async findByCaseId(caseId: string) {

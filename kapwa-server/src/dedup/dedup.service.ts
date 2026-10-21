@@ -226,15 +226,61 @@ export class DedupService {
     if (op.status !== 'reviewing') throw new BadRequestException('Operation is not in review');
     const match = await this.matchesRepo.findOne({ where: { id: matchId } });
     if (!match) throw new NotFoundException('Match not found');
+    const wasPaired = match.targetType === 'import_row' ? match.targetImportRowId : null;
+    const revertedPersonId = match.targetPersonId;
     match.status = 'pending';
     match.decidedAt = undefined;
+    match.decidedBy = undefined;
+    match.remark = undefined;
     await this.matchesRepo.save(match);
+
     const row = await this.rowsRepo.findOne({ where: { id: match.rowId } });
     if (row) {
+      // Reverting a same-person decision removes the link the decision made;
+      // the row must go back to being undecided, not stay retained to a person.
+      if (revertedPersonId && row.matchedPersonId === revertedPersonId) row.matchedPersonId = null;
+      // Deprioritizing a duplicate appended a note; undo it with the decision.
+      if (match.targetType === 'import_row') row.remarks = row.originalRemarks || undefined;
       row.status = await this.deriveRowStatus(row.id);
       await this.rowsRepo.save(row);
     }
+    // Pair decisions also stamped the other row primary; reset it too or the
+    // "other row" keeps winning after the decision is undone.
+    if (wasPaired) {
+      const paired = await this.rowsRepo.findOne({ where: { id: wasPaired } });
+      if (paired) {
+        paired.status = await this.deriveRowStatus(paired.id);
+        await this.rowsRepo.save(paired);
+      }
+    }
     return { row, match };
+  }
+
+  /**
+   * Undo a disqualification decision (waive / confirm) for a row. The match
+   * statuses the decision set go back to pending, and the row returns to
+   * waiting on them. Scoped to the reviewing operation like every decision.
+   */
+  async revertEligibility(operationId: string, rowId: string) {
+    const op = await this.opsRepo.findOne({ where: { id: operationId } });
+    if (!op) throw new NotFoundException('Operation not found');
+    if (op.status !== 'reviewing') throw new BadRequestException('Operation is not in review');
+    const row = await this.rowsRepo.findOne({ where: { id: rowId, operationId } });
+    if (!row) throw new NotFoundException('Row not found');
+    if (!row.eligibilityDecision) {
+      throw new BadRequestException('This row has no eligibility decision to undo');
+    }
+    const matches = await this.matchesRepo.find({ where: { rowId } });
+    for (const m of matches) {
+      m.status = 'pending';
+      m.decidedAt = undefined;
+      m.decidedBy = undefined;
+      await this.matchesRepo.save(m);
+    }
+    row.eligibilityDecision = null;
+    row.status = await this.deriveRowStatus(row.id);
+    await this.rowsRepo.save(row);
+    return { row };
   }
 
   async create(input: { source: string; columnMap: ColumnMap; interventionType: string; matchThreshold?: number }, actorId: string) {
