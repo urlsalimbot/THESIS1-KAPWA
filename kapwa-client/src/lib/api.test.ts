@@ -33,8 +33,21 @@ function jsonRes(body: unknown, status = 200, headers: Record<string, string> = 
     status,
     statusText: status === 401 ? 'Unauthorized' : 'OK',
     json: () => Promise.resolve(body),
+    text: () => Promise.resolve(JSON.stringify(body)),
     blob: () => Promise.resolve(new Blob(['x'])),
     headers: { get: (name: string) => headers[name] ?? null },
+  };
+}
+
+/** A successful response with no body — what DELETE returns (200/204). */
+function emptyRes(status = 200) {
+  return {
+    ok: true,
+    status,
+    statusText: 'OK',
+    json: () => Promise.reject(new SyntaxError('Unexpected end of JSON input')),
+    text: () => Promise.resolve(''),
+    headers: { get: () => null },
   };
 }
 
@@ -50,6 +63,21 @@ afterEach(() => {
 });
 
 describe('api core request', () => {
+  it('DELETE with an empty body (200) resolves instead of throwing a JSON parse error', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(emptyRes(200));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(api.del('/cases/c1/interventions/i1')).resolves.toBeUndefined();
+    expect(fetchMock.mock.calls[0][1].method).toBe('DELETE');
+  });
+
+  it('DELETE with a 204 resolves instead of throwing', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(emptyRes(204));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(api.del('/cases/c1/interventions/i1')).resolves.toBeUndefined();
+  });
+
   it('GET returns parsed JSON with Authorization header when a token exists', async () => {
     localStorage.setItem('kapwa_token', 'tok');
     const fetchMock = vi.fn().mockResolvedValue(jsonRes({ ok: true }));

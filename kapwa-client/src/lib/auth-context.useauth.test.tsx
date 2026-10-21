@@ -76,6 +76,7 @@ describe('getCurrentUser', () => {
       ok: true,
       status: 200,
       json: () => Promise.resolve({ user: { id: 'u1', email: 'a@b.com', fullName: 'A B', role: 'admin' } }),
+      text: () => Promise.resolve(JSON.stringify({ user: { id: 'u1', email: 'a@b.com', fullName: 'A B', role: 'admin' } })),
     });
 
     const result = await getCurrentUser();
@@ -119,6 +120,7 @@ describe('cancelMfa', () => {
       ok: true,
       status: 200,
       json: () => Promise.resolve({ mfaRequired: true, tempToken: 'temp-1' }),
+      text: () => Promise.resolve(JSON.stringify({ mfaRequired: true, tempToken: 'temp-1' })),
     });
 
     let captured: ReturnType<typeof useAuth> | null = null;

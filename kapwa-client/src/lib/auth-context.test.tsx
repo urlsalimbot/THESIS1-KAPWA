@@ -34,6 +34,7 @@ describe('AuthProvider — kapwa:auth:logout subscriber', () => {
       ok: true,
       status: 200,
       json: () => Promise.resolve({ user: { id: 'u1', email: 'a@b', fullName: 'A B', role: 'admin' } }),
+      text: () => Promise.resolve(JSON.stringify({ user: { id: 'u1', email: 'a@b', fullName: 'A B', role: 'admin' } })),
     });
 
     const onAuth = vi.fn();
@@ -74,6 +75,7 @@ describe('AuthProvider — kapwa:auth:logout subscriber', () => {
       ok: true,
       status: 200,
       json: () => Promise.resolve({ user: { id: 'u1', email: 'a@b', fullName: 'A B', role: 'admin' } }),
+      text: () => Promise.resolve(JSON.stringify({ user: { id: 'u1', email: 'a@b', fullName: 'A B', role: 'admin' } })),
     });
 
     const onAuth = vi.fn();
@@ -107,6 +109,7 @@ describe('AuthProvider — kapwa:auth:logout subscriber', () => {
       ok: true,
       status: 200,
       json: () => Promise.resolve({ user: { id: 'u1', email: 'a@b', fullName: 'A B', role: 'admin' } }),
+      text: () => Promise.resolve(JSON.stringify({ user: { id: 'u1', email: 'a@b', fullName: 'A B', role: 'admin' } })),
     });
 
     const onAuth = vi.fn();
@@ -155,6 +158,7 @@ describe('AuthProvider — logout purges the intake draft', () => {
       ok: true,
       status: 200,
       json: () => Promise.resolve({ user: { id: 'u1', email: 'a@b', fullName: 'A B', role: 'admin' } }),
+      text: () => Promise.resolve(JSON.stringify({ user: { id: 'u1', email: 'a@b', fullName: 'A B', role: 'admin' } })),
     });
 
     localStorage.setItem('kapwa:intake:draft:u1', JSON.stringify({ data: { surname: 'A' }, savedAt: 'x' }));
@@ -191,6 +195,7 @@ describe('AuthProvider — logout purges the intake draft', () => {
       ok: true,
       status: 200,
       json: () => Promise.resolve({ user: { id: 'u1', email: 'a@b', fullName: 'A B', role: 'admin' } }),
+      text: () => Promise.resolve(JSON.stringify({ user: { id: 'u1', email: 'a@b', fullName: 'A B', role: 'admin' } })),
     });
 
     localStorage.setItem('kapwa:intake:draft:u1', JSON.stringify({ data: { surname: 'A' }, savedAt: 'x' }));
@@ -243,6 +248,7 @@ describe('AuthProvider — fetchUser uses api.get("/auth/me")', () => {
       ok: true,
       status: 200,
       json: () => Promise.resolve({ user: { id: 'u1', email: 'a@b.com', fullName: 'A B', role: 'social_worker' } }),
+      text: () => Promise.resolve(JSON.stringify({ user: { id: 'u1', email: 'a@b.com', fullName: 'A B', role: 'social_worker' } })),
     });
 
     const onAuth = vi.fn();
@@ -284,6 +290,7 @@ describe('AuthProvider — logout clears the pending ID photo', () => {
       ok: true,
       status: 200,
       json: () => Promise.resolve({ user: { id: 'u1', email: 'a@b', fullName: 'A B', role: 'admin' } }),
+      text: () => Promise.resolve(JSON.stringify({ user: { id: 'u1', email: 'a@b', fullName: 'A B', role: 'admin' } })),
     });
 
     const onAuth = vi.fn();

@@ -107,6 +107,20 @@ function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
   });
 }
 
+/**
+ * Parse a successful response body.
+ *
+ * A successful DELETE has no body (Nest answers 200 with `content-length: 0`,
+ * or 204), and `res.json()` on that throws "Unexpected end of JSON input" —
+ * which surfaced as "Could not remove the intervention" while the row had in
+ * fact been deleted. Read the text and only parse when there is one.
+ */
+async function readJsonBody<T>(res: { status: number; text: () => Promise<string> }): Promise<T> {
+  if (res.status === 204) return undefined as T;
+  const text = await res.text();
+  return (text.trim() ? JSON.parse(text) : undefined) as T;
+}
+
 async function rawRequest<T>(
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   path: string,
@@ -146,7 +160,7 @@ async function rawRequest<T>(
       if (!isCsrfRejection(err)) announceAccessDenied(err, normalized);
       throw err;
     }
-    return (await res.json()) as T;
+    return readJsonBody<T>(res);
   } finally {
     clearTimeout(timeoutId);
   }
@@ -278,7 +292,7 @@ export const api = {
         body: formData,
         signal: opts?.signal,
       });
-      if (res.ok) return res.json();
+      if (res.ok) return readJsonBody<T>(res);
       const errBody = await res.json().catch(() => null);
       const err = new ApiError(res.status, errBody, apiErrorMessage(res.status, errBody));
       if (isCsrfRejection(err) && !csrfRetried) {
