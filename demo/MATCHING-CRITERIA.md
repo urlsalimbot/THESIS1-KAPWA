@@ -162,3 +162,39 @@ The **intake** prior-record check is a separate scorer
 (`src/intake/match-scoring.ts`, weights 0.35 name / 0.20 family / 0.20 identifier
 / 0.15 birthday / 0.10 barangay, with a phonetic-surname rule). Do not mix the
 two when presenting: Client Deduplication uses the weights in this document.
+
+## 10. Boundary cases — two otherwise identical rows, one field apart
+
+Scores below use the same formula (no declared identifier, no household boost,
+which is how the intra-file sweep always scores):
+
+| Difference between the two rows | Score | Duplicate pair? |
+|---|---|---|
+| Only **barangay** differs | **0.80** (0.75 if the middle name is empty/unequal) | **Yes** |
+| Only **birthday** differs | **0.65** (0.60 without a middle name) | **No** |
+| Only birthday differs, but a declared phone/email/PhilSys is equal | **0.75** | Yes, exactly on the threshold |
+| Only middle name differs | **0.85** | Yes |
+| Barangay **and** birthday differ | **0.55** | No |
+| First-name typo (`Juan` → `Jhoan`) | 0.741 | No |
+
+**Consequences.**
+
+- **Barangay-only pair → one client.** Both rows become a duplicate pair; the
+  reviewer keeps one and the other creates nothing. The surviving row's
+  barangay is what gets written, and if the survivor is matched to an existing
+  person whose current address differs, finalize **overwrites** that address
+  (`barangayUpdate`, remark "Barangay updated to …"). Keep the row that carries
+  the correct address.
+- **Birthday-only pair → two clients, by design.** The rows are *not* a
+  duplicate pair, so both are swept against KAPWA independently. The row whose
+  birthday matches an existing person is retained and updates that record
+  (0.90 with middle name, 0.85 without); the row with the other birthday scores
+  0.65 against the very same person — below 0.75 — finds no candidate, and is
+  imported as a **new client**. If neither birthday exists in KAPWA, both rows
+  become new clients. There is no manual "same person" link to offer because no
+  candidate is shown below the threshold.
+- A **declared identifier** is the only signal that rescues a birthday-differing
+  pair, and only to exactly 0.75.
+- Practical rule for preparing a list: **birthday conflicts must be fixed
+  before upload**; barangay conflicts are tolerated but choose the surviving
+  row's address deliberately.
