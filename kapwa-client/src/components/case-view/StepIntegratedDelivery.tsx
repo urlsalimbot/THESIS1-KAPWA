@@ -71,6 +71,9 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
   const latestReferralId = referrals?.[0]?.id;
   const referralNotNeeded = Boolean(caseData?.referralNotNeeded);
   const canDecide = userRole === 'admin' || userRole === 'social_worker';
+  // Reading an issued letter is allowed to the same two roles by the API; the
+  // seal hides the writes, never the PDF they already hold.
+  const canReadLetter = canDecide;
 
   async function saveDecision(notNeeded: boolean) {
     setSavingDecision(true);
@@ -233,7 +236,9 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
               <p className="text-center text-xs text-muted-foreground">
                 {t('caseView.integrated.issuedHint', 'Endorsement letter issued for this case.')}
               </p>
-              {!readOnly && (
+              {/* Reading an issued letter is not a write: the seal locks the
+                  referral actions, never the PDF the agency already holds. */}
+              {canReadLetter && (
                 <div className="text-center">
                   <Button size="sm" onClick={redownload} disabled={issuing}>
                     <FileText size={14} className="mr-1" />

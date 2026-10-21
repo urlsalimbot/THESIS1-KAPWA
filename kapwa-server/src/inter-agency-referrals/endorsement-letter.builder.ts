@@ -1,12 +1,15 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { ORG_LOCATION } from '../common/constants';
 
 // Endorsement Letter — the formal document by which MSWDO hands a beneficiary
 // to a partner agency. It is the referral: issuing it records the inter-agency
 // referral and the printed letter is the paper the owning agency carries.
 //
-// Text-only letterhead (office name + location block + rule) rather than the
-// seal images used by the summary report: it keeps the built artefact
-// self-contained and avoids wiring image assets into the build for one page.
+// Letterhead carries the two official seals: the Municipal Government of
+// Norzagaray badge on the left and the DSWD badge on the right. The images are
+// the same files the GIS builders use; from dist this path resolves to
+// dist/gis/assets because nest-cli copies that directory into the build.
 // Everything else follows the official layout conventions from the other
 // builders (A4, 24pt margins, ORG_LOCATION from common/constants).
 
@@ -45,6 +48,22 @@ export async function buildEndorsementLetterPdf(data: EndorsementLetterData): Pr
   };
 
   // ---- Letterhead ----
+  // Draw the seals first so the centered text can sit between them. A missing
+  // or unreadable file must not stop the letter: the text letterhead remains.
+  const badgeSize = 52;
+  const badgeY = 34;
+  const badge = (file: string, x: number) => {
+    const filePath = path.join(__dirname, '..', 'gis', 'assets', file);
+    if (!fs.existsSync(filePath)) return;
+    try {
+      doc.image(filePath, x, badgeY, { fit: [badgeSize, badgeSize] });
+    } catch {
+      /* unsupported image — the text letterhead still renders */
+    }
+  };
+  badge('norzagaray-bulacan-official-logo.png', 56);
+  badge('DSWD-Logo.png', 56 + W - badgeSize);
+
   center('Republic of the Philippines', 48, 11, false);
   center(`Province of ${ORG_LOCATION.province}`, 61, 11, false);
   center(`Municipality of ${ORG_LOCATION.municipality}`, 74, 11, false);

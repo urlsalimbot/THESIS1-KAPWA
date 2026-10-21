@@ -209,6 +209,46 @@ describe('StepIntegratedDelivery — referral or an explicit no-referral decisio
     expect(mockDownloadLetter).not.toHaveBeenCalled();
   });
 
+  it('keeps the issued letter downloadable after the step is sealed', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('inter-agency-referrals')) {
+        return Promise.resolve([
+          { id: 'r1', toAgencyId: 'ag-rhu', reason: 'Medical coordination', status: 'referred' },
+        ]);
+      }
+      if (k.includes('agencies')) return Promise.resolve(AGENCIES);
+      return Promise.resolve(null);
+    });
+    const user = userEvent.setup();
+    const stepLock = { stepKey: 'referrals', lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
+    renderStep([], { readOnly: true, lockReadOnly: true, stepLock });
+
+    const btn = await screen.findByRole('button', { name: /Endorsement Letter/i });
+    expect(btn).toBeEnabled();
+    await user.click(btn);
+    await waitFor(() => expect(mockDownloadLetterById).toHaveBeenCalledWith('r1'));
+
+    // Still sealed: only the read/download survives, not the writes.
+    expect(screen.queryByRole('button', { name: /Add Referral/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Revoke referral/i })).toBeNull();
+  });
+
+  it('does not offer the letter to a read-only role the API would refuse', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('inter-agency-referrals')) {
+        return Promise.resolve([{ id: 'r1', toAgencyId: 'ag-rhu', reason: 'Medical coordination' }]);
+      }
+      if (k.includes('agencies')) return Promise.resolve(AGENCIES);
+      return Promise.resolve(null);
+    });
+    renderStep([], { readOnly: true, role: 'coordinator' });
+
+    await screen.findByText(/Inter-Agency Referrals/i);
+    expect(screen.queryByRole('button', { name: /Endorsement Letter/i })).toBeNull();
+  });
+
   it('is inert in readOnly mode', async () => {
     renderStep([], { readOnly: true });
 

@@ -30,6 +30,18 @@ describe('buildEndorsementLetterPdf', () => {
     expect(text).toContain('MSWDO Norzagaray');
   });
 
+  it('draws the municipal and DSWD badges in the letterhead', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const PDFDocument = require('pdfkit');
+    const image = jest.spyOn(PDFDocument.prototype, 'image');
+    try {
+      await buildEndorsementLetterPdf(DATA);
+      expect(image).toHaveBeenCalledTimes(2);
+    } finally {
+      image.mockRestore();
+    }
+  });
+
   it('renders without a beneficiary category', async () => {
     const pdf = await buildEndorsementLetterPdf({ ...DATA, caseCategory: undefined });
     expect(pdf.subarray(0, 4).toString('latin1')).toBe('%PDF');
