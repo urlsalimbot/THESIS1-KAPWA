@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useId, useCallback } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { statusLabel } from '@/i18n/display';
@@ -890,13 +890,17 @@ export function CaseViewPage() {
                 <Separator />
                 <p className="px-4 py-2 text-xs text-muted-foreground">
                   {t('cases.renewalOf', 'Renewal of case')}{' '}
-                  <Button variant="ghost" size="icon"
-                    type="button"
-                    className="rounded text-primary underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-                    onClick={() => navigate(`/cases/${caseData.renewalOfCaseId}`)}
+                  {/* A case reference is navigation, not a button. The global
+                      touch-target rule (`button, a[href] { min-height: 44px }`)
+                      is what turned the old icon-sized button into a square that
+                      the control number overlapped; `.touch-sm` is the app's
+                      opt-out for inline text links. */}
+                  <Link
+                    to={`/cases/${caseData.renewalOfCaseId}`}
+                    className="touch-sm rounded font-medium text-primary underline underline-offset-2 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                   >
                     {renewalCase?.controlNo || String(caseData.renewalOfCaseId).slice(0, 8)}
-                  </Button>
+                  </Link>
                 </p>
               </>
             )}

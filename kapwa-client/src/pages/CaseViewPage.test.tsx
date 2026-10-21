@@ -288,8 +288,12 @@ describe('CaseViewPage — government ID photo', () => {
     renderWithSWR(<CaseViewPage />);
     expect(await screen.findByText('Renewal of case')).toBeTruthy();
     // The linked case resolves to the mocked case record -> its control number.
-    const renewalLink = await screen.findByRole('button', { name: 'NORZ-2026-0042' });
-    expect(renewalLink).toBeTruthy();
+    // It is a navigation link, not a button: the 44px touch-target rule on
+    // buttons/links turned the old icon-sized control into an overlapping box,
+    // so `.touch-sm` is what keeps this one inline.
+    const renewalLink = await screen.findByRole('link', { name: 'NORZ-2026-0042' });
+    expect(renewalLink.getAttribute('href')).toBe('/cases/C-002');
+    expect(renewalLink.className).toContain('touch-sm');
   });
 
   it('renders PSGC codes in the beneficiary address as names', async () => {
