@@ -61,7 +61,8 @@ describe('DedupService', () => {
 
       const out = await svc.readPriorityList('op1');
 
-      expect(out.filename).toBe('client-dedup-op1.xlsx');
+      // CD-YYYY-MMM-NNN.xlsx (Manila month + rank among that month's finalizations).
+      expect(out.filename).toMatch(/^CD-\d{4}-[A-Z]{3}-001\.xlsx$/);
       expect(out.buffer.toString()).toBe('PK-built');
       expect(writer.build).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'op1' }),

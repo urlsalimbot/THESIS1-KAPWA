@@ -51,6 +51,13 @@ export class ClientImportOperation extends BaseEntity {
   finalizeStartedAt?: Date | null;
 
   /** Why the last attempt failed; the operation returns to `reviewing` to retry. */
+  /**
+   * Transient: the export filename for this run (`CD-YYYY-MMM-NNN.xlsx`). Set by
+   * the service when finalizing, read by the writer; the persisted artifact is
+   * `output_file`.
+   */
+  outputName?: string;
+
   @Column({ name: 'finalize_error', type: 'text', nullable: true })
   finalizeError?: string | null;
 

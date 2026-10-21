@@ -67,6 +67,21 @@ describe('DedupOutputService writer', () => {
     expect(buf.length).toBeGreaterThan(1000);
   });
 
+  it('names the workbook after the run (CD-YYYY-MMM-NNN.xlsx)', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dedup-export-'));
+    process.env.DEDUP_EXPORT_DIR = dir;
+    const named = { ...op, outputName: 'CD-2026-OCT-007.xlsx' } as ClientImportOperation;
+    // exportDir() caches its first answer per module, so use a fresh module here
+    // rather than leaving the shared cache pointing at this test's temp dir.
+    let FreshService: typeof DedupOutputService | undefined;
+    jest.isolateModules(() => {
+      FreshService = require('./dedup-output.service').DedupOutputService;
+    });
+    const written = await new FreshService!().write(named, rows);
+    expect(path.basename(written)).toBe('CD-2026-OCT-007.xlsx');
+    delete process.env.DEDUP_EXPORT_DIR;
+  });
+
   it('honours DEDUP_EXPORT_DIR and stores an absolute path', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dedup-export-'));
     process.env.DEDUP_EXPORT_DIR = dir;

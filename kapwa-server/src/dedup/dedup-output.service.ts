@@ -109,7 +109,7 @@ export class DedupOutputService implements DedupOutputWriter {
     const buffer = await this.build(op, rows);
     const dir = exportDir();
     fs.mkdirSync(dir, { recursive: true });
-    const file = path.join(dir, `client-dedup-${op.id}.xlsx`);
+    const file = path.join(dir, op.outputName ?? `client-dedup-${op.id}.xlsx`);
     await fs.promises.writeFile(file, buffer);
     // Absolute path: the download endpoint re-resolves against cwd, and an
     // absolute input to path.resolve is returned unchanged.

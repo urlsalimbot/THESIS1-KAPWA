@@ -480,6 +480,35 @@ export class DedupService {
   }
 
   /**
+   * `CD-YYYY-MMM-NNN.xlsx` — the Manila month of finalization plus its rank among
+   * that month's finalized runs. Derived from `finalized_at` (no counter table),
+   * so a download reproduces the same name the finalize wrote.
+   *
+   * shortcut: two ops finalized in the same month by *different instances at
+   * once* could compute the same rank; one process finalizes at a time, so the
+   * window is theoretical. Upgrade to a per-month counter row if runs ever scale out.
+   */
+  private async priorityListName(at: Date, includeSelf: boolean): Promise<string> {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Manila', year: 'numeric', month: 'short',
+    }).formatToParts(at);
+    const year = parts.find((p) => p.type === 'year')?.value ?? '';
+    const month = (parts.find((p) => p.type === 'month')?.value ?? '').toUpperCase();
+
+    const rows: Array<{ n: number }> = await this.opsRepo.query(
+      `SELECT COUNT(*)::int AS n
+         FROM client_import_operations
+        WHERE status = 'finalized' AND finalized_at IS NOT NULL
+          AND date_trunc('month', finalized_at AT TIME ZONE 'Asia/Manila')
+            = date_trunc('month', $1::timestamptz AT TIME ZONE 'Asia/Manila')
+          AND finalized_at <= $1`,
+      [at],
+    );
+    const rank = Math.max(1, Number(rows[0]?.n ?? 0) + (includeSelf ? 0 : 1));
+    return `CD-${year}-${month}-${String(rank).padStart(3, '0')}.xlsx`;
+  }
+
+  /**
    * The finalized operation's priority list. The stored file wins; if this
    * container no longer has it (the finalize ran elsewhere, or the task was
    * replaced), the rows are still in the database, so the workbook is rebuilt
@@ -490,19 +519,21 @@ export class DedupService {
     if (!op) throw new NotFoundException('Operation not found');
     if (!op.outputFile) throw new NotFoundException('This operation has not been finalized yet');
 
+    // The canonical name is derived, not read from the path: a run finalized
+    // before the naming rule (or whose file was written under another name) still
+    // downloads as CD-YYYY-MMM-NNN.xlsx.
+    const filename = await this.priorityListName(op.finalizedAt ?? op.createdAt ?? new Date(), true);
+
     const file = path.resolve(process.cwd(), op.outputFile);
     try {
-      return { buffer: await fs.promises.readFile(file), filename: path.basename(file) };
+      return { buffer: await fs.promises.readFile(file), filename };
     } catch {
       // Fall through: rebuild from the source of truth.
     }
 
     if (!this.outputWriter) throw new NotFoundException('The output file is missing and cannot be rebuilt');
     const rows = await this.rowsRepo.find({ where: { operationId }, order: { rowIndex: 'ASC' } });
-    return {
-      buffer: await this.outputWriter.build(op, rows),
-      filename: `client-dedup-${op.id}.xlsx`,
-    };
+    return { buffer: await this.outputWriter.build(op, rows), filename };
   }
 
   async list(page = 1, limit = 10, status?: string) {
@@ -783,6 +814,9 @@ export class DedupService {
       // Persisted, not just returned: the request that queued the job is long
       // gone by the time this runs, and the review screen polls for it.
       op.finalizeSummary = result;
+      // The export's own name (CD-YYYY-MMM-NNN.xlsx); the writer uses it for the
+      // file and the download serves the same one.
+      op.outputName = await this.priorityListName(op.finalizedAt, false);
       if (this.outputWriter) op.outputFile = await this.outputWriter.write(op, rows as ClientImportRow[]);
       await em.getRepository(ClientImportOperation).save(op);
     });

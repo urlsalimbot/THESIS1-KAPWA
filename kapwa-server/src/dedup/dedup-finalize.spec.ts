@@ -70,6 +70,10 @@ describe('DedupService.finalize', () => {
     expect(beneficiaryRepo.create.mock.calls[0][0]).toMatchObject({ personId: 'p-new' });
     const remark = remarksService.append.mock.calls[0][0];
     expect(remark).toMatchObject({ beneficiaryId: 'ben-new', kind: 'import', remark: 'AICS', authoredBy: 'u1' });
+    // The writer received the export's canonical name.
+    const writtenOp = (stubWriter.write as jest.Mock).mock.calls.at(-1)[0];
+    expect(writtenOp.outputName).toMatch(/^CD-\d{4}-[A-Z]{3}-\d{3}\.xlsx$/);
+
     const savedOp = opsRepo.save.mock.calls.at(-1)[0];
     expect(savedOp).toMatchObject({ status: 'finalized', accomplisher: 'u1', outputFile: 'exports/client-dedup/op1.xlsx' });
   });
