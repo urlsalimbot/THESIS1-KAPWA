@@ -45,8 +45,8 @@ describe('BeneficiariesPage', () => {
 
   it('renders beneficiary name from mock data', async () => {
     renderWithSWR(<BeneficiariesPage />);
-    expect(await screen.findByText('Juan D. Dela Cruz')).toBeTruthy();
-    expect(await screen.findByText('Maria S. Santos')).toBeTruthy();
+    expect(await screen.findByText('Juan Dizon Dela Cruz')).toBeTruthy();
+    expect(await screen.findByText('Maria Soriano Santos')).toBeTruthy();
   });
 
   it('renders search input for beneficiaries', async () => {
@@ -62,7 +62,7 @@ describe('BeneficiariesPage', () => {
 
   it('api.get is called with a path containing /beneficiaries on mount', async () => {
     renderWithSWR(<BeneficiariesPage />);
-    await screen.findByText('Juan D. Dela Cruz');
+    await screen.findByText('Juan Dizon Dela Cruz');
     expect(mockApiGet).toHaveBeenCalled();
     const lastCallArg = mockApiGet.mock.calls[mockApiGet.mock.calls.length - 1][0];
     expect(JSON.stringify(lastCallArg)).toContain('beneficiaries');
@@ -71,7 +71,7 @@ describe('BeneficiariesPage', () => {
   it('typing in the search input then clicking Search triggers a second api.get with a search param', async () => {
     renderWithSWR(<BeneficiariesPage />);
     // Wait for the initial mount fetch to complete
-    await screen.findByText('Juan D. Dela Cruz');
+    await screen.findByText('Juan Dizon Dela Cruz');
     const initialCallCount = mockApiGet.mock.calls.length;
     expect(initialCallCount).toBeGreaterThan(0);
 

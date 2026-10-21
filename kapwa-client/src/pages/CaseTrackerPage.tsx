@@ -93,7 +93,7 @@ export function CaseTrackerPage() {
     { accessorKey: 'controlNo', header: t('tracker.controlNo', 'Control No.'), cell: ({ row }) => <span className="font-mono text-xs">{row.original.controlNo}</span> },
     { accessorKey: 'surname', header: t('tracker.surname', 'Surname') },
     { accessorKey: 'firstName', header: t('tracker.firstName', 'First Name') },
-    { accessorKey: 'middleName', header: t('tracker.middleName', 'M.I.'), cell: ({ row }) => <span className="text-xs">{row.original.middleName ? `${row.original.middleName[0]}.` : ''}</span> },
+    { accessorKey: 'middleName', header: t('tracker.middleName', 'M.I.'), cell: ({ row }) => <span className="text-xs">{row.original.middleName ?? ''}</span> },
     { accessorKey: 'gender', header: t('tracker.gender', 'Gender') },
     { accessorKey: 'clientCategory', header: t('tracker.category', 'Category') },
     { accessorKey: 'caseCategory', header: t('tracker.caseCategory', 'Case Category'), cell: ({ row }) => <CaseCategoryCell category={row.original.caseCategory} /> },

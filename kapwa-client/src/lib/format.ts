@@ -143,20 +143,17 @@ export function residentName(
 }
 
 /**
- * Middle name as a single initial — `"Poblete"` → `"P."`.
- *
- * The app stores the full middle name but displays it abbreviated in every
- * full-name surface. The one deliberate exception is the beneficiary view
- * page (`BeneficiaryViewPage`), which shows the middle name in full.
+ * The stored middle name, shown as-is — `"Poblete"` stays `"Poblete"`. The app
+ * never abbreviates a middle name to an initial; a person either has a full
+ * middle name on record or none.
  */
-export function middleInitial(middleName: string | null | undefined): string {
-  const name = middleName?.trim();
-  return name ? `${name.charAt(0).toUpperCase()}.` : '';
+export function displayMiddleName(middleName: string | null | undefined): string {
+  return middleName?.trim() ?? '';
 }
 
 /**
- * `"Pedro P. Reyes Jr."` — first-name-first full name with the middle name
- * abbreviated to an initial. Empty parts are dropped, so no double spaces.
+ * `"Pedro Poblete Reyes Jr."` — first-name-first full name with the middle name
+ * in full. Empty parts are dropped, so no double spaces.
  */
 export function personFullName(
   firstName: string | null | undefined,
@@ -164,7 +161,7 @@ export function personFullName(
   surname: string | null | undefined,
   extension?: string | null,
 ): string {
-  return [firstName, middleInitial(middleName), surname, extension]
+  return [firstName, displayMiddleName(middleName), surname, extension]
     .map(part => part?.trim() ?? '')
     .filter(Boolean)
     .join(' ');

@@ -85,7 +85,7 @@ describe('SearchResultsPage', () => {
 
     renderWithSWR('ana');
 
-    expect(await screen.findByRole('heading', { name: 'Ana L. Fernandez' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Ana Lontok Fernandez' })).toBeTruthy();
     expect(screen.getByText('Minuyan')).toBeTruthy();
     expect(screen.getByText('NORZ-AC-2026-0002')).toBeTruthy();
     expect(screen.getByText('NHTS-0001')).toBeTruthy();

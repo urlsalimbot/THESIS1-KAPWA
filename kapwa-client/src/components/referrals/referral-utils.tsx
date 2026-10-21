@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { middleInitial, personFullName } from '../../lib/format';
+import { displayMiddleName, personFullName } from '../../lib/format';
 
 export interface Agency {
   id: string;
@@ -61,7 +61,7 @@ export interface NameParts {
 export function referralListName(p?: NameParts | null): string {
   if (!p) return '';
   const surname = [p.surname, p.extension].filter(Boolean).join(' ');
-  const given = [p.firstName, middleInitial(p.middleName)].filter(Boolean).join(' ');
+  const given = [p.firstName, displayMiddleName(p.middleName)].filter(Boolean).join(' ');
   return [surname, given].filter(Boolean).join(', ');
 }
 
