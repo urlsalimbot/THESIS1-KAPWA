@@ -370,7 +370,13 @@ export class AccessCardsService {
     const person = await this.repo.query(
       `SELECT p.surname, p.first_name, p.middle_name, p.gender,
               p.dob::date AS dob,
-              (SELECT raw FROM person_addresses pa WHERE pa.person_id = p.id AND pa.address_type = 'current' LIMIT 1) AS address_raw,
+              (SELECT COALESCE(pa.raw, CONCAT_WS(', ', pa.street, pa.barangay, pa.city, pa.province))
+                 FROM person_addresses pa
+                WHERE pa.person_id = p.id AND pa.address_type = 'current'
+                LIMIT 1) AS address_raw,
+              (SELECT pa.barangay FROM person_addresses pa
+                WHERE pa.person_id = p.id AND pa.address_type = 'current'
+                LIMIT 1) AS barangay,
               (SELECT value FROM person_contacts pc WHERE pc.person_id = p.id AND pc.contact_type = 'phone' LIMIT 1) AS phone,
               (SELECT nhts_pr_id FROM households WHERE id = b.household_id) AS nhts_pr_id
        FROM beneficiaries b
@@ -401,7 +407,11 @@ export class AccessCardsService {
       relations: ['agencyRef'],
     });
 
-    const barangay = p.address_raw?.includes(',') ? (p.address_raw as string).split(',').slice(0, 2).join(',').trim() : (p.address_raw ?? '');
+    // `raw` is the legacy concatenated address; rows created after the address
+    // decomposition only carry the structured columns, so the barangay is read
+    // from its own column and the address line is composed as a fallback.
+    const barangay = (p.barangay as string) ?? '';
+    const clientAddress = (p.address_raw as string) ?? '';
 
     const data: AccessCardPdfData = {
       code,
@@ -415,7 +425,7 @@ export class AccessCardsService {
         middleName: p.middle_name ?? undefined,
         gender: p.gender ?? '',
         dob: p.dob ?? undefined,
-        address: p.address_raw ?? '',
+        address: clientAddress,
       },
       familyMembers: (fam ?? []).map((m: any) => ({
         fullName: m.full_name ?? '',

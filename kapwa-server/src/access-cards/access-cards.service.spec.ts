@@ -571,7 +571,7 @@ describe('AccessCardsService.generateAccessCardPdf', () => {
         { id: 'b1', access_card_code: 'NORZ-AC-2026-0001', surname: 'Dela Cruz', first_name: 'Juan' },
       ])
       .mockResolvedValueOnce([
-        { surname: 'Dela Cruz', first_name: 'Juan', middle_name: 'B', gender: 'Male', dob: new Date('1990-01-01'), address_raw: 'Brgy. San Mateo, Norzagaray, Bulacan; 123', phone: '0917-000-0000', nhts_pr_id: 'NHTS-2024-000123' },
+        { surname: 'Dela Cruz', first_name: 'Juan', middle_name: 'B', gender: 'Male', dob: new Date('1990-01-01'), address_raw: 'Brgy. San Mateo, Norzagaray, Bulacan; 123', barangay: 'San Mateo', phone: '0917-000-0000', nhts_pr_id: 'NHTS-2024-000123' },
       ])
       .mockResolvedValueOnce([
         { full_name: 'Maria Dela Cruz', relationship: 'Spouse', age: 35, status: 'Employed', income: 15000 },
@@ -581,6 +581,11 @@ describe('AccessCardsService.generateAccessCardPdf', () => {
     ]);
     const pdf = await service.generateAccessCardPdf('b1');
     expect(pdf.toString('latin1')).toContain('%PDF');
+    // The PDF's barangay line reads the structured address column, not the
+    // legacy `raw` string (which the seeded rows leave null).
+    const personQuery = repoMock.query.mock.calls[1][0];
+    expect(personQuery).toContain('AS barangay');
+    expect(personQuery).toContain('COALESCE(pa.raw');
   });
 
   describe('claimant card ownership', () => {
