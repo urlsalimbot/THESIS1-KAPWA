@@ -158,7 +158,9 @@ export class AccessCardsService {
   async findBeneficiaryCard(beneficiaryId: string, caller?: User) {
     await this.assertCardAccess(caller, { beneficiaryId });
     const ben = await this.repo.query(
-      'SELECT b.id, COALESCE(h.access_card_code, br.access_card_code) AS access_card_code, p.surname, p.first_name FROM beneficiaries b LEFT JOIN households h ON h.id = b.household_id LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id JOIN persons p ON p.id = b.person_id WHERE b.id = $1',
+      // The printed card shows the barangay line, so the current address row
+      // has to come along: without it print always showed "Barangay:" blank.
+      'SELECT b.id, COALESCE(h.access_card_code, br.access_card_code) AS access_card_code, p.surname, p.first_name, COALESCE(pa.barangay, \'\') AS barangay FROM beneficiaries b LEFT JOIN households h ON h.id = b.household_id LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id JOIN persons p ON p.id = b.person_id LEFT JOIN LATERAL (SELECT a.barangay FROM person_addresses a WHERE a.person_id = p.id ORDER BY (a.address_type = \'current\') DESC LIMIT 1) pa ON true WHERE b.id = $1',
       [beneficiaryId]
     );
     if (!ben?.[0]?.access_card_code) {
@@ -177,7 +179,7 @@ export class AccessCardsService {
   async findCardByCode(cardCode: string, caller?: User) {
     await this.assertCardAccess(caller, { cardCode });
     const ben = await this.repo.query(
-      'SELECT b.id, COALESCE(h.access_card_code, br.access_card_code) AS access_card_code, p.surname, p.first_name FROM beneficiaries b LEFT JOIN households h ON h.id = b.household_id LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id JOIN persons p ON p.id = b.person_id WHERE COALESCE(h.access_card_code, br.access_card_code) = $1 LIMIT 1',
+      'SELECT b.id, COALESCE(h.access_card_code, br.access_card_code) AS access_card_code, p.surname, p.first_name, COALESCE(pa.barangay, \'\') AS barangay FROM beneficiaries b LEFT JOIN households h ON h.id = b.household_id LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id JOIN persons p ON p.id = b.person_id LEFT JOIN LATERAL (SELECT a.barangay FROM person_addresses a WHERE a.person_id = p.id ORDER BY (a.address_type = \'current\') DESC LIMIT 1) pa ON true WHERE COALESCE(h.access_card_code, br.access_card_code) = $1 LIMIT 1',
       [cardCode]
     );
     if (!ben?.[0]?.access_card_code) {

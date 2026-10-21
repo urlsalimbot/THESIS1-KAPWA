@@ -95,8 +95,8 @@ describe('AccessCardsService', () => {
   });
 
   describe('findBeneficiaryCard', () => {
-    it('returns beneficiary card data', async () => {
-      const benData = { id: 'ben-id', access_card_code: 'NORZ-AC-2026-0042', surname: 'Doe', first_name: 'John' };
+    it('returns beneficiary card data, with the barangay the printed card shows', async () => {
+      const benData = { id: 'ben-id', access_card_code: 'NORZ-AC-2026-0042', surname: 'Doe', first_name: 'John', barangay: 'Bigte' };
       repoMock.query.mockResolvedValue([benData]);
       repoMock.find.mockResolvedValue([]);
 
@@ -107,8 +107,13 @@ describe('AccessCardsService', () => {
         code: 'NORZ-AC-2026-0042',
         services: [],
       });
+      expect(result.beneficiary.barangay).toBe('Bigte');
       expect(repoMock.query).toHaveBeenCalledWith(
-        'SELECT b.id, COALESCE(h.access_card_code, br.access_card_code) AS access_card_code, p.surname, p.first_name FROM beneficiaries b LEFT JOIN households h ON h.id = b.household_id LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id JOIN persons p ON p.id = b.person_id WHERE b.id = $1',
+        expect.stringContaining('COALESCE(pa.barangay, \'\') AS barangay'),
+        ['ben-id']
+      );
+      expect(repoMock.query).toHaveBeenCalledWith(
+        expect.stringContaining('FROM person_addresses'),
         ['ben-id']
       );
     });
@@ -137,6 +142,12 @@ describe('AccessCardsService', () => {
       });
       expect(repoMock.query).toHaveBeenCalledWith(
         expect.stringContaining('WHERE COALESCE(h.access_card_code, br.access_card_code) = $1'),
+        ['NORZ-AC-2026-0042']
+      );
+      // The code lookup feeds the same printed card, so it carries the
+      // barangay too.
+      expect(repoMock.query).toHaveBeenCalledWith(
+        expect.stringContaining('COALESCE(pa.barangay, \'\') AS barangay'),
         ['NORZ-AC-2026-0042']
       );
       expect(repoMock.find).toHaveBeenCalledWith({
