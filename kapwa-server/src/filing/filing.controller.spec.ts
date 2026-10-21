@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Reflector } from '@nestjs/core';
-import { ConflictException, StreamableFile } from '@nestjs/common';
+import { BadRequestException, ConflictException, StreamableFile } from '@nestjs/common';
 import * as fs from 'fs';
 import { FilingController } from './filing.controller';
 import { FilingService } from './filing.service';
@@ -229,6 +229,12 @@ describe('FilingController — step-1 seal on requirement writes', () => {
     await controller.upload(file, { caseId: 'c1', category: 'irf_photo' }, sw);
 
     expect(stepLocks.assertRequirementsWritable).not.toHaveBeenCalled();
+  });
+
+  it('rejects a multipart upload that carries no file with 400, not a 500', async () => {
+    await expect(controller.upload(undefined, { caseId: 'c1' }, sw))
+      .rejects.toThrow(BadRequestException);
+    expect(service.upload).not.toHaveBeenCalled();
   });
 
   it('checks step 1 before verifying a requirement document', async () => {

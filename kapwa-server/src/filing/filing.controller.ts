@@ -1,5 +1,5 @@
 import { MAX_FILE_SIZE } from '../common/constants';
-import { Controller, Get, Post, Patch, Delete, Param, Query, UseGuards, UploadedFile, Body, Request, UseInterceptors, StreamableFile, Res, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Post, Patch, Delete, Param, Query, UseGuards, UploadedFile, Body, Request, UseInterceptors, StreamableFile, Res, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
@@ -37,6 +37,10 @@ export class FilingController {
     @Body(new ZodPipe(UploadMetadataSchema)) metadata: { caseId?: string; beneficiaryId?: string; irfId?: string; announcementId?: string; category?: string; notes?: string; requirementKey?: string },
     @Request() req: any,
   ) {
+    // A multipart request without its file part used to reach the service with
+    // `undefined` and surface as a 500. It is a client mistake, not a server
+    // failure, so answer 400 like the rest of the validation layer.
+    if (!file) throw new BadRequestException('No file uploaded');
     // Only a requirement upload writes `case_requirements`; a photo or an
     // approval document changes no sealed data, so it is not refused.
     if (metadata.caseId && metadata.requirementKey) {
