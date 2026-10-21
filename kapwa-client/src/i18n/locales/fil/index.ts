@@ -768,7 +768,7 @@ const fil: EnLocale = {
     "scsrBurial": "SCSR — Buryal",
     "scsrMedical": "SCSR — Medikal",
     "gisPdf": "GIS (PDF)",
-    "gisLocked": "Magagamit kapag aktibo na ang kaso (kasalukuyang {{status}})",
+    "gisLocked": "Magagamit kapag na-activate na ang kaso (kasalukuyang {{status}})",
     "gisNational": "Pambansa (DSWD)",
     "gisMunicipal": "Munisipal (MSWDO)",
     "caseTitle": "Kaso {{controlNo}}",

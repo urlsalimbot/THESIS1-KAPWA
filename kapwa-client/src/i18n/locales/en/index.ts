@@ -1324,7 +1324,7 @@ const en = {
     "scsrBurial": "SCSR — Burial",
     "scsrMedical": "SCSR — Medical",
     "gisPdf": "GIS (PDF)",
-    "gisLocked": "Available once the case is active (currently {{status}})",
+    "gisLocked": "Available once the case has been activated (currently {{status}})",
     "gisNational": "National (DSWD)",
     "gisMunicipal": "Municipal (MSWDO)",
     "caseTitle": "Case {{controlNo}}",

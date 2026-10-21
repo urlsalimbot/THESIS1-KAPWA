@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
@@ -200,6 +200,29 @@ describe('CaseViewPage — government ID photo', () => {
     await screen.findByText('Juan Dela Cruz');
 
     expect(screen.getByRole('button', { name: /GIS \(PDF\)/i })).not.toBeDisabled();
+  });
+
+  it('offers the GIS download for a closed or aftercare case (the sheet is history)', async () => {
+    // Regression: both the API and this button required exactly `active`, so the
+    // intake sheet — and the CSR that embeds it — could never be printed again.
+    for (const status of ['transitioning', 'closed', 'aftercare']) {
+      mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
+      mockApiGet.mockImplementation((key: unknown) => {
+        const k = JSON.stringify(key);
+        if (k.includes('history')) return Promise.resolve([]);
+        if (k.includes('enrollments')) return Promise.resolve([]);
+        if (k.includes('interventions')) return Promise.resolve([]);
+        if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+        if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+        if (k.includes('caseId')) return Promise.resolve([]);
+        if (k.includes('cases')) return Promise.resolve({ ...mockCase, status });
+        return Promise.resolve(null);
+      });
+      renderWithSWR(<CaseViewPage />);
+      await screen.findByText('Juan Dela Cruz');
+      expect(screen.getByRole('button', { name: /GIS \(PDF\)/i })).not.toBeDisabled();
+      cleanup();
+    }
   });
 
   it('mutates the case-detail key when the action bar reports a transition', async () => {

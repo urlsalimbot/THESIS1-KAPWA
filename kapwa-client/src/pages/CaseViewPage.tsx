@@ -139,6 +139,13 @@ function actorLabel(name?: string | null, role?: string | null): string | null {
   return n || r;
 }
 
+/**
+ * The GIS is printable from activation onward, not only while active — it is the
+ * printed record of an approved case, and closure/aftercare is when reprints are
+ * wanted. Mirrors the server's PRINTABLE_CASE_STATUSES (the API enforces it).
+ */
+const GIS_PRINTABLE_STATUSES = new Set(['active', 'transitioning', 'closed', 'aftercare']);
+
 export function CaseViewPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
@@ -810,9 +817,9 @@ export function CaseViewPage() {
                       variant="outline"
                       size="sm"
                       className="gap-1.5"
-                      disabled={caseData.status !== 'active'}
-                      title={caseData.status !== 'active'
-                        ? t('cases.gisLocked', 'Available once the case is active (currently {{status}})', { status: caseData.status })
+                      disabled={!GIS_PRINTABLE_STATUSES.has(caseData.status)}
+                      title={!GIS_PRINTABLE_STATUSES.has(caseData.status)
+                        ? t('cases.gisLocked', 'Available once the case has been activated (currently {{status}})', { status: caseData.status })
                         : undefined}
                     >
                       <Download size={14} aria-hidden="true" /> {t('cases.gisPdf', 'GIS (PDF)')}
