@@ -216,7 +216,15 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
         toast.error(t('caseView.implement.serviceNameRequired', 'Enter the name of the service rendered.'));
         return;
       }
-      const serviceName = adHoc ? form.serviceName.trim() : dialogProgram!.name;
+      // The label the operator picked, not the programme's name: a programme
+      // can render many services, and the saved row (and the access card it
+      // auto-logs) must say which one was delivered.
+      const serviceName = adHoc
+        ? form.serviceName.trim()
+        : t(
+            `interventionType.${form.interventionType}`,
+            customByCode.get(form.interventionType)?.label ?? form.interventionType ?? dialogProgram!.name,
+          );
       const category = adHoc ? (form.category || undefined) : (dialogProgram!.category || form.category || undefined);
       await api.post(`/cases/${caseId}/interventions`, {
         // An ad-hoc service carries no program anchors: the server records it

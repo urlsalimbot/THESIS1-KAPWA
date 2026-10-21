@@ -181,6 +181,42 @@ describe('StepImplementHIP adhoc intervention', () => {
       expect(payload.programEnrollmentId).toBe('enr-1');
       expect(payload.programId).toBe('p1');
       expect(payload.interventionType).toBe('crisis_counseling');
+      expect(payload.serviceName).toBe('Crisis Counseling');
+    });
+
+    it('records a custom catalog service with its own label, not the program name', async () => {
+      const user = userEvent.setup();
+      mockApiGet.mockImplementation(async (key: unknown) => {
+        const k = JSON.stringify(key);
+        if (k.includes('intervention-catalog')) {
+          return [{ code: 'qa_catalog_probe', label: 'QA Catalog Probe', isFinancial: false, isActive: true }];
+        }
+        if (k.includes('interventions')) return [];
+        if (k.includes('enrollments')) {
+          return [{
+            id: 'enr-1', programId: 'p1',
+            programName: 'AICS — Assistance to Individuals in Crisis Situation',
+            services: ['medical_assistance'],
+          }];
+        }
+        if (k.includes('programs')) return [{ id: 'p1', name: 'AICS — Assistance to Individuals in Crisis Situation' }];
+        return [];
+      });
+      render(
+        <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0, provider: () => new Map() }}>
+          <StepImplementHIP caseId="case-1" caseData={{ status: 'enrolled' }} userRole="social_worker" />
+        </SWRConfig>,
+      );
+      fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
+      await screen.findByRole('dialog');
+
+      await pickSelect(user, 'Service *', /QA Catalog Probe/);
+      fireEvent.click(screen.getByRole('button', { name: /Save Intervention/ }));
+
+      await waitFor(() => expect(mockApiPost).toHaveBeenCalledTimes(1));
+      const [, payload] = mockApiPost.mock.calls[0];
+      expect(payload.interventionType).toBe('qa_catalog_probe');
+      expect(payload.serviceName).toBe('QA Catalog Probe');
     });
 
     it('points an unenrolled case at the ad-hoc path', async () => {
