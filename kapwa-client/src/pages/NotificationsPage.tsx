@@ -211,14 +211,20 @@ export function NotificationsPage() {
           <ul className="divide-y">
             {displayed.map(n => (
               <li key={n.id}>
-                <Button variant="ghost"
+                {/* A native button, not the shared Button: a notification is a
+                    multi-line row, and Button's fixed `h-10` +
+                    `whitespace-nowrap` collapsed the title into the message and
+                    doubled the text on itself. */}
+                <button
+                  type="button"
                   onClick={() => {
                     if (!n.isRead) markRead.trigger({ id: n.id });
                     navigate(navTarget(n));
                   }}
                   disabled={markRead.isMutating}
                   className={cn(
-                    'w-full text-left px-4 py-4 flex gap-3 hover:bg-muted/50 transition-colors cursor-pointer',
+                    'flex w-full items-start gap-3 px-4 py-4 text-left transition-colors',
+                    'hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-60',
                     !n.isRead && 'bg-muted/20',
                   )}
                 >
@@ -247,7 +253,7 @@ export function NotificationsPage() {
                       {!n.isRead && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
                     </div>
                   </div>
-                </Button>
+                </button>
               </li>
             ))}
           </ul>

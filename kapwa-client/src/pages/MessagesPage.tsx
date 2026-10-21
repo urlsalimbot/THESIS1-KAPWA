@@ -8,6 +8,7 @@ import type { TFunction } from 'i18next';
 import { connectSocket, disconnectSocket, emitTyping } from '../lib/chat-socket';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
+import { setBreadcrumbLabel } from '../lib/breadcrumbs';
 import { Send, MessageSquare, Search, X, Check, CheckCheck, ChevronLeft, Plus } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
 import { Input } from '@/components/ui/input';
@@ -207,6 +208,15 @@ export function MessagesPage() {
     }
   }, [urlUserId]);
 
+  // The URL carries the peer's UUID; register their name so the topbar crumb
+  // reads "Messages › Juan Dela Cruz" instead of "Message 01a159da".
+  useEffect(() => {
+    if (!activeConv) return;
+    const name = conversations.find((c) => c.userId === activeConv)?.name
+      ?? rawUsers.find((u) => u.id === activeConv)?.fullName;
+    if (name) setBreadcrumbLabel(activeConv, name);
+  }, [activeConv, conversations, rawUsers]);
+
   // Auto-scroll
   useEffect(() => {
     if (autoScroll) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -341,8 +351,8 @@ export function MessagesPage() {
                       <p className="text-xs text-muted-foreground py-8 text-center">{t('messages.noContacts', 'No contacts found')}</p>
                     ) : (
                       filteredUsers.map(u => (
-                        <Button variant="ghost" key={u.id} onClick={() => selectConversation(u.id)}
-                          className="w-full text-left rounded-lg px-3 py-2.5 text-sm hover:bg-accent flex items-center gap-3 transition-colors group"
+                        <button type="button" key={u.id} onClick={() => selectConversation(u.id)}
+                          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted group"
                         >
                           <Avatar className="h-8 w-8">
                             <AvatarFallback className={cn('text-xs text-white font-medium', roleColor(u.role))}>
@@ -356,7 +366,7 @@ export function MessagesPage() {
                           {existingConvIds.has(u.id) && (
                             <span className="text-xs text-muted-foreground/60 italic shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">{t('messages.existing', 'Existing')}</span>
                           )}
-                        </Button>
+                        </button>
                       ))
                     )}
                   </div>
@@ -402,13 +412,22 @@ export function MessagesPage() {
             ) : (
               <div className="py-1">
                 {conversations.map(conv => (
-                  <Button variant="ghost" key={conv.userId} onClick={() => selectConversation(conv.userId)}
+                  // Native button: the shared Button's `h-10` and
+                  // `whitespace-nowrap` clipped this two-line row against the
+                  // list edge and pushed the timestamp out of view.
+                  <button type="button" key={conv.userId} onClick={() => selectConversation(conv.userId)}
                     className={cn(
-                      'w-full text-left px-4 py-3 hover:bg-accent/60 transition-colors border-b border-border/40 last:border-b-0',
-                      activeConv === conv.userId && 'bg-accent',
+                      'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors',
+                      'border-b border-border/40 last:border-b-0 hover:bg-muted/60',
+                      // `accent` is the terracotta brand colour, not a surface:
+                      // selecting a conversation with it painted the row red.
+                      activeConv === conv.userId && 'bg-muted text-foreground',
                     )}
                   >
-                    <div className="flex items-center gap-3">
+                    {/* `min-w-0` on this wrapper is what lets the two-line
+                        column shrink; without it the preview overran the
+                        sidebar and pushed the timestamp out of view. */}
+                    <div className="flex w-full min-w-0 items-center gap-3">
                       <Avatar className="h-10 w-10 shrink-0">
                         <AvatarFallback className={cn('text-sm text-white font-medium', roleColor(conv.role))}>
                           {(conv.name || '?').charAt(0).toUpperCase()}
@@ -429,7 +448,7 @@ export function MessagesPage() {
                         </div>
                       </div>
                     </div>
-                  </Button>
+                  </button>
                 ))}
               </div>
             )}
