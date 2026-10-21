@@ -12,6 +12,19 @@ import { buildMunicipalGisPdf } from './gis-municipal-pdf.builder';
 /** GIS variations: the national DSWD sheet and the MSWDO municipal sheet. */
 export type GisForm = 'national' | 'municipal';
 
+/**
+ * Statuses at which a printable case document may be produced: the case must be,
+ * or must have been, active. Before activation there is no approved service plan
+ * to print; after it the sheet and the case study report are history and stay
+ * printable (closing and aftercare are exactly when they get reprinted).
+ */
+export const PRINTABLE_CASE_STATUSES: readonly CaseStatus[] = [
+  CaseStatus.ACTIVE,
+  CaseStatus.TRANSITIONING,
+  CaseStatus.CLOSED,
+  CaseStatus.AFTERCARE,
+];
+
 @Injectable()
 export class GisExportService {
   private readonly logger = new Logger(GisExportService.name);
@@ -30,9 +43,9 @@ export class GisExportService {
     // UI, so a direct link or a stale tab cannot print a case still under review.
     const c = await this.caseRepo.findOne({ where: { id: caseId }, select: ['id', 'status'] });
     if (!c) throw new NotFoundException('Case not found');
-    if (c.status !== CaseStatus.ACTIVE) {
+    if (!PRINTABLE_CASE_STATUSES.includes(c.status)) {
       throw new ConflictException(
-        `The General Intake Sheet can only be printed once the case is active (this case is ${c.status}).`,
+        `The General Intake Sheet can only be printed once the case has been activated (this case is ${c.status}).`,
       );
     }
     const data = await loadGisData(

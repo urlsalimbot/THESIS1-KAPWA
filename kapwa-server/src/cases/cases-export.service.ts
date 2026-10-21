@@ -1,11 +1,11 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Case } from './case.entity';
+import { Case, CaseStatus } from './case.entity';
 import { CaseHistory } from './case-history.entity';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
 import { FilingService } from '../filing/filing.service';
-import { GisExportService } from '../gis/gis-export.service';
+import { GisExportService, PRINTABLE_CASE_STATUSES } from '../gis/gis-export.service';
 import { IrfExportService } from '../irf/irf-export.service';
 import { OrgService } from '../common/org.service';
 import { ORG_LOCATION, MUNICIPAL_MAYOR } from '../common/constants';
@@ -41,6 +41,15 @@ export class CasesExportService {
       relations: ['beneficiary', 'beneficiary.person', 'beneficiary.household', 'assignedWorker'],
     });
     if (!c) throw new NotFoundException('Case not found');
+    // The bundle is the closure record (CSR + PCV + COE + IRF + GIS). Like the
+    // sheet it embeds, it is printable from activation onward — transition and
+    // aftercare are when it is actually needed. Refuse before that, with this
+    // document's own name rather than the GIS's.
+    if (!PRINTABLE_CASE_STATUSES.includes(c.status)) {
+      throw new ConflictException(
+        `The Case Study Report can be produced once the case has been activated (this case is ${c.status}).`,
+      );
+    }
 
     const parts: Buffer[] = [
       await this.buildCsrCover(c),

@@ -202,6 +202,30 @@ describe('CasesExportService — CSR bundle', () => {
     expect(svc.mergePdfs.mock.calls[0][0]).toHaveLength(4);
   });
 
+  it('builds for a closed or aftercare case (the reports are closure documents)', async () => {
+    for (const status of [CaseStatus.TRANSITIONING, CaseStatus.CLOSED, CaseStatus.AFTERCARE]) {
+      const caseRepo = { findOne: jest.fn().mockResolvedValue({ ...bundleCase(), status }), manager: { query: jest.fn().mockResolvedValue([]) } };
+      const gis = { generateGisPdf: jest.fn().mockResolvedValue(Buffer.from('%PDF')) };
+      const svc: any = new (CasesExportService as any)(caseRepo, {} as any, {} as any, {} as any, {} as any, gis, {} as any);
+      svc.org = { officeName: jest.fn().mockResolvedValue('MSWDO') };
+      jest.spyOn(svc, 'buildCsrCover').mockResolvedValue(Buffer.from('%PDF'));
+      jest.spyOn(svc, 'buildPettyCashVoucher').mockResolvedValue(Buffer.from('%PDF'));
+      jest.spyOn(svc, 'buildCertificateOfEligibility').mockResolvedValue(Buffer.from('%PDF'));
+      jest.spyOn(svc, 'mergePdfs').mockResolvedValue(Buffer.from('%PDF-merged'));
+
+      await expect(svc.generateCsrPdf('c1')).resolves.toBeTruthy();
+      expect(gis.generateGisPdf).toHaveBeenCalledWith('c1');
+    }
+  });
+
+  it('refuses before activation, naming the case study report (not the GIS)', async () => {
+    const caseRepo = { findOne: jest.fn().mockResolvedValue({ ...bundleCase(), status: CaseStatus.ASSESSED }), manager: { query: jest.fn() } };
+    const gis = { generateGisPdf: jest.fn() };
+    const svc: any = new (CasesExportService as any)(caseRepo, {} as any, {} as any, {} as any, {} as any, gis, {} as any);
+    await expect(svc.generateCsrPdf('c1')).rejects.toThrow(/Case Study Report can be produced once the case has been activated/);
+    expect(gis.generateGisPdf).not.toHaveBeenCalled();
+  });
+
   it('adds the IRF when one is linked to the case', async () => {
     const caseRepo = { findOne: jest.fn().mockResolvedValue(bundleCase()), manager: { query: jest.fn().mockResolvedValue([{ id: 'irf-1' }]) } };
     const gis = { generateGisPdf: jest.fn().mockResolvedValue(Buffer.from('%PDF')) };

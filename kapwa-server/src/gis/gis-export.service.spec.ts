@@ -1,6 +1,6 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { CaseStatus } from '../cases/case.entity';
-import { GisExportService } from './gis-export.service';
+import { GisExportService, PRINTABLE_CASE_STATUSES } from './gis-export.service';
 
 describe('GisExportService', () => {
   const baseCase = {
@@ -54,12 +54,27 @@ describe('GisExportService', () => {
     await expect(service.generateGisPdf('missing')).rejects.toThrow(NotFoundException);
   });
 
-  it('refuses to print the sheet until the case is active', async () => {
+  it('refuses to print the sheet before the case is activated', async () => {
     // The General Intake Sheet prints an approved case; it used to be
     // downloadable from intake onward.
-    caseRepoMock.findOne.mockResolvedValue({ ...baseCase, status: CaseStatus.IN_REVIEW });
-    await expect(service.generateGisPdf('c1')).rejects.toThrow(ConflictException);
-    await expect(service.generateGisPdf('c1', 'municipal')).rejects.toThrow(ConflictException);
+    for (const status of [CaseStatus.ENROLLED, CaseStatus.ASSESSED, CaseStatus.IN_REVIEW]) {
+      caseRepoMock.findOne.mockResolvedValue({ ...baseCase, status });
+      await expect(service.generateGisPdf('c1')).rejects.toThrow(ConflictException);
+      await expect(service.generateGisPdf('c1', 'municipal')).rejects.toThrow(ConflictException);
+    }
+  });
+
+  it('keeps printing the sheet after activation — transition, closure, aftercare', async () => {
+    // Regression: the sheet is history once the office has approved the case, and
+    // a closed/aftercare case still needs reprints (the CSR bundle embeds it).
+    // One real build proves the gate; the constant covers the rest of the window
+    // without rendering four PDFs in a unit test.
+    caseRepoMock.findOne.mockResolvedValue({ ...baseCase, status: CaseStatus.AFTERCARE });
+    const buf = await service.generateGisPdf('c1');
+    expect(buf.toString('latin1')).toContain('%PDF');
+    for (const status of [CaseStatus.ACTIVE, CaseStatus.TRANSITIONING, CaseStatus.CLOSED, CaseStatus.AFTERCARE]) {
+      expect(PRINTABLE_CASE_STATUSES).toContain(status);
+    }
   });
 
   it('returns the case controlNo for export filenames', async () => {
