@@ -21,7 +21,13 @@
     "shelter_assistance",
     "scsr_generated",
     "home_visit",
-    "health_checkup"
+    "health_checkup",
+    "assistive_device",
+    "pwd_assistance",
+    "birth_discrepancy",
+    "philhealth_assistance",
+    "child_custody",
+    "balik_probinsya"
   ],
   "programTypes": [
     "aics",
@@ -49,7 +55,9 @@
     "food_pack",
     "educational_assistance",
     "livelihood_seed",
-    "shelter_assistance"
+    "shelter_assistance",
+    "assistive_device",
+    "balik_probinsya"
   ],
   "programTypesByCaseCategory": {
     "Children in Conflict with the Law (CICL)": [

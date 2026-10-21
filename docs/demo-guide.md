@@ -53,7 +53,7 @@ Sign in as **admin@mswdo.test / admin123**. The admin lands on the Admin Panel.
   Approving a case is admin-only.
 - **Announcements** — 5 published (one pinned) and 2 drafts. The published ones are what the
   public saw in the prologue.
-- **Programs** — the staff catalogue (38 programs). Only the admin can add, edit, or retire one.
+- **Programs** — the staff catalogue (19 programs). Only the admin can add, edit, or retire one.
 - **Admin Panel → Users** — every account with its role and barangay. Point at the Bigte
   coordinator and at a social worker's 13 permitted barangays. Roles are assigned centrally.
 - **Admin Panel → Audit Log** — the chained record of changes (nothing can be edited silently).

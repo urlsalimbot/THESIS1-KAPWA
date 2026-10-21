@@ -90,7 +90,7 @@ narrative thread in the film, and it only works if both sides are Bigte.
 Checked through the UI against `https://kapwa.software`, so these beats have real content
 on the night:
 
-- **Public:** 38 programs; 7 announcements (5 published, one pinned; 2 drafts).
+- **Public:** 19 programs; 7 announcements (5 published, one pinned; 2 drafts).
 - **Admin:** 30 active accounts; Approval Pipeline Phase-In **13** · Implementation **1**
   · Phase-Out **0**; Audit Log tab present under Admin Panel.
 - **Social worker (`worker1`):** 13 permitted barangays. Cases filter returns rows for

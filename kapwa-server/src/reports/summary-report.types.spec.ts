@@ -14,6 +14,9 @@ const PROGRAMS = [
   { id: 'p-hv', name: 'Home Visit', category: 'Technical' },
   { id: 'p-counsel', name: 'Psychosocial Counseling', category: 'Mental Health' },
   { id: 'p-4ps', name: '4Ps — Pantawid Pamilyang Pilipino Program', category: 'CCT' },
+  { id: 'p-aics', name: 'AICS — Assistance to Individuals in Crisis Situation', category: 'Crisis Intervention' },
+  { id: 'p-pwd2', name: 'Program for Persons with Disabilities (PWDs)', category: 'PWD Welfare' },
+  { id: 'p-balik', name: 'Balik Probinsya Assistance', category: 'Technical' },
 ];
 
 const base = { serviceText: '', referralText: '', hasCsr: false, hasVisit: false };
@@ -68,6 +71,38 @@ describe('codeForColumn', () => {
     expect(codeForColumn('LEGAL_PAO')).toBe('R');
     expect(codeForColumn('COUNSELLING')).toBe('H');
     expect(codeForColumn('TECH_OTHERS')).toBe('C');
+  });
+});
+
+describe('selectCaseColumn — typed services (DSWD assistance types)', () => {
+  it('maps each printed channel from the recorded service type', () => {
+    const typed = (serviceTypes: string[]) => selectCaseColumn({ ...base, serviceTypes }, PROGRAMS).key;
+    expect(typed(['burial_assistance'])).toBe('BURIAL');
+    expect(typed(['medical_assistance'])).toBe('MEDICAL');
+    expect(typed(['assistive_device'])).toBe('ASSISTIVE');
+    expect(typed(['pwd_assistance'])).toBe('PWD');
+    expect(typed(['birth_discrepancy'])).toBe('BIRTH_DISCREPANCY');
+    expect(typed(['transport_assistance'])).toBe('TRAVEL');
+    expect(typed(['philhealth_assistance'])).toBe('PHILHEALTH');
+    expect(typed(['child_custody'])).toBe('CUSTODY');
+    expect(typed(['balik_probinsya'])).toBe('BALIK');
+    expect(typed(['referral_pao'])).toBe('LEGAL_PAO');
+    expect(typed(['legal_assistance'])).toBe('LEGAL_OTHERS');
+    expect(typed(['scsr_generated'])).toBe('CSR');
+    expect(typed(['crisis_counseling'])).toBe('COUNSELLING');
+    expect(typed(['home_visit'])).toBe('HOME_VISIT');
+  });
+
+  it('uses the printed form order when a case has several typed services', () => {
+    expect(selectCaseColumn({ ...base, serviceTypes: ['scsr_generated', 'medical_assistance', 'home_visit'] }, PROGRAMS).key).toBe('MEDICAL');
+    expect(selectCaseColumn({ ...base, serviceTypes: ['balik_probinsya', 'transport_assistance'] }, PROGRAMS).key).toBe('BALIK');
+    expect(selectCaseColumn({ ...base, serviceTypes: ['financial_grant'] }, PROGRAMS).key).toBe('TECH_OTHERS');
+  });
+
+  it('keeps the genuine programme fallback for programme-shaped slots', () => {
+    expect(selectCaseColumn({ ...base, programId: 'p-pwd2' }, PROGRAMS).key).toBe('PWD');
+    expect(selectCaseColumn({ ...base, programId: 'p-balik' }, PROGRAMS).key).toBe('BALIK');
+    expect(selectCaseColumn({ ...base, programId: 'p-aics', serviceTypes: ['burial_assistance'] }, PROGRAMS).key).toBe('BURIAL');
   });
 });
 

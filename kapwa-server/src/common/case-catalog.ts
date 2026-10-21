@@ -23,6 +23,9 @@ export const INTERVENTION_TYPES: readonly string[] = [
   'community_service', 'legal_assistance', 'medico_legal_assistance', 'referral_pao',
   'protection_order_issued', 'protective_custody', 'shelter_assistance', 'scsr_generated',
   'home_visit', 'health_checkup',
+  // DSWD assistance categories the GAD form prints separately.
+  'assistive_device', 'pwd_assistance', 'birth_discrepancy', 'philhealth_assistance',
+  'child_custody', 'balik_probinsya',
 ];
 export const PROGRAM_TYPES: readonly string[] = [
   'aics', 'social_pension', 'supplemental_feeding', 'livelihood', 'family_welfare',
@@ -38,6 +41,7 @@ export const PROGRAM_TYPES: readonly string[] = [
 export const FINANCIAL_INTERVENTION_TYPES: readonly string[] = [
   'financial_grant', 'medical_assistance', 'burial_assistance', 'transport_assistance',
   'food_pack', 'educational_assistance', 'livelihood_seed', 'shelter_assistance',
+  'assistive_device', 'balik_probinsya',
 ];
 export function isFinancialIntervention(code: string | null | undefined): boolean {
   return !!code && FINANCIAL_INTERVENTION_TYPES.includes(code);

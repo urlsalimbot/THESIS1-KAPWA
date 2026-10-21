@@ -30,6 +30,7 @@ interface ProgramSeed {
 // "... (depending on ...)" in the program matrix). They must not block
 // activation of a routine case, so they seed as non-mandatory.
 const OPTIONAL_DOCUMENT_KEYS = new Set<string>([
+  'Barangay Certificate of Indigency',
   'Death certificate (for burial-adjacent medical claims)',
   'Medical appointment slip / referral (if medical-related)',
   'Affidavit of need (if emergency travel)',
@@ -51,15 +52,10 @@ export const PROGRAMS: ProgramSeed[] = [
   // (Palanan MSWDO AICS process: "direct financial assistance and material
   // assistance including medical, transportation, financial, burial and food").
   // The former standalone Medical/Burial/Transportation/Food/Financial/
-  // Educational Assistance programs were merged here (research-verified
-  // 2026-10-04; see design spec Appendix B).
-  //
-  // The six merged rows below are kept as *untyped, report-support* rows:
-  // the GAD summary report's BURIAL/MEDICAL/EDUCATION columns key on these
-  // names, and removing them would empty the columns on fresh databases. They
-  // are outside the typed catalog (`programType: null`) — the catalog program
-  // for all of them is AICS, and the AICS-budget phase keys off
-  // `program_type = aics` + the intervention type.
+  // Educational Assistance programs are not DSWD programmes: they are
+  // assistance types rendered under AICS (MC 15 s. 2022). They were removed as
+  // programmes in the DSWD-alignment pass — their requirements live on the
+  // services, and the GAD report routes cases by intervention type.
   {
     id: uuidv7(),
     name: 'AICS — Assistance to Individuals in Crisis Situation',
@@ -71,118 +67,24 @@ export const PROGRAMS: ProgramSeed[] = [
       'Social case study report (if available)',
     ],
     fundSources: ['DSWD - AICS', 'LGU - Municipal'],
-    legalBasis: 'DSWD MC No. 5 s.2021 (AICS Operational Guidelines)',
+    legalBasis: 'DSWD MC No. 15 s. 2022 (Updated AICS Guidelines), as amended by MC No. 16 s. 2023 and MC No. 6 s. 2024',
     isActive: true,
     programType: 'aics',
     interventions: [
       'financial_grant', 'medical_assistance', 'burial_assistance',
       'transport_assistance', 'food_pack', 'educational_assistance',
-      'scsr_generated', 'crisis_counseling',
+      'assistive_device', 'birth_discrepancy', 'philhealth_assistance',
+      'child_custody', 'legal_assistance', 'referral_pao',
+      'psychosocial_support', 'crisis_counseling', 'scsr_generated',
     ],
     requiredForms: { medical_assistance: 'medical_certificate', burial_assistance: 'death_certificate' },
   },
-  {
-    id: uuidv7(),
-    name: 'Medical Assistance',
-    category: 'Medical',
-      requiredDocuments: [
-      'Valid ID of patient or immediate family member',
-      'Barangay Certificate of Indigency',
-      'Medical abstract / doctor\'s referral',
-      'Prescription / list of medicines',
-      'Hospital bill / statement of account',
-      'Death certificate (for burial-adjacent medical claims)',
-    ],
-    fundSources: ['LGU - Municipal', 'DSWD - AICS'],
-    legalBasis: 'RA 11223 (Universal Health Care Act); DSWD MC No. 5 s.2021 (AICS Guidelines)',
-    isActive: true,
-    programType: null,
-    interventions: ['medical_assistance', 'financial_grant', 'scsr_generated'],
-    requiredForms: { scsr_generated: 'social_case_study_report', medical_assistance: 'medical_certificate' },
-  },
-  {
-    id: uuidv7(),
-    name: 'Burial Assistance',
-    category: 'Burial',
-      requiredDocuments: [
-      'Valid ID of claimant / immediate family member',
-      'Barangay Certificate of Indigency',
-      'Death certificate (PSA)',
-      'Funeral contract / official receipt from funeral parlor',
-      'Affidavit of next of kin',
-    ],
-    fundSources: ['LGU - Municipal', 'DSWD - AICS'],
-    legalBasis: 'RA 7160 (Local Government Code); DSWD MC No. 5 s.2021',
-    isActive: true,
-    programType: null,
-    interventions: ['burial_assistance'],
-    requiredForms: { burial_assistance: 'death_certificate' },
-  },
-  {
-    id: uuidv7(),
-    name: 'Transportation Assistance',
-    category: 'Transportation',
-      requiredDocuments: [
-      'Valid ID of claimant',
-      'Barangay Certificate of Indigency',
-      'Medical appointment slip / referral (if medical-related)',
-      'Affidavit of need (if emergency travel)',
-    ],
-    fundSources: ['LGU - Municipal'],
-    legalBasis: 'RA 7160 (Local Government Code)',
-    isActive: true,
-    programType: null,
-    interventions: ['transport_assistance'],
-  },
-  {
-    id: uuidv7(),
-    name: 'Food Assistance',
-    category: 'Food',
-      requiredDocuments: [
-      'Valid ID of claimant',
-      'Barangay Certificate of Indigency',
-      'Affidavit of need',
-    ],
-    fundSources: ['LGU - Municipal', 'DSWD - AICS'],
-    legalBasis: 'RA 7160 (Local Government Code); DSWD MC No. 5 s.2021',
-    isActive: true,
-    programType: null,
-    interventions: ['food_pack'],
-  },
-  {
-    id: uuidv7(),
-    name: 'Financial Assistance (General)',
-    category: 'Financial',
-      requiredDocuments: [
-      'Valid ID of claimant',
-      'Barangay Certificate of Indigency',
-      'Letter request / application form',
-      'Supporting documents depending on purpose (hospital bill, quotation, assessment)',
-    ],
-    fundSources: ['LGU - Municipal', 'DSWD - AICS'],
-    legalBasis: 'RA 7160 (Local Government Code); DSWD MC No. 5 s.2021',
-    isActive: true,
-    programType: null,
-    interventions: ['financial_grant', 'scsr_generated'],
-    requiredForms: { scsr_generated: 'social_case_study_report' },
-  },
-  {
-    id: uuidv7(),
-    name: 'Educational Assistance',
-    category: 'Education',
-      requiredDocuments: [
-      'Valid ID of parent / guardian',
-      'Barangay Certificate of Indigency',
-      'Certificate of Enrollment / registration form',
-      'School ID of student',
-      'Grades / class card (for continuing)',
-    ],
-    fundSources: ['LGU - Municipal', 'DSWD - AICS', 'Private Donations'],
-    legalBasis: 'RA 9155 (Governance of Basic Education Act); RA 10931 (Universal Access to Quality Tertiary Education Act)',
-    isActive: true,
-    programType: null,
-    interventions: ['educational_assistance', 'training_seminar'],
-  },
+  
+  
+  
+  
+  
+  
 
   // ----------------------------------------------------------- Family welfare
   {
@@ -277,7 +179,7 @@ export const PROGRAMS: ProgramSeed[] = [
   },
   {
     id: uuidv7(),
-    name: 'PWD Assistance',
+    name: 'Program for Persons with Disabilities (PWDs)',
     category: 'PWD Welfare',
       requiredDocuments: [
       'Valid ID of claimant',
@@ -290,7 +192,7 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 7277 (Magna Carta for Disabled Persons); RA 10754 (Expanded Benefits and Privileges of PWDs)',
     isActive: true,
     programType: 'disability_aid',
-    interventions: ['medical_assistance', 'financial_grant', 'health_checkup', 'scsr_generated'],
+    interventions: ['assistive_device', 'pwd_assistance', 'medical_assistance', 'financial_grant', 'health_checkup', 'referral_pao', 'scsr_generated'],
     requiredForms: { scsr_generated: 'social_case_study_report', medical_assistance: 'medical_certificate' },
   },
 
@@ -411,37 +313,8 @@ export const PROGRAMS: ProgramSeed[] = [
   },
 
   // ----------------------------------------------------------- Crisis support
-  {
-    id: uuidv7(),
-    name: 'Crisis Intervention & Psychosocial Support',
-    category: 'Mental Health',
-      requiredDocuments: [
-      'Valid ID of client',
-      'Referral letter (if from other agency)',
-      'Consent form (for minors, parental consent)',
-    ],
-    fundSources: ['LGU - Municipal'],
-    legalBasis: 'RA 11036 (Mental Health Act); RA 9433 (Magnificat Act — MSWDO)',
-    isActive: true,
-    programType: 'counseling',
-    interventions: ['crisis_counseling', 'psychosocial_support'],
-  },
-  {
-    id: uuidv7(),
-    name: 'Referral and Linkage Services',
-    category: 'Legal',
-      requiredDocuments: [
-      'Valid ID of client',
-      'Referral letter (if any)',
-      'Brief narrative of situation',
-    ],
-    fundSources: ['LGU - Municipal'],
-    legalBasis: 'RA 7160 (Local Government Code)',
-    isActive: true,
-    programType: 'legal_referral',
-    interventions: ['referral_pao', 'legal_assistance', 'scsr_generated'],
-    requiredForms: { referral_pao: 'referral_form', scsr_generated: 'social_case_study_report' },
-  },
+  
+  
 
   // ------------------------------------------------------------ 4Ps & feeding
   {
@@ -496,23 +369,7 @@ export const PROGRAMS: ProgramSeed[] = [
   },
 
   // ------------------------------------------------------------------ Medical
-  {
-    id: uuidv7(),
-    name: 'Medical Equipment Loan',
-    category: 'Medical',
-      requiredDocuments: [
-      'Valid ID of claimant',
-      'Barangay Certificate of Indigency',
-      'Medical certificate / doctor\'s prescription for the equipment',
-      'Affidavit of undertaking (responsibility for equipment)',
-    ],
-    fundSources: ['LGU - Municipal'],
-    legalBasis: 'RA 7160 (Local Government Code)',
-    isActive: true,
-    programType: 'medical',
-    interventions: ['medical_assistance', 'scsr_generated'],
-    requiredForms: { scsr_generated: 'social_case_study_report', medical_assistance: 'medical_certificate' },
-  },
+  
 
   // ------------------------------------------- National CDD / economic programs
   {
@@ -547,136 +404,16 @@ export const PROGRAMS: ProgramSeed[] = [
     programType: 'supplemental_feeding',
     interventions: ['food_pack', 'health_checkup'],
   },
-  {
-    id: uuidv7(),
-    name: 'UPLIFT (Economic Empowerment)',
-    category: 'Livelihood',
-      requiredDocuments: [
-      'Valid ID of participant',
-      'Barangay Certificate of Indigency',
-      'NHTS-PR / Listahanan reference or DSWD validation',
-      'Household savings-group or association endorsement',
-    ],
-    fundSources: ['DSWD - UPLIFT'],
-    legalBasis: 'EO 110 s. 2026 (Unified Package for Livelihoods, Industry, Food, and Transport)',
-    isActive: true,
-    programType: 'livelihood',
-    interventions: ['livelihood_seed', 'training_seminar'],
-  },
+  
 
-  // ---- GAD summary-report technical/legal programs (2026-09-28) ----------
-  // Seeded so the summary report's columns can derive from the programs table;
-  // each maps to a reference GAD database column. Intervention logging via the
-  // existing picker attaches program_id, which the report counts. Programs
-  // outside the typed catalog keep `programType: null` — they remain real
-  // PPAs, just not ones the enrollments/AICS-budget phase keys off.
-  {
-    id: uuidv7(),
-    name: 'Assistive Device Support',
-    category: 'PWD Welfare',
-      requiredDocuments: [
-      'Valid ID of claimant',
-      'Barangay Certificate of Indigency',
-      'Medical certificate / quotation for the device',
-    ],
-    fundSources: ['LGU - Municipal', 'DSWD'],
-    legalBasis: 'RA 7277 (Magna Carta for Disabled Persons); RA 10754',
-    isActive: true,
-    programType: 'disability_aid',
-    interventions: ['medical_assistance', 'scsr_generated'],
-    requiredForms: { scsr_generated: 'social_case_study_report', medical_assistance: 'medical_certificate' },
-  },
-  {
-    id: uuidv7(),
-    name: 'Legal Referral (PAO)',
-    category: 'Legal',
-      requiredDocuments: ['Valid ID of client', 'Referral letter (if any)', 'Brief narrative of situation'],
-    fundSources: ['LGU - Municipal'],
-    legalBasis: 'RA 9999 (Free Legal Assistance Act); PAO Operations Manual',
-    isActive: true,
-    programType: 'legal_referral',
-    interventions: ['referral_pao', 'legal_assistance'],
-    requiredForms: { referral_pao: 'referral_form' },
-  },
-  {
-    id: uuidv7(),
-    name: 'Referral – Others',
-    category: 'Legal',
-      requiredDocuments: ['Valid ID of client', 'Referral letter (if any)', 'Brief narrative of situation'],
-    fundSources: ['LGU - Municipal'],
-    legalBasis: 'RA 7160 (Local Government Code)',
-    isActive: true,
-    programType: 'legal_referral',
-    interventions: ['referral_pao'],
-    requiredForms: { referral_pao: 'referral_form' }
-  },
-  {
-    id: uuidv7(),
-    name: 'Birth Discrepancy Assistance',
-    category: 'Technical',
-      requiredDocuments: [
-      'Valid ID of client / parent (if minor)',
-      'PSA Birth Certificate',
-      'Affidavit of discrepancy / supporting documents',
-    ],
-    fundSources: ['LGU - Municipal', 'DSWD - AICS'],
-    legalBasis: 'RA 9048; RA 10172 (clerical error / correction of first name)',
-    isActive: true,
-    programType: null,
-    interventions: ['scsr_generated'],
-    requiredForms: { scsr_generated: 'social_case_study_report' },
-  },
-  {
-    id: uuidv7(),
-    name: 'Case Study Report (CSR)',
-    category: 'Technical',
-      requiredDocuments: ['Valid ID of client', 'Referral letter (if any)'],
-    fundSources: ['LGU - Municipal'],
-    legalBasis: 'RA 9433 (Magnificat Act — MSWDO)',
-    isActive: true,
-    programType: null,
-    interventions: ['scsr_generated'],
-    requiredForms: { scsr_generated: 'social_case_study_report' },
-  },
-  {
-    id: uuidv7(),
-    name: 'Home Visit',
-    category: 'Technical',
-      requiredDocuments: ['Valid ID of client'],
-    fundSources: ['LGU - Municipal'],
-    legalBasis: 'RA 7160 (Local Government Code)',
-    isActive: true,
-    programType: null,
-    interventions: ['home_visit'],
-  },
-  {
-    id: uuidv7(),
-    name: 'PhilHealth Assistance',
-    category: 'Medical',
-      requiredDocuments: [
-      'Valid ID of claimant',
-      'PhilHealth member data record',
-      'Medical certificate / hospital bill (depending on need)',
-    ],
-    fundSources: ['PhilHealth', 'LGU - Municipal'],
-    legalBasis: 'RA 11223 (Universal Health Care Act)',
-    isActive: true,
-    programType: 'medical',
-    interventions: ['medical_assistance', 'health_checkup'],
-    requiredForms: { medical_assistance: 'medical_certificate' },
-  },
-  {
-    id: uuidv7(),
-    name: 'Child Custody Support',
-    category: 'Technical',
-      requiredDocuments: ['Valid ID of parent / guardian', 'Referral letter (if any)'],
-    fundSources: ['LGU - Municipal', 'DSWD'],
-    legalBasis: 'RA 7610; Family Code of the Philippines (EO 209)',
-    isActive: true,
-    programType: 'child_welfare',
-    interventions: ['legal_assistance', 'crisis_counseling', 'scsr_generated'],
-    requiredForms: { scsr_generated: 'social_case_study_report' },
-  },
+  
+  
+  
+  
+  
+  
+  
+  
   {
     id: uuidv7(),
     name: 'Balik Probinsya Assistance',
@@ -690,20 +427,10 @@ export const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'EO 114 s. 2020 (Balik Probinsya, Bagong Pag-asa Program)',
     isActive: true,
     programType: 'disaster_relief',
-    interventions: ['transport_assistance', 'financial_grant', 'scsr_generated'],
+    interventions: ['balik_probinsya', 'transport_assistance', 'financial_grant', 'scsr_generated'],
     requiredForms: { scsr_generated: 'social_case_study_report' },
   },
-  {
-    id: uuidv7(),
-    name: 'Travel Assessment',
-    category: 'Technical',
-      requiredDocuments: ['Valid ID of claimant', 'Medical appointment slip / referral (if medical-related)'],
-    fundSources: ['LGU - Municipal'],
-    legalBasis: 'RA 7160 (Local Government Code)',
-    isActive: true,
-    programType: null,
-    interventions: ['transport_assistance'],
-  },
+  
 ];
 
 export async function seedPrograms(dataSource: DataSource) {

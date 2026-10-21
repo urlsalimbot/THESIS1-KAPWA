@@ -14,7 +14,7 @@ const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'Ju
 interface RawCaseRow {
   case_id: string; created_at: Date; client_category: string | null; gender: string | null;
   surname: string | null; first_name: string | null; middle_name: string | null;
-  dob: Date | null; barangay: string | null; service_text: string | null; referral_text: string | null;
+  dob: Date | null; barangay: string | null; service_text: string | null; service_types: string | null; referral_text: string | null;
   referral_agencies: string | null;
   latest_intervention_at: Date | null; latest_referral_at: Date | null;
   program_id: string | null; program_name: string | null;
@@ -32,6 +32,7 @@ const CASES_SQL = `
          p.dob AS dob,
          pa.barangay AS barangay,
          COALESCE(ci.text, '') AS service_text,
+         COALESCE(ci.types, '') AS service_types,
          COALESCE(cr.text, '') AS referral_text,
          COALESCE(cr.agencies, '') AS referral_agencies,
          (SELECT MAX(ci2.created_at) FROM case_interventions ci2 WHERE ci2.case_id = c.id) AS latest_intervention_at,
@@ -57,7 +58,8 @@ const CASES_SQL = `
     LIMIT 1
   ) pa ON TRUE
   LEFT JOIN LATERAL (
-    SELECT string_agg(ci2.service_name || ' ' || COALESCE(ci2.category, '') || ' ' || COALESCE(pr.name, '') || ' ' || COALESCE(pr.category, ''), ' ') AS text
+    SELECT string_agg(ci2.service_name || ' ' || COALESCE(ci2.category, '') || ' ' || COALESCE(pr.name, '') || ' ' || COALESCE(pr.category, ''), ' ') AS text,
+           string_agg(DISTINCT ci2.intervention_type, ',') FILTER (WHERE ci2.intervention_type IS NOT NULL) AS types
     FROM case_interventions ci2
     LEFT JOIN programs pr ON pr.id = ci2.program_id
     WHERE ci2.case_id = c.id
@@ -107,6 +109,7 @@ export class SummaryReportService {
       const input: CaseClassificationInput = {
         clientCategory: r.client_category,
         serviceText: r.service_text ?? '',
+        serviceTypes: (r.service_types ?? '').split(',').map((t) => t.trim()).filter(Boolean),
         referralText: r.referral_text ?? '',
         hasCsr: !!r.has_csr,
         hasVisit: !!r.has_visit,

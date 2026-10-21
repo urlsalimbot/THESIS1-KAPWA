@@ -73,6 +73,7 @@ const fil: EnLocale = {
     "health": "Kalusugan at Home Visit",
     "legal": "Legal at Proteksyon",
     "psychosocial": "Pagpapayo at Psychosocial",
+    "technical": "Teknikal at Rehistro Sibil"
   },
   "interventionCatalog": {
     "add": "Magdagdag ng serbisyo",
@@ -134,7 +135,13 @@ const fil: EnLocale = {
     "shelter_assistance": "Tulong sa Silungan",
     "scsr_generated": "Social Case Study Report",
     "home_visit": "Home Visit",
-    "health_checkup": "Health Checkup"
+    "health_checkup": "Health Checkup",
+    "assistive_device": "Assistive Device",
+    "pwd_assistance": "PWD Assistance",
+    "birth_discrepancy": "Birth Discrepancy",
+    "philhealth_assistance": "PhilHealth Assistance",
+    "child_custody": "Child Custody",
+    "balik_probinsya": "Balik Probinsya"
   },
   "referralStatus": {
     "referred": "Ipinadala",

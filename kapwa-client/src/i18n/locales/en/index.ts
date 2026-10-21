@@ -472,6 +472,7 @@ const en = {
     "health": "Health & Home Visits",
     "legal": "Legal & Protection",
     "psychosocial": "Counseling & Psychosocial",
+    "technical": "Technical & Civil Registry"
   },
   "interventionCatalog": {
     "add": "Add service",
@@ -534,7 +535,13 @@ const en = {
     "scsr_generated": "Social Case Study Report",
     "home_visit": "Home Visit",
     "health_checkup": "Health Checkup",
-  },
+  
+    "assistive_device": "Assistive Device",
+    "pwd_assistance": "PWD Assistance",
+    "birth_discrepancy": "Birth Discrepancy",
+    "philhealth_assistance": "PhilHealth Assistance",
+    "child_custody": "Child Custody",
+    "balik_probinsya": "Balik Probinsya",},
   "referralStatus": {
     "referred": "Referred",
     "received": "Received",

@@ -60,7 +60,7 @@ const CATEGORIES: Record<string, string> = {
 const SERVICES: Record<string, string[]> = {
   closed: ['Social Pension for Indigent Senior Citizens'],
   transitioning: ['AICS — Assistance to Individuals in Crisis Situation'],
-  active: ['PWD Assistance'],
+  active: ['Program for Persons with Disabilities (PWDs)'],
   in_review: ['AICS — Assistance to Individuals in Crisis Situation'],
   enrolled: ['Emergency Cash/Food for Work'],
   assessed: ['Sustainable Livelihood Program'],
@@ -103,7 +103,7 @@ const assessmentFor = (stage: string) => ({
 // service actually is, so the typed intervention UI renders them correctly.
 const INTERVENTIONS: Record<string, Record<string, unknown>[]> = {
   active: [
-    { serviceName: 'PWD Assistance', category: 'HV', interventionType: 'medical_assistance', deliveryDate: '2026-07-25', amount: 0, modeOfDelivery: 'In-kind', fundSource: 'LGU', notes: 'Assistive device issued', deliveredBy: 'MSWDO' },
+    { serviceName: 'PWD Assistance', category: 'HV', interventionType: 'assistive_device', deliveryDate: '2026-07-25', amount: 0, modeOfDelivery: 'In-kind', fundSource: 'LGU', notes: 'Assistive device issued', deliveredBy: 'MSWDO' },
   ],
   transitioning: [
     { serviceName: 'AICS — Assistance to Individuals in Crisis Situation', category: 'FA', interventionType: 'medical_assistance', deliveryDate: '2026-06-15', amount: 4500, modeOfDelivery: 'Cash', fundSource: 'AICS', notes: 'Medical assistance cycle', deliveredBy: 'MSWDO' },
