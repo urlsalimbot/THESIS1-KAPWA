@@ -55,9 +55,11 @@ with no remapping. **80 data rows** plus the header row. Birthdays are text
 | 23–81 | 59 new clients across all 13 barangays, 1950–2004 birth years | **No match / New client** → created on finalize |
 
 **Numbers to expect (default 0.75 threshold):** **9 KAPWA matches** (8 exact at
-0.85–0.90 plus the fuzzy match at ≈0.82), **6 duplicate pairs** (0.83–0.85), and
+0.85–0.90 plus the fuzzy match at 0.85), **6 duplicate pairs** (0.85–0.86), and
 **59 new clients**. The matching signals are name similarity, birthday and
-barangay; a served household can only raise a score.
+barangay; a served household can only raise a score. The full rules — weights,
+candidate gate, duplicate ordering, and limits — are in
+[`demo/MATCHING-CRITERIA.md`](MATCHING-CRITERIA.md).
 
 **Before you finalize:** uploading and reviewing creates no client records.
 **Finalizing creates the 59 new clients** and updates the nine matched ones —
