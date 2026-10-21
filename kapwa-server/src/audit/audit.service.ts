@@ -24,7 +24,17 @@ export class AuditService {
     repo: Repository<any>,
     orderField: string = 'createdAt',
   ): Promise<{ valid: boolean; brokenAt?: string }> {
-    const records = await repo.find({ order: { [orderField]: 'ASC' } });
+    // The DB trigger (ZAuditHashChain) links each row to the latest row by
+    // `${orderField} DESC, id DESC`, and the migration backfilled in the
+    // reversed order: `${orderField} ASC, id ASC`. Ordering by the timestamp
+    // alone made verification non-deterministic the moment several rows shared
+    // one — the seeded beneficiaries have two timestamp values across 306 rows,
+    // so /audit/verify-all reported those chains broken while the links were
+    // actually intact. The id tiebreaker is what makes this the same total
+    // order the writer used.
+    const records = await repo.find({
+      order: { [orderField]: 'ASC', id: 'ASC' } as any,
+    });
     for (let i = 1; i < records.length; i++) {
       const prev = records[i - 1];
       const curr = records[i];
