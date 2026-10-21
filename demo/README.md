@@ -50,15 +50,17 @@ with no remapping. **80 data rows** plus the header row. Birthdays are text
 | Rows | Content | Expected in review |
 |---|---|---|
 | 2–9 | Eight exact matches against seeded production clients — Castillo, Dimagiba, Garcia, Mendoza, Villanueva, Ramos, Santos, Reyes — with their real birthdays and barangays | **KAPWA matches** → "same person" records the service on the existing client |
-| 10 | One deliberate near match: `Fernandez, Lisa` (production spells it **Liza**), same birthday and barangay | Depending on the matcher's threshold this appears as a KAPWA match or a new client — a good beat for "the system surfaces a probable match, a human decides" |
-| 11–22 | Six people entered twice: middle name vs initial, one birthday off by a day, and two spelling variants (`Quimson`/`Quimzon`, `Jocelyn`/`Joceline`) | **6 · Duplicates in this list** — one row per pair is set aside |
+| 10 | One deliberate **fuzzy** match: `Fernandes, Liza` against production's `Fernandez, Liza` — same birthday, middle initial and barangay, one letter apart in the surname | **KAPWA match** — a probable, not exact, hit: the system offers the candidate and the human confirms |
+| 11–22 | Six people entered twice: full middle name vs middle initial in five pairs, and `Jocelyn` / `Jocelyne` in the sixth | **6 · Duplicates in this list** — one row per pair is set aside |
 | 23–81 | 59 new clients across all 13 barangays, 1950–2004 birth years | **No match / New client** → created on finalize |
 
-**Numbers to expect:** about **9 KAPWA matches** (8 guaranteed exact + the near
-match), **6 duplicate pairs**, and **59 new clients**.
+**Numbers to expect (default 0.75 threshold):** **9 KAPWA matches** (8 exact at
+0.85–0.90 plus the fuzzy match at ≈0.82), **6 duplicate pairs** (0.83–0.85), and
+**59 new clients**. The matching signals are name similarity, birthday and
+barangay; a served household can only raise a score.
 
 **Before you finalize:** uploading and reviewing creates no client records.
-**Finalizing creates the 59 new clients** and updates the eight matched ones —
+**Finalizing creates the 59 new clients** and updates the nine matched ones —
 that is the intended demonstration, but do not finalize if you want to keep the
 production client list exactly as it is. After finalize, the confirmation card
 shows the counts and the downloadable priority list (`CD-YYYY-MMM-NNN.xlsx`).
