@@ -34,18 +34,12 @@ export interface DedupRow {
   eligibilityCode?: string | null;
 }
 
-interface CandidateCase {
-  controlNo?: string;
-  status?: string;
-}
-
 interface CandidateMember {
   personId: string;
   lastName?: string;
   firstName?: string;
   interventions: number;
   lastDeliveryDate?: string | null;
-  cases?: CandidateCase[];
 }
 
 export interface CandidateRemark {
@@ -92,7 +86,6 @@ export interface DedupCandidate {
   interventions?: number;
   /** The person's most recent service date, for the "passes the 30-day gate" line. */
   lastDeliveryDate?: string | null;
-  cases?: CandidateCase[];
   household?: {
     id: string;
     memberPersonIds: string[];
@@ -136,9 +129,9 @@ function targetLabel(c: DedupCandidate): string {
 function codeMeta(code: string | null | undefined): { frame: string; dot: string; text: string; label: string } | null {
   switch (code) {
     case 'recent_intervention':
-      return { frame: 'border-destructive/30 bg-destructive/10', dot: 'bg-destructive', text: 'text-destructive-foreground', label: t('dedup.codeRecent', 'Served within the last 30 days') };
+      return { frame: 'border-destructive/30 bg-destructive/10', dot: 'bg-destructive', text: 'text-destructive', label: t('dedup.codeRecent', 'Served within the last 30 days') };
     case 'household_recent':
-      return { frame: 'border-destructive/30 bg-destructive/10', dot: 'bg-destructive', text: 'text-destructive-foreground', label: t('dedup.codeHousehold', 'Household member served within the last 30 days') };
+      return { frame: 'border-destructive/30 bg-destructive/10', dot: 'bg-destructive', text: 'text-destructive', label: t('dedup.codeHousehold', 'Household member served within the last 30 days') };
     case 'intra_list':
       return { frame: 'border-warning/35 bg-alert-error-bg', dot: 'bg-warning', text: 'text-warning-foreground', label: t('dedup.codeIntra', 'Duplicate in this list — keep exactly one') };
     case 'passed_30d':
@@ -192,7 +185,9 @@ function groupCandidates(candidates: DedupCandidate[]): DedupCandidate[] {
     return [c.person.lastName, c.person.firstName, c.person.middleName, c.person.dob, c.person.barangay]
       .map((v) => (v ?? '').trim().toLowerCase()).join('|');
   };
-  const evidence = (c: DedupCandidate): number => (c.cases?.length ?? 0) * 1000 + (c.interventions ?? 0);
+  // Match identity is the person record plus the interventions received. Cases
+  // do not take part in choosing the record.
+  const evidence = (c: DedupCandidate): number => c.interventions ?? 0;
   const byKey = new Map<string, DedupCandidate[]>();
   for (const c of candidates) {
     const key = keyOf(c);
@@ -246,7 +241,7 @@ export function RowDecisionCard({
           className={`space-y-2 rounded-md border p-3 ${
             disqualifiedUndecided
               ? red
-                ? 'border-destructive/30 bg-destructive/10 text-destructive-foreground'
+                ? 'border-destructive/30 bg-destructive/10 text-destructive'
                 : 'border-warning/35 bg-alert-error-bg text-warning-foreground'
               : 'border-border bg-muted/40 text-muted-foreground'
           }`}
@@ -468,19 +463,6 @@ function Phase2Tree({
   );
 }
 
-function CaseLines({ cases }: { cases: CandidateCase[] }) {
-  if (cases.length === 0) return <div className="text-muted-foreground">{t('dedup.noCases', 'No cases on record')}</div>;
-  return (
-    <ul className="space-y-0.5">
-      {cases.map((c, i) => (
-        <li key={i} className="text-muted-foreground">
-          {c.controlNo ?? '—'} {c.status ? `(${c.status})` : ''}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 function CandidateBody({ candidate: c, row }: { candidate: DedupCandidate; row: DedupRow }) {
   if (c.targetType === 'db_person' && c.person) {
     return (
@@ -488,7 +470,6 @@ function CandidateBody({ candidate: c, row }: { candidate: DedupCandidate; row: 
         <div className="text-muted-foreground">
           {formatDate(c.person.dob)} · {c.person.barangay ?? '—'}
         </div>
-        <CaseLines cases={c.cases ?? []} />
         <div>
           {c.interventions ?? 0} intervention{(c.interventions ?? 0) === 1 ? '' : 's'}
           {c.lastDeliveryDate
@@ -519,9 +500,6 @@ function CandidateBody({ candidate: c, row }: { candidate: DedupCandidate; row: 
               {' — '}
               {m.interventions} intervention{m.interventions === 1 ? '' : 's'}
               {m.lastDeliveryDate ? ` · last ${formatDate(m.lastDeliveryDate)}` : ''}
-              {m.cases && m.cases.length > 0 && (
-                <span> · {m.cases.map((cc) => cc.controlNo).filter(Boolean).join(', ')}</span>
-              )}
             </li>
           ))}
         </ul>

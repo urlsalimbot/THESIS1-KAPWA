@@ -1062,8 +1062,9 @@ export class DedupService {
             WHERE h.id::text = ANY($1::text[]) GROUP BY h.id`, [householdIds])
       : [];
     const memberIds = [...new Set(households.flatMap((h) => h.memberPersonIds ?? []))] as string[];
-    // Names/cases/interventions are needed for both the person targets and the
-    // household members shown on the household card.
+    // Names and intervention history are needed for both the person targets
+    // and the household members shown on the household card. Cases are not
+    // part of matching: the person record plus the interventions received are.
     const identities = [...new Set([...personIds, ...memberIds])];
 
     const people: any[] = identities.length
@@ -1073,12 +1074,6 @@ export class DedupService {
                   (SELECT a.barangay FROM person_addresses a WHERE a.person_id = p.id AND a.address_type = 'current'
                     ORDER BY a.is_primary DESC NULLS LAST LIMIT 1) AS barangay
              FROM persons p WHERE p.id::text = ANY($1::text[])`, [identities])
-      : [];
-    const cases: any[] = identities.length
-      ? await this.rowsRepo.query(
-          `SELECT b.person_id::text AS person_id, c.control_no AS "controlNo", c.status
-             FROM beneficiaries b JOIN cases c ON c.beneficiary_id = b.id
-            WHERE b.person_id::text = ANY($1::text[]) ORDER BY c.created_at DESC`, [identities])
       : [];
     const interventions: any[] = identities.length
       ? await this.rowsRepo.query(
@@ -1139,7 +1134,6 @@ export class DedupService {
       remarks: remarksByPerson.get(m.targetPersonId as string) ?? [],
       interventions: interventionBy.get(m.targetPersonId as string) ?? 0,
       lastDeliveryDate: lastDeliveryBy.get(m.targetPersonId as string) ?? null,
-      cases: cases.filter((c) => c.person_id === m.targetPersonId),
       household: households.find((h) => h.id === m.targetHouseholdId)
         ? {
             id: m.targetHouseholdId,
@@ -1151,7 +1145,6 @@ export class DedupService {
                 ...memberName(mid),
                 interventions: interventionBy.get(mid) ?? 0,
                 lastDeliveryDate: lastDeliveryBy.get(mid) ?? null,
-                cases: cases.filter((c) => c.person_id === mid),
               })),
           }
         : null,

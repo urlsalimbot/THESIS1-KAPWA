@@ -134,8 +134,7 @@ describe('DedupService', () => {
     ]);
     rowsRepo.query
       .mockResolvedValueOnce([{ id: 'p1', lastName: 'Reyes', firstName: 'Pedro' }])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]) // interventions
       .mockResolvedValueOnce([
         {
           person_id: 'p1', kind: 'decision', remark: 'Same person.',
@@ -144,6 +143,7 @@ describe('DedupService', () => {
       ]);
     const out = await service.rowMatches('op1', 'row1', 1, 20);
     expect(out.data[0].person).toMatchObject({ id: 'p1' });
+    expect(out.data[0]).not.toHaveProperty('cases');
     expect(out.data[0].remarks).toEqual([
       {
         kind: 'decision', remark: 'Same person.',

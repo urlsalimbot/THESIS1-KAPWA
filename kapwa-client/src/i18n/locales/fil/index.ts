@@ -3102,7 +3102,6 @@ const fil: EnLocale = {
     "nameListHint": "Pangalanan ang listahang ito — hal. pangalan ng file o ng batch na pinagmulan nito.",
     "newOperation": "Bagong deduplikasyon",
     "noCandidates": "Walang kandidatong tugma para sa row na ito.",
-    "noCases": "Walang nakatalang kaso",
     "operations": "Mga Operasyon",
     "others": "Iba pa…",
     "outputDesc": "Isinulat sa Excel ang priority list — i-download ito sa ibaba.",

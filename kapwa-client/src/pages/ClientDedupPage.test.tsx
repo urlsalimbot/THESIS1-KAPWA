@@ -84,7 +84,6 @@ const MATCH_EVIDENCE = {
     {
       id: 'm1', targetType: 'db_person', score: 0.91, status: 'primary', signals: {},
       person: { id: 'p1', lastName: 'Reyes', firstName: 'Pedro', dob: '1988-03-21', barangay: 'Bigte' },
-      interventions: 0, cases: [],
     },
   ],
   total: 1, page: 1, limit: 20,
@@ -232,8 +231,8 @@ describe('ClientDedupPage', () => {
       if (k.includes('/rows') && k.includes('/matches')) {
         return Promise.resolve({
           data: [
-            { id: 'm-empty', targetType: 'db_person', score: 0.9, status: 'pending', signals: {}, person: { id: 'p-empty', ...person }, interventions: 0, cases: [] },
-            { id: 'm-rich', targetType: 'db_person', score: 0.9, status: 'pending', signals: {}, person: { id: 'p-rich', ...person }, interventions: 3, cases: [{ controlNo: 'MSWD-2026-00001', status: 'enrolled' }] },
+            { id: 'm-empty', targetType: 'db_person', score: 0.9, status: 'pending', signals: {}, person: { id: 'p-empty', ...person }, interventions: 0 },
+            { id: 'm-rich', targetType: 'db_person', score: 0.9, status: 'pending', signals: {}, person: { id: 'p-rich', ...person }, interventions: 3 },
           ],
           total: 2, page: 1, limit: 20,
         });

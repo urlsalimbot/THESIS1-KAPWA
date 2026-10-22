@@ -14,7 +14,6 @@ const personCandidate: DedupCandidate = {
   id: 'm1', targetType: 'db_person', score: 0.91, status: 'primary', signals: {},
   person: { id: 'p1', lastName: 'Reyes', firstName: 'Pedro', middleName: 'P.', dob: '1988-03-21', barangay: 'Bigte' },
   interventions: 2,
-  cases: [{ controlNo: 'C-2026-001', status: 'active' }, { controlNo: 'C-2026-002', status: 'closed' }],
   remarks: [
     { kind: 'decision', remark: 'Same person.', source: 'Batch 1.xlsx', authorName: 'Juan Dela Cruz', createdAt: '2026-10-01T02:30:00Z' },
     { kind: 'import', remark: 'AICS food pack request', source: 'Batch 1.xlsx', authorName: null, createdAt: '2026-10-01T01:00:00Z' },
@@ -22,9 +21,8 @@ const personCandidate: DedupCandidate = {
 };
 
 describe('RowDecisionCard', () => {
-  it('renders the matched candidate as evidence with cases, interventions and recent remarks', () => {
+  it('renders the matched candidate as person evidence with interventions and recent remarks', () => {
     render(<RowDecisionCard row={row} candidates={[personCandidate]} />);
-    expect(screen.getByText(/C-2026-001/)).toBeTruthy();
     expect(screen.getByText(/2 interventions/i)).toBeTruthy();
     expect(screen.getByText(/recent remarks/i)).toBeTruthy();
     expect(screen.getByText(/Same person\./)).toBeTruthy();
@@ -39,14 +37,13 @@ describe('RowDecisionCard', () => {
       household: {
         id: 'h1', memberPersonIds: ['p9'],
         members: [
-          { personId: 'p9', lastName: 'Reyes', firstName: 'Maria', interventions: 1, cases: [{ controlNo: 'C-2026-009', status: 'active' }] },
+          { personId: 'p9', lastName: 'Reyes', firstName: 'Maria', interventions: 1 },
         ],
       },
     };
     render(<RowDecisionCard row={row} candidates={[household]} />);
     expect(screen.getByText(/household already served/i)).toBeTruthy();
     expect(screen.getByText(/Maria/)).toBeTruthy();
-    expect(screen.getByText(/C-2026-009/)).toBeTruthy();
     expect(screen.getByText(/1 intervention/i)).toBeTruthy();
     expect(screen.queryByText(/recent remarks/i)).toBeNull();
   });
@@ -185,11 +182,10 @@ describe('RowDecisionCard — traffic light and keep decision', () => {
       targetType: 'db_person' as const, score: 0.9, status: 'pending' as const, signals: {},
       person: { id: 'p-empty', lastName: 'Reyes', firstName: 'Pedro', middleName: 'Poblete', dob: '1988-03-21', barangay: 'Bigte' },
     };
-    const empty: DedupCandidate = { ...base, id: 'm-empty', interventions: 0, cases: [] };
+    const empty: DedupCandidate = { ...base, id: 'm-empty', interventions: 0 };
     const rich: DedupCandidate = {
       ...base, id: 'm-rich', interventions: 3,
       person: { ...base.person, id: 'p-rich' },
-      cases: [{ controlNo: 'MSWD-2026-00001', status: 'enrolled' }],
     };
     const onDecide = vi.fn();
     render(
@@ -201,8 +197,8 @@ describe('RowDecisionCard — traffic light and keep decision', () => {
     );
 
     expect(screen.getAllByText(/Is this the same person/i)).toHaveLength(1);
-    expect(screen.getByText(/MSWD-2026-00001/)).toBeTruthy();
-    expect(screen.queryByText(/No cases on record/)).toBeNull();
+    expect(screen.getByText(/3 interventions/)).toBeTruthy();
+    expect(screen.queryByText(/0 interventions/)).toBeNull();
 
     await userEvent.click(screen.getByRole('button', { name: /yes — update the record/i }));
     await userEvent.click(screen.getByRole('button', { name: /keep — position unchanged/i }));

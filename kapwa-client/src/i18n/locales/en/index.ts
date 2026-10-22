@@ -3098,7 +3098,6 @@ const en = {
     "nameListHint": "Name this list — e.g. the file name or the batch it came from.",
     "newOperation": "New deduplication",
     "noCandidates": "No candidate matches for this row.",
-    "noCases": "No cases on record",
     "operations": "Operations",
     "others": "Others…",
     "outputDesc": "The priority list is written to Excel — download it below.",
