@@ -180,6 +180,35 @@ describe('RowDecisionCard — traffic light and keep decision', () => {
     expect(onDecide).toHaveBeenCalledWith('m1', { kind: 'new_client' });
   });
 
+  it('collapses two records with the same identity into one decision card', async () => {
+    const base = {
+      targetType: 'db_person' as const, score: 0.9, status: 'pending' as const, signals: {},
+      person: { id: 'p-empty', lastName: 'Reyes', firstName: 'Pedro', middleName: 'Poblete', dob: '1988-03-21', barangay: 'Bigte' },
+    };
+    const empty: DedupCandidate = { ...base, id: 'm-empty', interventions: 0, cases: [] };
+    const rich: DedupCandidate = {
+      ...base, id: 'm-rich', interventions: 3,
+      person: { ...base.person, id: 'p-rich' },
+      cases: [{ controlNo: 'MSWD-2026-00001', status: 'enrolled' }],
+    };
+    const onDecide = vi.fn();
+    render(
+      <RowDecisionCard
+        row={{ ...row, eligibility: 'allowed', eligibilityReason: undefined, status: 'retained' }}
+        candidates={[empty, rich]}
+        onDecide={onDecide}
+      />,
+    );
+
+    expect(screen.getAllByText(/Is this the same person/i)).toHaveLength(1);
+    expect(screen.getByText(/MSWD-2026-00001/)).toBeTruthy();
+    expect(screen.queryByText(/No cases on record/)).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: /yes — update the record/i }));
+    await userEvent.click(screen.getByRole('button', { name: /keep — position unchanged/i }));
+    expect(onDecide).toHaveBeenCalledWith('m-rich', { kind: 'keep_here' }, ['m-empty']);
+  });
+
   it('names the differ-only-in-barangay duplicate pair in phase 1, with keep controls', async () => {
     const dup: DedupCandidate = {
       id: 'm3', targetType: 'import_row', score: 0.8, status: 'pending',

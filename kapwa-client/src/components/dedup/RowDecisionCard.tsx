@@ -101,6 +101,8 @@ export interface DedupCandidate {
   pairedRow?: {
     id: string; rowIndex: number; lastName?: string; firstName?: string; dob?: string; barangay?: string;
   } | null;
+  /** Other match rows for the same person identity, decided with this card. */
+  alsoMatchIds?: string[];
 }
 
 interface RowDecisionCardProps {
@@ -114,9 +116,9 @@ interface RowDecisionCardProps {
    * the same-person / position tree in phase 2. Deprioritizing keeps demand a
    * reason — the server rejects an empty one.
    */
-  onDecide?: (matchId: string, decision: MatchDecision) => void | Promise<void>;
+  onDecide?: (matchId: string, decision: MatchDecision, alsoMatchIds?: string[]) => void | Promise<void>;
   /** Undo a decided match (same person / duplicate / new client). */
-  onRevert?: (matchId: string) => void | Promise<void>;
+  onRevert?: (matchId: string, alsoMatchIds?: string[]) => void | Promise<void>;
   busy?: boolean;
 }
 
@@ -178,6 +180,47 @@ function SignalChips({ signals }: { signals?: Record<string, unknown> }) {
 }
 
 /**
+ * One row can match two person records that are the same client duplicated in
+ * KAPWA (same full name, birthdate and barangay). Presenting both gives the
+ * operator two identical decision trees; collapse them to the record with the
+ * most serving evidence and carry the other match ids so the one decision
+ * resolves every row of the group.
+ */
+function groupCandidates(candidates: DedupCandidate[]): DedupCandidate[] {
+  const keyOf = (c: DedupCandidate): string | null => {
+    if (c.targetType !== 'db_person' || !c.person) return null;
+    return [c.person.lastName, c.person.firstName, c.person.middleName, c.person.dob, c.person.barangay]
+      .map((v) => (v ?? '').trim().toLowerCase()).join('|');
+  };
+  const evidence = (c: DedupCandidate): number => (c.cases?.length ?? 0) * 1000 + (c.interventions ?? 0);
+  const byKey = new Map<string, DedupCandidate[]>();
+  for (const c of candidates) {
+    const key = keyOf(c);
+    if (key) byKey.set(key, [...(byKey.get(key) ?? []), c]);
+  }
+  const seen = new Set<string>();
+  const visible: DedupCandidate[] = [];
+  for (const c of candidates) {
+    const key = keyOf(c);
+    if (!key) { visible.push(c); continue; }
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const group = byKey.get(key) ?? [c];
+    const winner = [...group].sort((a, b) =>
+      evidence(b) - evidence(a) || Number(b.score) - Number(a.score) || a.id.localeCompare(b.id))[0];
+    // If any record in the group is still pending, the group is undecided even
+    // when the record chosen for display was resolved earlier — otherwise a
+    // hidden pending match would block finalize with no card to decide it.
+    visible.push({
+      ...winner,
+      status: group.some((g) => g.status === 'pending') ? 'pending' : winner.status,
+      alsoMatchIds: group.filter((g) => g.id !== winner.id).map((g) => g.id),
+    });
+  }
+  return visible;
+}
+
+/**
  * One import row's review surface: candidates are evidence (person/household/
  * import-row identity with their signals), and the decision lives on each
  * candidate — keep/deprioritize/new client (phase 2) or which row of the pair
@@ -236,7 +279,7 @@ export function RowDecisionCard({
       ) : candidates.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t('dedup.noCandidates', 'No candidate matches for this row.')}</p>
       ) : (
-        candidates.map((c) => {
+        groupCandidates(candidates).map((c) => {
           const light = codeMeta(row.eligibilityCode);
           // Phase 1: decide which row of the pair wins. Phase 2: the
           // same-person tree — the tree (not a separate waive/confirm action)
@@ -271,7 +314,7 @@ export function RowDecisionCard({
                       : t('dedup.badgeMatched', 'Matched')}
                 </Badge>
                 {c.status !== 'pending' && onRevert && (
-                  <Button size="sm" variant="ghost" onClick={() => onRevert(c.id)} disabled={busy}>
+                  <Button size="sm" variant="ghost" onClick={() => (c.alsoMatchIds?.length ? onRevert(c.id, c.alsoMatchIds) : onRevert(c.id))} disabled={busy}>
                     <RotateCcw size={13} className="mr-1" /> {t('dedup.revertDecision', 'Revert decision')}
                   </Button>
                 )}
@@ -346,15 +389,17 @@ function Phase1Keep({
   busy: boolean;
 }) {
   const [remark, setRemark] = useState('');
+  const decide = (decision: MatchDecision) =>
+    c.alsoMatchIds?.length ? onDecide(c.id, decision, c.alsoMatchIds) : onDecide(c.id, decision);
   return (
     <div className="flex flex-wrap items-center gap-2 border-t border-border pt-2">
-      <Button size="sm" variant="default" disabled={busy} onClick={() => onDecide(c.id, { kind: 'keep_row' })}>{t('dedup.keepThisRow', 'Keep this row')}</Button>
+      <Button size="sm" variant="default" disabled={busy} onClick={() => decide({ kind: 'keep_row' })}>{t('dedup.keepThisRow', 'Keep this row')}</Button>
       <Button
         size="sm"
         variant="outline"
         disabled={busy || remark.trim() === ''}
         title={remark.trim() === '' ? 'Name a reason before setting this row aside' : undefined}
-        onClick={() => onDecide(c.id, { kind: 'keep_other_row', remark: remark.trim() })}
+        onClick={() => decide({ kind: 'keep_other_row', remark: remark.trim() })}
       >
         Keep row {c.pairedRow?.rowIndex ?? ''} instead
       </Button>
@@ -386,13 +431,15 @@ function Phase2Tree({
 }) {
   const [ask, setAsk] = useState<'ask' | 'yes'>('ask');
   const [remark, setRemark] = useState('');
+  const decide = (decision: MatchDecision) =>
+    c.alsoMatchIds?.length ? onDecide(c.id, decision, c.alsoMatchIds) : onDecide(c.id, decision);
   if (ask === 'ask') {
     return (
       <div className="space-y-1.5 border-t border-border pt-2">
         <div className="text-xs font-medium text-muted-foreground">{t('dedup.samePersonQ', 'Is this the same person?')}</div>
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="default" disabled={busy} onClick={() => setAsk('yes')}>{t('dedup.samePersonYes', 'Yes — update the record')}</Button>
-          <Button size="sm" variant="outline" disabled={busy} onClick={() => onDecide(c.id, { kind: 'new_client' })}>{t('dedup.samePersonNo', 'No — import as new client')}</Button>
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => decide({ kind: 'new_client' })}>{t('dedup.samePersonNo', 'No — import as new client')}</Button>
         </div>
       </div>
     );
@@ -401,13 +448,13 @@ function Phase2Tree({
     <div className="space-y-1.5 border-t border-border pt-2">
       <div className="text-xs font-medium text-muted-foreground">{t('dedup.samePersonWhere', 'Same person — where does the row sit in the priority list?')}</div>
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" variant="outline" disabled={busy} onClick={() => onDecide(c.id, { kind: 'keep_here' })}>{t('dedup.keepHere', 'Keep — position unchanged')}</Button>
+        <Button size="sm" variant="outline" disabled={busy} onClick={() => decide({ kind: 'keep_here' })}>{t('dedup.keepHere', 'Keep — position unchanged')}</Button>
         <Button
           size="sm"
           variant="default"
           disabled={busy || remark.trim() === ''}
           title={remark.trim() === '' ? 'Name a reason before moving the row down' : undefined}
-          onClick={() => onDecide(c.id, { kind: 'deprioritize', remark: remark.trim() })}
+          onClick={() => decide({ kind: 'deprioritize', remark: remark.trim() })}
         >{t('dedup.deprioritize', 'Deprioritize — move to bottom')}</Button>
         <Input
           className="h-7 w-64 text-xs"

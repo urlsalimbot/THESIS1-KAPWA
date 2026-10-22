@@ -225,6 +225,40 @@ describe('ClientDedupPage', () => {
     expect((await screen.findAllByText(/within the last 30 days/)).length).toBeGreaterThan(0);
   });
 
+  it('sends one decision to every grouped identity duplicate', async () => {
+    const person = { lastName: 'Reyes', firstName: 'Pedro', middleName: 'P.', dob: '1988-03-21', barangay: 'Bigte' };
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = String(key);
+      if (k.includes('/rows') && k.includes('/matches')) {
+        return Promise.resolve({
+          data: [
+            { id: 'm-empty', targetType: 'db_person', score: 0.9, status: 'pending', signals: {}, person: { id: 'p-empty', ...person }, interventions: 0, cases: [] },
+            { id: 'm-rich', targetType: 'db_person', score: 0.9, status: 'pending', signals: {}, person: { id: 'p-rich', ...person }, interventions: 3, cases: [{ controlNo: 'MSWD-2026-00001', status: 'enrolled' }] },
+          ],
+          total: 2, page: 1, limit: 20,
+        });
+      }
+      if (k.includes('/rows')) return Promise.resolve(ROWS_DISQ);
+      if (k.includes('/client-dedup/operations/op1')) {
+        return Promise.resolve({ id: 'op1', source: 'Batch 1.xlsx', status: 'reviewing', pending: 1, disqualified: 1, totalRows: 2 });
+      }
+      if (k.includes('/client-dedup/operations')) return Promise.resolve(OPERATIONS_RESPONSE);
+      return Promise.resolve(null);
+    });
+    mockApiPost.mockResolvedValue({});
+    await openReview();
+    await userEvent.click(await screen.findByRole('button', { name: /review matches/i }));
+
+    await userEvent.click(await screen.findByRole('button', { name: /yes — update the record/i }));
+    await userEvent.click(screen.getByRole('button', { name: /keep — position unchanged/i }));
+
+    await waitFor(() => expect(mockApiPost).toHaveBeenCalledTimes(2));
+    expect(mockApiPost.mock.calls.map((c) => c[0])).toEqual([
+      '/client-dedup/operations/op1/matches/m-empty/decision',
+      '/client-dedup/operations/op1/matches/m-rich/decision',
+    ]);
+  });
+
   it('shows the finalize bar blocking while disqualified rows await a decision', async () => {
     await openReview();
     expect(await screen.findByText(/1 pending 1 disqualified/i)).toBeTruthy();

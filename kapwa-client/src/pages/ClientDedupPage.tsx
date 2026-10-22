@@ -313,12 +313,7 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
       {
         id: 'status',
         header: t('dedup.colStatus', 'Status'),
-        cell: ({ row }) => (
-          <div className="space-y-1">
-            <RowStatusChip row={row.original} />
-            <CodeChip code={row.original.eligibilityCode} />
-          </div>
-        ),
+        cell: ({ row }) => <RowStatusChip row={row.original} />,
       },
       {
         id: 'remarks',
@@ -567,30 +562,6 @@ function RowStatusChip({ row }: { row: DedupRow }) {
   );
 }
 
-/**
- * The traffic-light chip on every row: the same codes the candidate cards use,
- * so the list is scannable without opening a card. Rows imported before the
- * code existed carry none.
- */
-function CodeChip({ code }: { code?: string | null }) {
-  if (!code) return null;
-  const meta: Record<string, { label: string; className: string }> = {
-    recent_intervention: { label: t('dedup.chipRecent', 'Served recently — review'), className: 'border-destructive/30 bg-destructive/10 text-destructive-foreground' },
-    household_recent: { label: t('dedup.chipHousehold', 'Household served recently — review'), className: 'border-destructive/30 bg-destructive/10 text-destructive-foreground' },
-    intra_list: { label: 'Duplicate in this list', className: 'border-warning/35 bg-alert-error-bg text-warning-foreground' },
-    passed_30d: { label: 'Served earlier', className: 'border-warning/35 bg-alert-error-bg text-warning-foreground' },
-    no_intervention: { label: t('dedup.chipNoIntervention', 'Matched — no prior service'), className: 'border-success/35 bg-alert-success-bg text-success-foreground' },
-    new_client: { label: t('dedup.chipNewClient', 'New client'), className: 'border-success/35 bg-alert-success-bg text-success-foreground' },
-  };
-  const m = meta[code];
-  if (!m) return null;
-  return (
-    <Badge variant="outline" className={m.className}>
-      {m.label}
-    </Badge>
-  );
-}
-
 function ExpandedRowPanel({
   operationId,
   row,
@@ -620,14 +591,18 @@ function ExpandedRowPanel({
       embedded={embedded}
       onRevert={
         canRevert
-          ? async (matchId: string) => {
-              await api.post(`/client-dedup/operations/${operationId}/matches/${matchId}/revert`);
+          ? async (matchId: string, alsoMatchIds: string[] = []) => {
+              // Reopen the grouped duplicates too, so one visible card and its
+              // hidden identity twins always move together.
+              for (const id of [...alsoMatchIds, matchId]) {
+                await api.post(`/client-dedup/operations/${operationId}/matches/${id}/revert`);
+              }
               toast.success(t('dedup.decisionReverted', 'Decision reverted — the match is pending again.'));
               await onChanged();
             }
           : undefined
       }
-      onDecide={async (matchId: string, decision) => {
+      onDecide={async (matchId: string, decision, alsoMatchIds: string[] = []) => {
         const body =
           decision.kind === 'keep_row'
             ? { keep: 'import_row' }
@@ -638,6 +613,11 @@ function ExpandedRowPanel({
                 : decision.kind === 'keep_here'
                   ? { samePerson: true, position: 'keep' }
                   : { samePerson: true, position: 'deprioritize', remark: decision.remark };
+        // Resolve the identity duplicates first; the visible record is decided
+        // last so `matchedPersonId` ends on the record the operator saw.
+        for (const id of alsoMatchIds) {
+          await api.post(`/client-dedup/operations/${operationId}/matches/${id}/decision`, body);
+        }
         await api.post(`/client-dedup/operations/${operationId}/matches/${matchId}/decision`, body);
         toast.success(
           decision.kind === 'keep_row'
