@@ -546,11 +546,11 @@ function RowStatusChip({ row }: { row: DedupRow }) {
     no_match: { label: t('dedup.chipNoMatch', 'No match'), className: 'border-success/35 bg-alert-success-bg text-success-foreground' },
     pending: { label: t('dedup.chipPending', 'Pending review'), className: 'border-border bg-muted text-muted-foreground' },
     retained: { label: t('dedup.chipRetained', 'Retained'), className: 'border-success/35 bg-alert-success-bg text-success-foreground' },
-    primary: { label: t('dedup.chipPrimary', 'Primary — kept'), className: 'border-badge-review-bg bg-badge-review-bg text-secondary-foreground' },
+    primary: { label: t('dedup.chipPrimary', 'Primary — kept'), className: 'border-badge-review-bg bg-badge-review-bg text-badge-review-fg' },
     deprioritized: {
       label: panReview ? t('dedup.chipDisq', 'Disqualified — review needed') : 'Deprioritized',
       className: panReview
-        ? 'border-destructive/30 bg-destructive/10 text-destructive-foreground'
+        ? 'border-destructive/30 bg-destructive/10 text-destructive'
         : 'border-warning/35 bg-alert-error-bg text-warning-foreground',
     },
   };

@@ -293,7 +293,7 @@ function HouseholdMembers({ candidate, t }: { candidate: MatchCandidate; t: TFun
 
 const CASE_STATUS_TONE: Array<[RegExp, string]> = [
   [/approved|completed|closed/i, 'border-success/35 bg-alert-success-bg text-success-foreground'],
-  [/active/i, 'border-badge-review-bg bg-badge-review-bg text-secondary-foreground'],
+  [/active/i, 'border-badge-review-bg bg-badge-review-bg text-badge-review-fg'],
   [/pending/i, 'border-warning/35 bg-alert-error-bg text-warning-foreground'],
 ];
 

@@ -35,7 +35,7 @@ const KIND_LABELS: Record<RemarkKind, string> = {
 };
 
 const KIND_CLASSES: Record<RemarkKind, string> = {
-  import: 'border-badge-review-bg bg-badge-review-bg text-secondary-foreground',
+  import: 'border-badge-review-bg bg-badge-review-bg text-badge-review-fg',
   decision: 'border-warning/35 bg-alert-error-bg text-warning-foreground',
   barangay_update: 'border-success/35 bg-alert-success-bg text-success-foreground',
   manual: 'border-border bg-muted text-muted-foreground',
