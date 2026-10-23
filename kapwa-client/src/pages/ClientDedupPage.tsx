@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import useSWR, { useSWRConfig } from 'swr';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef, RowSelectionState } from '@tanstack/react-table';
 import { Download, FileSpreadsheet, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import i18n from '@/i18n';
@@ -18,6 +18,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -223,6 +224,10 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
   const [reviewFilter, setReviewFilter] = useState<'all' | 'matched' | 'no_match' | 'disqualified'>('all');
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [batchDepOpen, setBatchDepOpen] = useState(false);
+  const [batchReason, setBatchReason] = useState('');
   // The two dedup stages: duplicates inside this import first, then matches
   // with KAPWA records. Rows can belong to both — the phase just changes what
   // is listed.
@@ -250,6 +255,64 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
   const disqualifiedCount = detail?.disqualified ?? 0;
 
   const refresh = () => mutate((key) => Array.isArray(key) && key[0] === 'clientDedup');
+  const selectedIds = Object.entries(rowSelection).filter(([, on]) => on).map(([id]) => id);
+
+  /**
+   * Apply one decision to every selected row's pending matches. The selection
+   * is a review aid; the server still owns each match decision and its pair /
+   * eligibility consequences. Matches are processed weakest-evidence first so
+   * the last same-person decision points the row at the richest record.
+   */
+  async function runBatch(action: 'keep' | 'deprioritize' | 'new_client', remark = '') {
+    if (batchBusy || selectedIds.length === 0) return;
+    setBatchBusy(true);
+    let applied = 0;
+    let skipped = 0;
+    try {
+      for (const rowId of selectedIds) {
+        const matches = await api.get<MatchesResponse>(
+          `/client-dedup/operations/${operationId}/rows/${rowId}/matches?page=1&limit=20`,
+        );
+        const pending = matches.data.filter((m) => m.status === 'pending');
+        if (pending.length === 0) { skipped++; continue; }
+        // A pair row has no "new client" answer: both rows are the same person,
+        // so keep/deprioritize is the only valid decision.
+        if (action === 'new_client' && pending.some((m) => m.targetType === 'import_row')) {
+          skipped++;
+          continue;
+        }
+        const ordered = [...pending].sort((a, b) => (a.interventions ?? 0) - (b.interventions ?? 0));
+        for (const match of ordered) {
+          const body = action === 'keep'
+            ? (match.targetType === 'import_row'
+                ? { keep: 'import_row' }
+                : { samePerson: true, position: 'keep' })
+            : action === 'deprioritize'
+              ? (match.targetType === 'import_row'
+                  ? { keep: 'other_import_row', remark }
+                  : { samePerson: true, position: 'deprioritize', remark })
+              : { samePerson: false };
+          await api.post(`/client-dedup/operations/${operationId}/matches/${match.id}/decision`, body);
+        }
+        applied++;
+      }
+      toast.success(
+        t('dedup.batchApplied', 'Batch decision applied to {{count}} row(s).', { count: applied }) +
+          (skipped ? ` ${t('dedup.batchSkipped', '{{count}} row(s) skipped — no pending decision.', { count: skipped })}` : ''),
+      );
+      setRowSelection({});
+      await refresh();
+    } catch (err) {
+      toast.error(t('dedup.batchFailed', 'Could not apply the batch decision'), {
+        description: err instanceof Error ? err.message : undefined,
+      });
+      await refresh();
+    } finally {
+      setBatchBusy(false);
+      setBatchDepOpen(false);
+      setBatchReason('');
+    }
+  }
 
   /**
    * The endpoint queues the batch (202) and the worker runs it — a
@@ -387,6 +450,25 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
           {rowsData?.total ?? 0} row{(rowsData?.total ?? 0) === 1 ? '' : 's'}
         </span>
       </div>
+      {selectedIds.length > 0 && (
+        <div data-testid="dedup-batch-actions" className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2">
+          <span className="text-sm font-medium">
+            {t('dedup.selectedCount', '{{count}} selected', { count: selectedIds.length })}
+          </span>
+          <Button size="sm" disabled={batchBusy} onClick={() => runBatch('keep')}>
+            {t('dedup.keepSelected', 'Keep selected')}
+          </Button>
+          <Button size="sm" variant="outline" disabled={batchBusy} onClick={() => setBatchDepOpen(true)}>
+            {t('dedup.deprioritizeSelected', 'Deprioritize selected')}
+          </Button>
+          <Button size="sm" variant="secondary" disabled={batchBusy} onClick={() => runBatch('new_client')}>
+            {t('dedup.newClientsSelected', 'New clients')}
+          </Button>
+          <Button size="sm" variant="ghost" disabled={batchBusy} onClick={() => setRowSelection({})}>
+            {t('dedup.clearSelection', 'Clear')}
+          </Button>
+        </div>
+      )}
       <DataTable
         columns={columns}
         data={rows}
@@ -395,6 +477,11 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
         pagination={pagination}
         sorting={[]}
         onPaginationChange={setPagination}
+        enableRowSelection
+        rowCanSelect={(r) => r.status !== 'no_match'}
+        rowSelection={rowSelection}
+        onRowSelectionChange={setRowSelection}
+        getRowId={(r) => r.id}
       />
       <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background/95 p-3 shadow-sm backdrop-blur">
         <span className="text-sm text-muted-foreground">
@@ -445,6 +532,32 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
           </DialogContent>
         </Dialog>
       )}
+
+      <AlertDialog open={batchDepOpen} onOpenChange={(open) => { setBatchDepOpen(open); if (!open) setBatchReason(''); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('dedup.batchReasonTitle', 'Deprioritize selected rows')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('dedup.batchReasonBody', 'Give one reason for moving these rows to the bottom of the priority list.')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            aria-label={t('dedup.batchReasonPlaceholder', 'Reason')}
+            value={batchReason}
+            onChange={(e) => setBatchReason(e.target.value)}
+            rows={3}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={batchBusy}>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={batchBusy || batchReason.trim() === ''}
+              onClick={(e) => { e.preventDefault(); void runBatch('deprioritize', batchReason.trim()); }}
+            >
+              {t('dedup.batchApply', 'Apply')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>

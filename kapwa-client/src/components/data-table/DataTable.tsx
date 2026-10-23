@@ -37,6 +37,8 @@ export interface DataTableProps<TData, TValue> {
   showPagination?: boolean;
   children?: React.ReactNode;
   enableRowSelection?: boolean;
+  /** Per-row override: return false to keep a row out of a batch selection. */
+  rowCanSelect?: (row: TData) => boolean;
   rowSelection?: RowSelectionState;
   onRowSelectionChange?: ((updater: Updater<RowSelectionState>) => void) | undefined;
   getRowId?: (row: TData) => string;
@@ -54,6 +56,7 @@ export function DataTable<TData, TValue>({
   showPagination = true,
   children,
   enableRowSelection = false,
+  rowCanSelect,
   rowSelection,
   onRowSelectionChange,
   getRowId,
@@ -112,7 +115,9 @@ export function DataTable<TData, TValue>({
       ? { onRowSelectionChange }
       : {}),
     ...(enableRowSelection && getRowId ? { getRowId } : {}),
-    ...(enableRowSelection ? { enableRowSelection: true } : {}),
+    ...(enableRowSelection
+      ? { enableRowSelection: rowCanSelect ? (row: { original: TData }) => rowCanSelect(row.original) : true }
+      : {}),
     manualPagination: !selfOwnsData,
     manualSorting: !selfOwnsData,
     // Pagination is fully controlled by the caller (URL-driven). Letting
