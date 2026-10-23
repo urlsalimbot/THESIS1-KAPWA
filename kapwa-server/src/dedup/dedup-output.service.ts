@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { ORG_LOCATION } from '../common/constants';
+import { OrgService } from '../common/org.service';
 import { ClientImportOperation, ClientImportRow } from './dedup.entity';
 import { DedupOutputWriter } from './dedup.service';
 
@@ -91,6 +93,10 @@ export function outputGrid(op: ClientImportOperation, rows: ClientImportRow[]): 
 
 @Injectable()
 export class DedupOutputService implements DedupOutputWriter {
+  // OrgService is global; tests construct this service directly and fall back
+  // to the same office name the OrgService uses when the agency row is absent.
+  constructor(private readonly org?: OrgService) {}
+
   /**
    * The workbook itself, in memory. The download endpoint rebuilds from here
    * when the stored file is gone: containers are disposable, and a finalize that
@@ -101,7 +107,54 @@ export class DedupOutputService implements DedupOutputWriter {
     const ExcelJS = require('exceljs');
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Priority List');
-    for (const line of outputGrid(op, rows)) sheet.addRow(line);
+    const grid = outputGrid(op, rows);
+    const columns = grid[0].length;
+    const officeName = (this.org ? await this.org.officeName() : '') || 'Municipal Social Welfare and Development Office';
+    const stamp = op.finalizedAt ?? op.createdAt ?? new Date();
+    const dateLabel = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric',
+    }).format(new Date(stamp));
+
+    // SCSR-style letterhead: the office identity and the document title sit
+    // above the data grid, centered across every column, so the printed sheet
+    // reads as an official MSWDO list rather than a bare spreadsheet.
+    const letterhead: Array<{ text: string; size?: number; bold?: boolean }> = [
+      { text: ORG_LOCATION.country },
+      { text: `Province of ${ORG_LOCATION.province}` },
+      { text: `Municipality of ${ORG_LOCATION.municipality}` },
+      { text: officeName.toUpperCase(), size: 12, bold: true },
+      { text: 'CLIENT DEDUPLICATION PRIORITY LIST', size: 14, bold: true },
+      { text: `Date: ${dateLabel}` },
+      { text: `Source: ${op.source}` },
+    ];
+    for (const line of letterhead) {
+      const row = sheet.addRow([line.text]);
+      sheet.mergeCells(row.number, 1, row.number, columns);
+      const cell = sheet.getCell(row.number, 1);
+      cell.value = line.text;
+      cell.font = { name: 'Calibri', size: line.size ?? 10, bold: line.bold ?? false };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      row.height = line.size && line.size >= 14 ? 22 : 16;
+    }
+    sheet.addRow([]); // breathing room before the data grid
+
+    const headerRow = sheet.rowCount + 1;
+    for (const line of grid) sheet.addRow(line);
+    const header = sheet.getRow(headerRow);
+    header.font = { name: 'Calibri', size: 10, bold: true };
+    header.eachCell((cell: any) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE5E2DD' } };
+      cell.alignment = { vertical: 'middle', wrapText: true };
+    });
+    grid[0].forEach((label, i) => {
+      sheet.getColumn(i + 1).width = Math.max(14, Math.min(36, String(label).length + 6));
+    });
+    sheet.views = [{ state: 'frozen', ySplit: headerRow }];
+    sheet.autoFilter = {
+      from: { row: headerRow, column: 1 },
+      to: { row: headerRow + grid.length - 1, column: columns },
+    };
+    sheet.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
     return (await workbook.xlsx.writeBuffer()) as Buffer;
   }
 

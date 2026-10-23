@@ -67,6 +67,35 @@ describe('DedupOutputService writer', () => {
     expect(buf.length).toBeGreaterThan(1000);
   });
 
+  it('adds the SCSR-style letterhead and title above the priority grid', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const ExcelJS = require('exceljs');
+    const svc = new DedupOutputService();
+    const headerOp = {
+      id: 'op1', source: 'Batch 1.xlsx', createdAt: new Date('2026-10-23T02:00:00Z'),
+      columnMap: { baseline: {}, extras: [] },
+    } as unknown as ClientImportOperation;
+    const headerRow = {
+      rowIndex: 2, lastName: 'Reyes', firstName: 'Pedro', middleName: 'Poblete',
+      dob: '1988-03-21', barangay: 'Bigte', status: 'no_match',
+    } as ClientImportRow;
+
+    const buf = await svc.build(headerOp, [headerRow]);
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf);
+    const sheet = wb.getWorksheet('Priority List');
+
+    expect(sheet.getCell('A1').value).toBe('Republic of the Philippines');
+    expect(sheet.getCell('A2').value).toBe('Province of Bulacan');
+    expect(sheet.getCell('A3').value).toBe('Municipality of Norzagaray');
+    expect(sheet.getCell('A4').value).toBe('MUNICIPAL SOCIAL WELFARE AND DEVELOPMENT OFFICE');
+    expect(sheet.getCell('A5').value).toBe('CLIENT DEDUPLICATION PRIORITY LIST');
+    expect(String(sheet.getCell('A6').value)).toMatch(/^Date: /);
+    expect(sheet.getCell('A7').value).toBe('Source: Batch 1.xlsx');
+    expect(sheet.getCell('A9').value).toBe('Last Name');
+    expect(sheet.getCell('A10').value).toBe('Reyes');
+  });
+
   it('names the workbook after the run (CD-YYYY-MMM-NNN.xlsx)', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dedup-export-'));
     process.env.DEDUP_EXPORT_DIR = dir;
