@@ -83,9 +83,6 @@ export function IntakeReviewPage() {
     if (pendingIntakeId) {
       void api.patch(`/pending-intakes/${pendingIntakeId}/processed`, {}).catch(() => undefined);
     }
-    if (walkInLogId) {
-      // The caseId is filled in after the create/confirm result below.
-    }
   }
 
   function markWalkInConverted(caseId?: string) {
