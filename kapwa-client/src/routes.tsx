@@ -113,6 +113,7 @@ const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then(m 
 const FourPsCompliancePage = lazy(() => import('./pages/FourPsCompliancePage').then(m => ({ default: m.FourPsCompliancePage })));
 const PayoutSchedulePage = lazy(() => import('./pages/PayoutSchedulePage').then(m => ({ default: m.PayoutSchedulePage })));
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage').then(m => ({ default: m.AnalyticsPage })));
+const WalkInLogPage = lazy(() => import('./pages/WalkInLogPage').then(m => ({ default: m.WalkInLogPage })));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 
 function Private({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
@@ -171,6 +172,7 @@ export const router = createBrowserRouter([
   { path: '/client-dedup/new', element: <Private roles={['admin','social_worker']}><ClientDedupNewPage /></Private> },
   { path: '/client-dedup/:id', element: <Private roles={['admin','social_worker']}><ClientDedupPage /></Private> },
   { path: '/tracker', element: <Private roles={['admin','social_worker']}><CaseTrackerPage /></Private> },
+  { path: '/walk-in-logs', element: <Private roles={['admin','social_worker']}><WalkInLogPage /></Private> },
   { path: '/admin', element: <Private roles={['admin']}><AdminPage /></Private> },
   { path: '/admin/users', element: <Private roles={['admin', 'social_worker']}><UsersPanelPage /></Private> },
   { path: '/admin/users/new', element: <Private roles={['admin']}><NewUserPage /></Private> },

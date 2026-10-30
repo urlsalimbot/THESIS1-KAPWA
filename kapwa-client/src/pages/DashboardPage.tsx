@@ -32,6 +32,7 @@ import { TrendsChart, type TrendRange, TREND_RANGES } from '@/components/dashboa
 import { NeedsAttention } from '@/components/dashboard/NeedsAttention';
 import { BarangayBreakdown } from '@/components/dashboard/BarangayBreakdown';
 import { ActivityCalendar } from '@/components/dashboard/ActivityCalendar';
+import { WalkInWidget } from '@/components/dashboard/WalkInWidget';
 import { CaseCategoryCell } from '@/components/case-category-cell';
 
 interface Stat { label: string; value: string; change: string; icon: React.ElementType; iconClass: string; }
@@ -260,6 +261,8 @@ export function DashboardPage() {
           recentInterventions={data.recentInterventions ?? 0}
         />
       )}
+
+      <div className="mt-4"><WalkInWidget /></div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4 short:mt-3 short:gap-3">
         <div className="lg:col-span-2"><CaseStatusChart data={data?.byStatus || []} /></div>

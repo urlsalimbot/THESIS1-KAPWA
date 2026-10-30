@@ -271,6 +271,7 @@ export function IntakePage() {
   const [beneficiaryIsClaimant, setBeneficiaryIsClaimant] = useState(false);
   const [hasConsent, setHasConsent] = useState(false);
   const [pendingIntakeId, setPendingIntakeId] = useState<string | null>(null);
+  const [walkInLogId] = useState<string | null>(() => (location.state as { walkInLogId?: string } | null)?.walkInLogId ?? null);
   const { data: pendingIntakes, mutate: mutatePendingIntakes } = useSWR<PendingIntakeRow[]>(
     ['pending-intakes'],
     () => api.get<PendingIntakeRow[]>('/pending-intakes'),
@@ -702,6 +703,11 @@ export function IntakePage() {
   }
 
   function completeIntake(caseId: string) {
+    if (walkInLogId) {
+      void api.patch(`/walk-in-logs/${walkInLogId}`, {
+        caseId, status: 'completed', outcome: 'Intake created / case opened',
+      }).catch(() => undefined);
+    }
     if (pendingIntakeId) {
       const id = pendingIntakeId;
       setPendingIntakeId(null);
@@ -878,7 +884,7 @@ export function IntakePage() {
             // would otherwise lose the whole intake with nothing to recover
             // from. It is cleared once a case actually exists.
             navigate('/intake/review', {
-              state: { candidates: matchResult.candidates, intakeData: intakePayload, pendingIntakeId },
+              state: { candidates: matchResult.candidates, intakeData: intakePayload, pendingIntakeId, walkInLogId },
             });
             return;
           }

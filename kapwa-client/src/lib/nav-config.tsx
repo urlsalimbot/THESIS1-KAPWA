@@ -2,7 +2,7 @@ import {
   FilePlus, LayoutDashboard, Users, CheckCircle, Wrench,
   ClipboardList, Shield, UserCircle, Stamp, Settings, MessageSquare,
   FileWarning, IdCard, ScrollText, BarChart3, Send, BadgeCheck,
-  Megaphone, CalendarDays, Share2, ScanSearch,
+  Megaphone, CalendarDays, Share2, ScanSearch, NotebookPen,
 } from 'lucide-react';
 import { FEATURE_ANALYTICS_ENABLED } from './feature-flags';
 
@@ -38,6 +38,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Operations',
     items: [
       { path: '/tracker', label: 'Daily Tracker', icon: <ClipboardList size={20} />, roles: ['admin', 'social_worker'] },
+      { path: '/walk-in-logs', label: 'Walk-in Log', icon: <NotebookPen size={20} />, roles: ['admin', 'social_worker'] },
       { path: '/approvals', label: 'Approvals', icon: <Stamp size={20} />, roles: ['admin', 'social_worker'] },
       { path: '/announcements/manage', label: 'Announcements', icon: <Megaphone size={20} />, roles: ['admin', 'social_worker'] },
       { path: '/client-dedup', label: 'Client Deduplication', icon: <ScanSearch size={20} />, roles: ['admin', 'social_worker'] },

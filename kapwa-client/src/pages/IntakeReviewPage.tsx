@@ -19,6 +19,7 @@ interface LocationState {
   candidates: MatchCandidate[];
   intakeData: any;
   pendingIntakeId?: string;
+  walkInLogId?: string;
 }
 
 export function IntakeReviewPage() {
@@ -49,7 +50,7 @@ export function IntakeReviewPage() {
     );
   }
 
-  const { candidates, intakeData, pendingIntakeId } = state;
+  const { candidates, intakeData, pendingIntakeId, walkInLogId } = state;
   const intake = (intakeData as any)?.beneficiary || {};
 
   const sorted = [...candidates].sort((a, b) => b.score - a.score);
@@ -79,8 +80,21 @@ export function IntakeReviewPage() {
   }
 
   function markPendingProcessed() {
-    if (!pendingIntakeId) return;
-    void api.patch(`/pending-intakes/${pendingIntakeId}/processed`, {}).catch(() => undefined);
+    if (pendingIntakeId) {
+      void api.patch(`/pending-intakes/${pendingIntakeId}/processed`, {}).catch(() => undefined);
+    }
+    if (walkInLogId) {
+      // The caseId is filled in after the create/confirm result below.
+    }
+  }
+
+  function markWalkInConverted(caseId?: string) {
+    if (!walkInLogId) return;
+    void api.patch(`/walk-in-logs/${walkInLogId}`, {
+      ...(caseId ? { caseId } : {}),
+      status: 'completed',
+      outcome: caseId ? 'Intake created / case opened' : 'Existing record updated by intake',
+    }).catch(() => undefined);
   }
 
   async function handleConfirm(householdId: string, createCase: boolean = true) {
@@ -118,6 +132,7 @@ export function IntakeReviewPage() {
       // updated), so the draft is spent.
       clearIntakeDraft();
       markPendingProcessed();
+      markWalkInConverted(result.caseId);
       if (result.caseCreated) {
         toast.success(t('intake.clientRegistered', 'Client registered'), { description: result.message });
         if (result.caseId) {
@@ -143,6 +158,7 @@ export function IntakeReviewPage() {
       const result = await api.post<{ caseId: string; controlNo: string }>('/intake', intakeData);
       clearIntakeDraft();
       markPendingProcessed();
+      markWalkInConverted(result.caseId);
       void uploadIntakeIdPhotos(result.caseId).then((ok) => {
         if (!ok) toast.error(t('intake.idPhoto.uploadFailed', 'ID photo upload failed'));
       });
