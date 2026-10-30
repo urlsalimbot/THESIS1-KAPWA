@@ -18,6 +18,7 @@ import { clearDraft } from '@/hooks/useIntakeAutosave';
 interface LocationState {
   candidates: MatchCandidate[];
   intakeData: any;
+  pendingIntakeId?: string;
 }
 
 export function IntakeReviewPage() {
@@ -48,7 +49,7 @@ export function IntakeReviewPage() {
     );
   }
 
-  const { candidates, intakeData } = state;
+  const { candidates, intakeData, pendingIntakeId } = state;
   const intake = (intakeData as any)?.beneficiary || {};
 
   const sorted = [...candidates].sort((a, b) => b.score - a.score);
@@ -75,6 +76,11 @@ export function IntakeReviewPage() {
         },
       },
     });
+  }
+
+  function markPendingProcessed() {
+    if (!pendingIntakeId) return;
+    void api.patch(`/pending-intakes/${pendingIntakeId}/processed`, {}).catch(() => undefined);
   }
 
   async function handleConfirm(householdId: string, createCase: boolean = true) {
@@ -111,6 +117,7 @@ export function IntakeReviewPage() {
       // The intake has been consumed either way (case created, or existing case
       // updated), so the draft is spent.
       clearIntakeDraft();
+      markPendingProcessed();
       if (result.caseCreated) {
         toast.success(t('intake.clientRegistered', 'Client registered'), { description: result.message });
         if (result.caseId) {
@@ -135,6 +142,7 @@ export function IntakeReviewPage() {
     try {
       const result = await api.post<{ caseId: string; controlNo: string }>('/intake', intakeData);
       clearIntakeDraft();
+      markPendingProcessed();
       void uploadIntakeIdPhotos(result.caseId).then((ok) => {
         if (!ok) toast.error(t('intake.idPhoto.uploadFailed', 'ID photo upload failed'));
       });

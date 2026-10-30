@@ -10,11 +10,14 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { Loader2, HandHeart, User, Mail, MapPin, Lock, Eye, EyeOff } from 'lucide-react';
 import { api } from '../lib/api';
 import { AuthShell } from '@/components/public/AuthShell';
+import { NAME_EXTENSIONS } from '@/lib/constants';
 
 const barangays = [
   'Bangkal',
@@ -53,6 +56,20 @@ const makeRegisterSchema = (t: TFunction) => z.object({
   phone: z
     .string()
     .regex(/^09\d{2}\s?\d{3}\s?\d{4}$/, t('auth.phoneInvalid', 'Please enter a valid phone number.')),
+  sex: z.enum(['Male', 'Female'], { message: t('auth.sexRequired', 'Please select your sex.') }),
+  placeOfBirth: z.string().min(1, t('auth.placeOfBirthRequired', 'Please enter your place of birth.')),
+  civilStatus: z.enum(['Single', 'Married', 'Widowed', 'Separated', 'Annulled'], {
+    message: t('auth.civilStatusRequired', 'Please select your civil status.'),
+  }),
+  street: z.string().min(1, t('auth.streetRequired', 'Please enter your street address.')),
+  philsysNumber: z.string().optional(),
+  occupation: z.string().min(1, t('auth.occupationRequired', 'Please enter your occupation.')),
+  estimatedMonthlyIncome: z
+    .string()
+    .min(1, t('auth.incomeRequired', 'Please enter your estimated monthly income.'))
+    .regex(/^\d+$/, t('auth.incomeInvalid', 'Enter a whole-number monthly income.')),
+  isIndigenous: z.boolean(),
+  consent: z.boolean().refine((v) => v === true, t('auth.consentRequired', 'Please confirm the data privacy consent.')),
   password: z.string().min(8, t('auth.passwordMinLength', 'Password must be at least 8 characters.')),
   confirmPassword: z.string(),
   barangay: z.string().min(1, t('auth.selectBarangay', 'Please select your barangay.')),
@@ -89,6 +106,15 @@ export function RegisterPage() {
       nameExtension: '',
       email: '',
       phone: '',
+      sex: undefined as unknown as 'Male' | 'Female',
+      placeOfBirth: '',
+      civilStatus: undefined as unknown as 'Single' | 'Married' | 'Widowed' | 'Separated' | 'Annulled',
+      street: '',
+      philsysNumber: '',
+      occupation: '',
+      estimatedMonthlyIncome: '',
+      isIndigenous: false,
+      consent: false,
       password: '',
       confirmPassword: '',
       barangay: '',
@@ -110,6 +136,34 @@ export function RegisterPage() {
         password: values.password,
         assignedBarangay: values.barangay,
         dob: values.dateOfBirth,
+        intake: {
+          beneficiary: {
+            surname: values.lastName,
+            firstName: values.firstName,
+            middleName: values.middleName || undefined,
+            extension: values.nameExtension && values.nameExtension !== 'N/A' ? values.nameExtension : undefined,
+            gender: values.sex,
+            dob: values.dateOfBirth,
+            age: Math.floor((Date.now() - new Date(values.dateOfBirth).getTime()) / 31557600000),
+            placeOfBirth: values.placeOfBirth,
+            civilStatus: values.civilStatus,
+            cellularNumber: values.phone.replace(/\s/g, ''),
+            email: values.email,
+            currentAddress: {
+              street: values.street,
+              barangay: values.barangay,
+              city: 'Norzagaray',
+              province: 'Bulacan',
+              region: '03',
+              postalCode: '3013',
+            },
+            philsysNumber: values.philsysNumber || undefined,
+            occupation: values.occupation,
+            estimatedMonthlyIncome: parseFloat(values.estimatedMonthlyIncome),
+            isIndigenous: values.isIndigenous,
+          },
+          familyMembers: [],
+        },
       });
       setEmailDelivered(res?.emailDelivered !== false);
       setRegisteredEmail(values.email);
@@ -131,6 +185,8 @@ export function RegisterPage() {
               {t('auth.weSentVerificationLink', 'We sent a verification link to')} <strong>{registeredEmail}</strong>{t('auth.period', '.')}
               <br />
               {t('auth.checkInboxToActivate', 'Please check your inbox and click the link to activate your account.')}
+              <br />
+              {t('auth.pendingIntakeNotice', 'Your completed intake is now pending review by an MSWDO admin or social worker.')}
             </CardDescription>
             {!emailDelivered && (
               <div className="error-msg mt-3" role="alert">
@@ -241,7 +297,16 @@ export function RegisterPage() {
                       <FormItem>
                         <FormLabel>{t('auth.nameExtension', 'Name Extension')}</FormLabel>
                         <FormControl>
-                          <Input placeholder={t('auth.nameExtensionPlaceholder', 'Jr., Sr., III')} className="h-11 md:h-10" {...field} />
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <SelectTrigger className="h-11 md:h-10" aria-label={t('auth.nameExtension', 'Name Extension')}>
+                              <SelectValue placeholder={t('auth.nameExtensionPlaceholder', 'Jr., Sr., III')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {NAME_EXTENSIONS.map((extension) => (
+                                <SelectItem key={extension} value={extension}>{extension}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -261,6 +326,23 @@ export function RegisterPage() {
                     </FormItem>
                   )}
                 />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField control={form.control} name="sex" render={({ field }) => (
+                    <FormItem><FormLabel>{t('auth.sex', 'Sex')}</FormLabel><FormControl>
+                      <RadioGroup value={field.value} onValueChange={field.onChange} className="flex h-10 items-center gap-4">
+                        {['Male', 'Female'].map((sex) => (<label key={sex} className="flex items-center gap-2 text-sm cursor-pointer"><RadioGroupItem value={sex} aria-label={sex} />{t(`auth.${sex.toLowerCase()}`, sex)}</label>))}
+                      </RadioGroup>
+                    </FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="placeOfBirth" render={({ field }) => (
+                    <FormItem><FormLabel>{t('auth.placeOfBirth', 'Place of Birth')}</FormLabel><FormControl><Input placeholder={t('auth.placeOfBirth', 'Place of Birth')} className="h-11 md:h-10" {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="civilStatus" render={({ field }) => (
+                    <FormItem><FormLabel>{t('auth.civilStatus', 'Civil Status')}</FormLabel><FormControl>
+                      <Select value={field.value} onValueChange={field.onChange}><SelectTrigger className="h-11 md:h-10" aria-label={t('auth.civilStatus', 'Civil Status')}><SelectValue placeholder={t('auth.selectCivilStatus', 'Select civil status')} /></SelectTrigger><SelectContent>{['Single', 'Married', 'Widowed', 'Separated', 'Annulled'].map((status) => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select>
+                    </FormControl><FormMessage /></FormItem>
+                  )} />
+                </div>
               </div>
               <Separator />
 
@@ -307,6 +389,9 @@ export function RegisterPage() {
                   <MapPin size={18} className="text-primary" aria-hidden="true" />
                   {t('auth.sectionAddress', 'Address')}
                 </h2>
+                <FormField control={form.control} name="street" render={({ field }) => (
+                  <FormItem><FormLabel>{t('auth.street', 'Street Address')}</FormLabel><FormControl><Input placeholder={t('auth.street', 'Street Address')} className="h-11 md:h-10" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
                 <FormField
                   control={form.control}
                   name="barangay"
@@ -331,6 +416,29 @@ export function RegisterPage() {
                     </FormItem>
                   )}
                 />
+              </div>
+              <Separator />
+
+              {/* Employment & identity — the remaining General Intake fields */}
+              <div className="space-y-3">
+                <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-foreground">
+                  <HandHeart size={18} className="text-primary" aria-hidden="true" />
+                  {t('auth.sectionEmployment', 'Employment & Identity')}
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField control={form.control} name="occupation" render={({ field }) => (
+                    <FormItem><FormLabel>{t('auth.occupation', 'Occupation')}</FormLabel><FormControl><Input placeholder={t('auth.occupation', 'Occupation')} className="h-11 md:h-10" {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="estimatedMonthlyIncome" render={({ field }) => (
+                    <FormItem><FormLabel>{t('auth.estimatedIncome', 'Estimated Monthly Income')}</FormLabel><FormControl><Input inputMode="numeric" placeholder="0" className="h-11 md:h-10" {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="philsysNumber" render={({ field }) => (
+                    <FormItem><FormLabel>{t('auth.philsysNumber', 'PhilSys Number')}</FormLabel><FormControl><Input placeholder={t('auth.optional', 'Optional')} className="h-11 md:h-10" {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                </div>
+                <FormField control={form.control} name="isIndigenous" render={({ field }) => (
+                  <FormItem><div className="flex items-center gap-2"><FormControl><Checkbox id="reg-is-indigenous" aria-label={t('auth.isIndigenous', 'Is an Indigenous Person (IP)')} checked={field.value === true} onCheckedChange={(v) => field.onChange(v === true)} /></FormControl><FormLabel htmlFor="reg-is-indigenous" className="!mt-0 cursor-pointer">{t('auth.isIndigenous', 'Is an Indigenous Person (IP)')}</FormLabel></div><FormMessage /></FormItem>
+                )} />
               </div>
               <Separator />
 
@@ -408,13 +516,22 @@ export function RegisterPage() {
                 </div>
               </div>
 
+              <FormField control={form.control} name="consent" render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-start gap-2">
+                    <FormControl><Checkbox id="reg-consent" aria-label={t('auth.consentLabel', 'Data privacy consent')} checked={field.value === true} onCheckedChange={(v) => field.onChange(v === true)} /></FormControl>
+                    <FormLabel htmlFor="reg-consent" className="!mt-0 text-sm leading-relaxed text-muted-foreground">{t('auth.consentText', 'I confirm that my information may be recorded and processed under the Data Privacy Act (RA 10173) so MSWDO can review this intake.')}</FormLabel>
+                  </div><FormMessage />
+                </FormItem>
+              )} />
+
               <Button
                 type="submit"
                 className="w-full bg-accent text-accent-foreground hover:bg-accent/90 h-11"
                 disabled={form.formState.isSubmitting}
               >
                 {form.formState.isSubmitting && <Loader2 size={16} className="mr-2 animate-spin" />}
-                {t('auth.createAccount', 'Create Account')}
+                {t('auth.submitForReview', 'Submit Registration for Review')}
               </Button>
             </form>
           </Form>

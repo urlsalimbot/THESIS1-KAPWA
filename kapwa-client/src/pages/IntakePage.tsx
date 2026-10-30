@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
 import { useIntakeAutosave, loadDraft, clearDraft } from '@/hooks/useIntakeAutosave';
 import { useAuth } from '@/lib/auth-context';
@@ -6,7 +7,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../lib/api';
 import { PageShell } from '@/components/PageShell';
 import { Input } from '@/components/ui/input';
-import { personFullName } from '../lib/format';
+import { personFullName, formatDate } from '../lib/format';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -63,6 +64,12 @@ interface PersonForm {
   cellularNumber: string; email: string; currentAddress: AddressFields;
   philsysNumber: string; occupation: string; estimatedMonthlyIncome: string;
   isIndigenous: boolean;
+}
+
+interface PendingIntakeRow {
+  id: string;
+  createdAt: string;
+  data: { beneficiary: any; familyMembers?: any[] };
 }
 
 /** Which referral this intake was handed off from, if any. */
@@ -263,6 +270,11 @@ export function IntakePage() {
   const [error, setError] = useState('');
   const [beneficiaryIsClaimant, setBeneficiaryIsClaimant] = useState(false);
   const [hasConsent, setHasConsent] = useState(false);
+  const [pendingIntakeId, setPendingIntakeId] = useState<string | null>(null);
+  const { data: pendingIntakes, mutate: mutatePendingIntakes } = useSWR<PendingIntakeRow[]>(
+    ['pending-intakes'],
+    () => api.get<PendingIntakeRow[]>('/pending-intakes'),
+  );
   const [benErrors, setBenErrors] = useState<ValidationErrors>({});
   const [claimErrors, setClaimErrors] = useState<ValidationErrors>({});
   const [pendingPreview, setPendingPreview] = useState<string | null>(null);
@@ -625,7 +637,78 @@ export function IntakePage() {
     }));
   }
 
+  function applyPendingIntake(p: PendingIntakeRow) {
+    const b = p.data.beneficiary ?? {};
+    setBeneficiary({
+      ...emptyPerson(),
+      surname: b.surname ?? '',
+      firstName: b.firstName ?? '',
+      middleName: b.middleName ?? '',
+      extension: b.extension ?? '',
+      gender: b.gender ?? '',
+      dob: b.dob ?? '',
+      placeOfBirth: b.placeOfBirth ?? '',
+      civilStatus: b.civilStatus ?? '',
+      cellularNumber: b.cellularNumber ?? '',
+      email: b.email ?? '',
+      currentAddress: {
+        street: b.currentAddress?.street ?? '',
+        barangay: b.currentAddress?.barangay ?? '',
+        // The registration form only offers Norzagaray barangays; restore the
+        // PSGC codes the intake address picker uses.
+        city: '0301413000',
+        province: '0301400000',
+        region: '03',
+        postalCode: b.currentAddress?.postalCode ?? '3013',
+        psgcCode: b.currentAddress?.psgcCode ?? '',
+      },
+      philsysNumber: b.philsysNumber ?? '',
+      occupation: b.occupation ?? '',
+      estimatedMonthlyIncome: b.estimatedMonthlyIncome != null ? String(b.estimatedMonthlyIncome) : '',
+      isIndigenous: Boolean(b.isIndigenous),
+    });
+    setBeneficiaryIsClaimant(true);
+    setClaimant(emptyPerson());
+    setRelationshipToBeneficiary('');
+    setFamily((p.data.familyMembers ?? []).map((m, i) => ({
+      id: `pending-${i}`,
+      surname: m.surname ?? '',
+      firstName: m.firstName ?? '',
+      middleName: m.middleName ?? '',
+      extension: m.extension ?? '',
+      gender: m.gender ?? '',
+      dob: m.dob ?? '',
+      relationship: m.relationship ?? '',
+      occupation: m.occupation ?? '',
+      income: m.income != null ? String(m.income) : '',
+      status: m.status ?? '',
+      done: false,
+    })));
+    setHasConsent(true);
+    setPendingIntakeId(p.id);
+    setError('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    toast.success(t('intake.pendingApplied', 'Claimant registration loaded — review the details and continue the intake.'));
+  }
+
+  async function dismissPendingIntake(id: string) {
+    try {
+      await api.patch(`/pending-intakes/${id}/dismiss`, {});
+      await mutatePendingIntakes();
+      toast.success(t('intake.pendingDismissed', 'Pending registration dismissed.'));
+    } catch {
+      toast.error(t('intake.pendingDismissFailed', 'Could not dismiss this pending registration.'));
+    }
+  }
+
   function completeIntake(caseId: string) {
+    if (pendingIntakeId) {
+      const id = pendingIntakeId;
+      setPendingIntakeId(null);
+      void api.patch(`/pending-intakes/${id}/processed`, {})
+        .then(() => mutatePendingIntakes())
+        .catch(() => undefined);
+    }
     void uploadIntakeIdPhotos(caseId).then((ok) => {
       if (!ok) toast.error(t('intake.idPhoto.uploadFailed', 'ID photo upload failed'));
     });
@@ -795,7 +878,7 @@ export function IntakePage() {
             // would otherwise lose the whole intake with nothing to recover
             // from. It is cleared once a case actually exists.
             navigate('/intake/review', {
-              state: { candidates: matchResult.candidates, intakeData: intakePayload },
+              state: { candidates: matchResult.candidates, intakeData: intakePayload, pendingIntakeId },
             });
             return;
           }
@@ -826,6 +909,45 @@ export function IntakePage() {
 
   return (
     <PageShell title={t('intake.title', 'General Intake Form')} description={t('intake.description', 'Client Registration — Beneficiary + Claimant + Family Composition')}>
+      {pendingIntakes && pendingIntakes.length > 0 && (
+        <div className="mb-4 overflow-hidden rounded-lg border bg-card">
+          <div className="border-b bg-muted/30 px-4 py-2.5">
+            <h2 className="text-sm font-semibold">{t('intake.pendingTitle', 'Pending Claimant Registrations')}</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {t('intake.pendingDescription', 'Self-registrations waiting for an admin or social worker. Load one to prefill this intake.')}
+            </p>
+          </div>
+          <ul className="divide-y">
+            {pendingIntakes.map((p) => {
+              const b = p.data.beneficiary ?? {};
+              return (
+                <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{personFullName(b.firstName, b.middleName, b.surname)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {[b.currentAddress?.barangay, formatDate(p.createdAt)].filter(Boolean).join(' · ')}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => applyPendingIntake(p)}>
+                      {t('intake.pendingUse', 'Use details')}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => void dismissPendingIntake(p.id)}>
+                      {t('intake.pendingDismiss', 'Dismiss')}
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+      {pendingIntakeId && (
+        <div className="mb-4 rounded border border-primary/20 bg-primary/5 p-3 text-sm text-primary">
+          {t('intake.pendingBanner', 'Processing claimant self-registration for')}{' '}
+          <strong>{personFullName(beneficiary.firstName, beneficiary.middleName, beneficiary.surname)}</strong>.
+        </div>
+      )}
       {error && (
         <div className="mb-4 rounded border border-destructive bg-destructive/10 p-3 text-sm text-destructive flex items-start gap-2">
           <AlertCircle size={16} className="mt-0.5 shrink-0" />

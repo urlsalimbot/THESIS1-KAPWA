@@ -255,6 +255,24 @@ const fil: EnLocale = {
     "viewDiff": "Tingnan ang Diff"
   },
   "auth": {
+    "sex": "Kasarian",
+    "male": "Lalaki",
+    "female": "Babae",
+    "placeOfBirth": "Lugar ng Kapanganakan",
+    "civilStatus": "Katayuang Sibil",
+    "selectCivilStatus": "Pumili ng civil status",
+    "street": "Address ng Kalye",
+    "occupation": "Hanapbuhay",
+    "estimatedIncome": "Tinatayang Buwanang Kita",
+    "philsysNumber": "Numero ng PhilSys",
+    "optional": "Opsyonal",
+    "isIndigenous": "Katutubong Pilipino (IP)",
+    "sectionEmployment": "Hanapbuhay at Identidad",
+    "consentLabel": "Pahintulot sa data privacy",
+    "consentText": "Kinukumpirma ko na maaaring itala at iproseso ang aking impormasyon sa ilalim ng Data Privacy Act (RA 10173) para masuri ng MSWDO ang intake na ito.",
+    "submitForReview": "Isumite ang Registration para sa Review",
+    "pendingIntakeNotice": "Ang iyong natapos na intake ay nakabinbin na para sa review ng MSWDO admin o social worker.",
+
     "alreadyHaveAccount": "May account ka na? Mag-sign in",
     "sessionExpired": "Nag-expire ang iyong session. Mangyaring mag-sign in muli.",
     "sessionNetworkError": "May problema sa koneksyon na nakaputol sa iyong session. Mangyaring mag-sign in muli.",
@@ -853,6 +871,15 @@ const fil: EnLocale = {
     "noInterAgencyReferrals": "Walang inter-agency referral para sa kasong ito."
   },
   "intake": {
+    "pendingTitle": "Mga Nakabinbing Registration ng Claimant",
+    "pendingDescription": "Mga self-registration na hinihintay ang admin o social worker. I-load ang isa para mapunan ang intake na ito.",
+    "pendingUse": "Gamitin ang detalye",
+    "pendingDismiss": "Isantabi",
+    "pendingApplied": "Na-load ang registration ng claimant — suriin ang detalye at ipagpatuloy ang intake.",
+    "pendingDismissed": "Naialis ang nakabinbing registration.",
+    "pendingDismissFailed": "Hindi maialis ang nakabinbing registration.",
+    "pendingBanner": "Pinoproseso ang self-registration ng claimant para kay",
+
     "claimantAccountTitle": "Isulat ito sa slip ng naghahabol",
     "claimantAccountHint": "Walang email o numero ng cellphone ang naghahabol na ito, kaya ang opisina ang nagbibigay ng pananda sa pagpasok. Isang beses lang ipinapakita ang password at hindi na ito maibabalik — kung mawala, mag-isyu ng bago mula sa kaso.",
     "claimantIdLabel": "ID ng Naghahabol",

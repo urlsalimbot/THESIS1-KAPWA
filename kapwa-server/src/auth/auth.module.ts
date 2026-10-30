@@ -14,6 +14,7 @@ import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { AbacService } from './services/abac.service';
 import { OtpModule } from '../otp/otp.module';
 import { EmailModule } from '../email/email.module';
+import { PendingIntakesModule } from '../pending-intakes/pending-intakes.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { EmailModule } from '../email/email.module';
     PassportModule,
     OtpModule,
     EmailModule,
+    PendingIntakesModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

@@ -1,5 +1,5 @@
 import { BCRYPT_SALT_ROUNDS, OTP_EXPIRY_MINUTES, OTP_MIN, OTP_RANGE, OTP_RATE_LIMIT_SECONDS, MS_PER_SECOND, SECONDS_PER_MINUTE } from '../common/constants';
-import { Logger, Injectable, UnauthorizedException, ConflictException, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Logger, Injectable, Optional, UnauthorizedException, ConflictException, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -14,6 +14,8 @@ import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { OtpService } from '../otp/otp.service';
 import { SmsGatewayService } from '../otp/sms-gateway.service';
 import { EmailService } from '../email/email.service';
+import { PendingIntakesService } from '../pending-intakes/pending-intakes.service';
+import type { SelfRegistrationIntakeInput } from './dto/auth.zod';
 
 // Split a legacy single-string name into atomic parts. Heuristic: the first
 // token is the first name, the last token is the last name, and everything in
@@ -53,6 +55,7 @@ export class AuthService {
     private otpService: OtpService,
     private smsGateway: SmsGatewayService,
     private emailService: EmailService,
+    @Optional() private pendingIntakes?: PendingIntakesService,
   ) {}
 
   private async upsertToken(userId: string, purpose: string, opts: { token: string; expiresAt?: Date; meta?: Record<string, any> }) {
@@ -124,7 +127,7 @@ export class AuthService {
     return true;
   }
 
-  async register(data: { email: string; password: string; role?: string; fullName?: string; firstName?: string; middleName?: string; lastName?: string; nameExtension?: string; phone?: string; dob?: string; assignedBarangay?: string }) {
+  async register(data: { email: string; password: string; role?: string; fullName?: string; firstName?: string; middleName?: string; lastName?: string; nameExtension?: string; phone?: string; dob?: string; assignedBarangay?: string; intake?: SelfRegistrationIntakeInput }) {
     const existing = await this.userRepo.findOne({ where: { email: data.email } });
     if (existing) throw new ConflictException('Email already registered');
 
@@ -154,6 +157,16 @@ export class AuthService {
       emailVerified: false,
     });
     await this.userRepo.save(user);
+    // Park the completed self-registration for staff. A queue failure must not
+    // lose the account/verification flow — the claimant can still verify, and
+    // the staff can start the intake manually.
+    if (data.intake && this.pendingIntakes) {
+      try {
+        await this.pendingIntakes.create(user.id, data.intake as Record<string, any>);
+      } catch (e) {
+        this.logger.warn(`Pending intake not recorded for ${user.email}: ${(e as Error)?.message ?? e}`);
+      }
+    }
     if (data.assignedBarangay) {
       await this.barangayRepo.save(this.barangayRepo.create({
         userId: user.id,

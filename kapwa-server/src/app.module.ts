@@ -33,6 +33,7 @@ import { ReferralsModule } from './referrals/referrals.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { AgenciesModule } from './agencies/agencies.module';
 import { InterAgencyReferralsModule } from './inter-agency-referrals/inter-agency-referrals.module';
+import { PendingIntakesModule } from './pending-intakes/pending-intakes.module';
 import { ContactMessagesModule } from './contact-messages/contact-messages.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { FourPsModule } from './fourps/fourps.module';
@@ -109,6 +110,7 @@ import { AppController } from './app.controller';
     AnnouncementsModule,
     AgenciesModule,
     InterAgencyReferralsModule,
+    PendingIntakesModule,
     ContactMessagesModule,
     AnalyticsModule,
     FourPsModule,

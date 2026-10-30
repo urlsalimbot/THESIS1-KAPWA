@@ -1635,6 +1635,18 @@ await q.query(`
   //    TypeORM chain is NOT fresh-boot-safe). Mark the chain as applied so
   //    run-migrations.js is a clean no-op on fresh deployments and only ever
   //    runs on existing DBs as an upgrade path.
+  await q.query(`CREATE TABLE IF NOT EXISTS pending_intakes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    status TEXT NOT NULL DEFAULT 'pending',
+    submitted_by_user_id UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+    data JSONB NOT NULL,
+    reviewed_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+    reviewed_at TIMESTAMPTZ NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_pending_intakes_status_created ON pending_intakes (status, created_at DESC)`);
+
   await q.query(`CREATE TABLE IF NOT EXISTS migrations (
     id SERIAL PRIMARY KEY,
     "timestamp" BIGINT NOT NULL,

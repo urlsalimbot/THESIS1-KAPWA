@@ -11,6 +11,7 @@ import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { OtpService } from '../otp/otp.service';
 import { SmsGatewayService } from '../otp/sms-gateway.service';
 import { EmailService } from '../email/email.service';
+import { PendingIntakesService } from '../pending-intakes/pending-intakes.service';
 import * as bcrypt from 'bcrypt';
 
 jest.mock('bcrypt');
@@ -23,6 +24,7 @@ describe('AuthService', () => {
   let jwtMock: Partial<JwtService>;
   let otpMock: Partial<OtpService>;
   let emailMock: { [k: string]: jest.Mock };
+  let pendingIntakesMock: { create: jest.Mock };
 
   beforeEach(async () => {
     repoMock = {
@@ -50,6 +52,7 @@ describe('AuthService', () => {
     const benRepoMock = { findOne: jest.fn(), create: jest.fn(), save: jest.fn() };
     barangayRepoMock = { findOne: jest.fn(), create: jest.fn(), save: jest.fn() };
     const smsMock = { sendSms: jest.fn().mockResolvedValue({ success: true, provider: 'log', messageId: 'm1' }) };
+    pendingIntakesMock = { create: jest.fn().mockResolvedValue({ id: 'pi1' }) };
     emailMock = {
       sendEmail: jest.fn().mockResolvedValue({ success: true }),
       sendVerificationEmail: jest.fn().mockResolvedValue({ success: true }),
@@ -71,6 +74,7 @@ describe('AuthService', () => {
         { provide: OtpService, useValue: otpMock },
         { provide: SmsGatewayService, useValue: smsMock },
         { provide: EmailService, useValue: emailMock },
+        { provide: PendingIntakesService, useValue: pendingIntakesMock },
       ],
     }).compile();
 
@@ -111,6 +115,21 @@ describe('AuthService', () => {
       await service.register({ email: 'test@test.com', password: 'pass' });
 
       expect(repoMock.create).toHaveBeenCalledWith(expect.objectContaining({ role: 'claimant' }));
+    });
+
+    it('parks a completed self-registration as a pending intake for staff', async () => {
+      (repoMock.findOne as jest.Mock).mockResolvedValue(null);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
+      (repoMock.create as jest.Mock).mockReturnValue({ id: 'u1', email: 'self@test.com', role: 'claimant' });
+      (repoMock.save as jest.Mock).mockResolvedValue({ id: 'u1', email: 'self@test.com', role: 'claimant' });
+      const intake = {
+        beneficiary: { surname: 'Reyes', firstName: 'Pedro' },
+        familyMembers: [],
+      } as any;
+
+      await service.register({ email: 'self@test.com', password: 'pass', intake });
+
+      expect(pendingIntakesMock.create).toHaveBeenCalledWith('u1', intake);
     });
 
     it('should create a primary barangay assignment when assignedBarangay is provided', async () => {

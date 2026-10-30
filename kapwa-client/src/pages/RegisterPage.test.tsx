@@ -103,9 +103,9 @@ describe('RegisterPage', () => {
     expect(screen.getByText('Date of Birth')).toBeTruthy();
   });
 
-  it('renders Create Account submit button', () => {
+  it('renders the submit-for-review button', () => {
     render(<BrowserRouter><RegisterPage /></BrowserRouter>);
-    expect(screen.getByText('Create Account')).toBeTruthy();
+    expect(screen.getByText('Submit Registration for Review')).toBeTruthy();
   });
 
   it('renders link back to login', () => {

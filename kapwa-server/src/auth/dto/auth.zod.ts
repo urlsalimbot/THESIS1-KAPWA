@@ -1,5 +1,10 @@
 import { BARANGAY_NAMES, MIN_PASSWORD_LENGTH } from '../../common/constants';
+import { IntakeInputSchema } from '../../intake/dto/intake.zod';
 import { z } from 'zod';
+
+/** Self-registration carries the beneficiary/family half of the General Intake. */
+const SelfRegistrationIntakeSchema = IntakeInputSchema.pick({ beneficiary: true, familyMembers: true });
+export type SelfRegistrationIntakeInput = z.infer<typeof SelfRegistrationIntakeSchema>;
 
 export const UserCreateSchema = z.object({
   email: z.string().email(),
@@ -17,7 +22,10 @@ export const UserCreateSchema = z.object({
   phone: z.string().optional(),
   dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional(),
   assignedBarangay: z.enum(BARANGAY_NAMES).optional(),
-  permittedBarangays: z.array(z.enum(BARANGAY_NAMES)).optional()
+  permittedBarangays: z.array(z.enum(BARANGAY_NAMES)).optional(),
+  // Completed claimant self-registration: stored as a pending intake for
+  // admin/social-worker review, not written into the registry yet.
+  intake: SelfRegistrationIntakeSchema.optional(),
 });
 
 export const LoginSchema = z

@@ -35,8 +35,12 @@ vi.mock('../lib/api', () => ({
     }),
     put: vi.fn(),
     del: vi.fn(),
+    patch: vi.fn(() => Promise.resolve({})),
   },
 }));
+
+// The page also asks for the claimant self-registration queue.
+(api.get as any).mockResolvedValue([]);
 
 vi.mock('../lib/constants', async (importOriginal) => ({
   ...(await importOriginal()),
@@ -106,6 +110,33 @@ describe('IntakePage — offline path', () => {
     expect(consolidatedPayload.beneficiary).toHaveProperty('firstName');
     expect(consolidatedPayload.beneficiary).toHaveProperty('gender');
     expect(consolidatedPayload.beneficiary).toHaveProperty('dob');
+  });
+
+  it('loads a pending claimant registration into the General Intake fields', async () => {
+    (api.get as any).mockImplementation((path: string) =>
+      path === '/pending-intakes'
+        ? Promise.resolve([{
+            id: 'pi1', createdAt: '2026-10-30T01:00:00Z',
+            data: {
+              beneficiary: {
+                surname: 'Reyes', firstName: 'Pedro', middleName: 'Poblete',
+                gender: 'Male', dob: '1988-03-21', placeOfBirth: 'Norzagaray',
+                civilStatus: 'Single', cellularNumber: '09171234567', email: 'pedro@example.test',
+                currentAddress: { street: 'Purok 1', barangay: 'Bigte', city: 'Norzagaray', province: 'Bulacan', region: '03', postalCode: '3013' },
+                occupation: 'Carpenter', estimatedMonthlyIncome: 12000, isIndigenous: false,
+              },
+            },
+          }])
+        : Promise.resolve([]),
+    );
+    render(<MemoryRouter><IntakePage /></MemoryRouter>);
+
+    expect(await screen.findByText('Pending Claimant Registrations')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: /use details/i }));
+
+    expect((screen.getByLabelText('ben-surname') as HTMLInputElement).value).toBe('Reyes');
+    expect((screen.getByLabelText('ben-firstName') as HTMLInputElement).value).toBe('Pedro');
+    expect((screen.getByLabelText('ben-cellularNumber') as HTMLInputElement).value).toBe('09171234567');
   });
 
   it('has no a11y violations', async () => {
