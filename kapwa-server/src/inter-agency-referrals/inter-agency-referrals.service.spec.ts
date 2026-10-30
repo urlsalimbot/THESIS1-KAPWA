@@ -183,4 +183,43 @@ describe('InterAgencyReferralsService', () => {
       expect(repoMock.find).not.toHaveBeenCalled();
     });
   });
+
+  describe('ensureReferralForIntervention', () => {
+    it('creates the PAO referral once and reuses it on a later log', async () => {
+      agencyRepoMock.findOne.mockImplementation(({ where }: any) => Promise.resolve(
+        where.code === 'MSWDO' ? { id: 'ag-mswdo', name: 'MSWDO' }
+          : where.code === 'PAO' ? { id: 'ag-pao', name: 'Public Attorney\'s Office' }
+            : null,
+      ));
+      caseRepoMock.findOne.mockResolvedValue({ id: 'c1', beneficiaryId: 'b1' });
+      benRepoMock.findOne.mockResolvedValue({ id: 'b1', personId: 'p1' });
+      repoMock.findOne.mockResolvedValue(null);
+      repoMock.create.mockImplementation((d: any) => d);
+      repoMock.save.mockImplementation(async (d: any) => ({ id: 'r-pao', ...d }));
+
+      const out = await service.ensureReferralForIntervention({
+        caseId: 'c1', interventionType: 'referral_pao', serviceName: 'Referral to PAO', createdBy: 'u1',
+      });
+
+      expect(out).toMatchObject({
+        caseId: 'c1', personId: 'p1', fromAgencyId: 'ag-mswdo', toAgencyId: 'ag-pao',
+        reason: 'Referral to PAO', createdBy: 'u1',
+      });
+      expect(repoMock.save).toHaveBeenCalledTimes(1);
+
+      repoMock.findOne.mockResolvedValue({ id: 'r-pao' });
+      const again = await service.ensureReferralForIntervention({
+        caseId: 'c1', interventionType: 'referral_pao', serviceName: 'Referral to PAO', createdBy: 'u2',
+      });
+      expect(again?.id).toBe('r-pao');
+      expect(repoMock.save).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores non-referral services', async () => {
+      await expect(service.ensureReferralForIntervention({
+        caseId: 'c1', interventionType: 'food_pack', serviceName: 'Food pack',
+      })).resolves.toBeNull();
+      expect(agencyRepoMock.findOne).not.toHaveBeenCalled();
+    });
+  });
 });

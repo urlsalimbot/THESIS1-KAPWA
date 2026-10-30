@@ -9,6 +9,7 @@ import { InterventionCatalogService } from './intervention-catalog.service';
 import { InterventionCatalogController } from './intervention-catalog.controller';
 import { AccessCardsModule } from '../access-cards/access-cards.module';
 import { CasesModule } from '../cases/cases.module';
+import { InterAgencyReferralsModule } from '../inter-agency-referrals/inter-agency-referrals.module';
 
 @Module({
   // `CasesModule` for the step-1 seal assertion, and `forwardRef` because the
@@ -19,7 +20,7 @@ import { CasesModule } from '../cases/cases.module';
   // done-predicate behind `CaseStepLocksService` is still not reachable from out
   // here, which is what that export boundary was for. `ProgramIntervention` feeds
   // the matrix-membership validation + the required-form obligation.
-  imports: [TypeOrmModule.forFeature([CaseIntervention, ProgramIntervention, InterventionCatalogEntry]), forwardRef(() => AccessCardsModule), forwardRef(() => CasesModule)],
+  imports: [TypeOrmModule.forFeature([CaseIntervention, ProgramIntervention, InterventionCatalogEntry]), forwardRef(() => AccessCardsModule), forwardRef(() => CasesModule), InterAgencyReferralsModule],
   controllers: [CaseInterventionsController, InterventionCatalogController],
   providers: [CaseInterventionsService, InterventionCatalogService],
   exports: [CaseInterventionsService],

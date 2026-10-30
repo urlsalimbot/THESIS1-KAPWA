@@ -1,12 +1,13 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException, forwardRef, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Optional, forwardRef, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CaseIntervention } from './case-intervention.entity';
 import { ProgramIntervention } from '../programs/program-intervention.entity';
 import { CreateCaseInterventionInput, UpdateCaseInterventionInput } from './dto/case-interventions.zod';
 import { AccessCardsService } from '../access-cards/access-cards.service';
-import { isFinancialIntervention, INTERVENTION_TYPES } from '../common/case-catalog';
+import { isFinancialIntervention, INTERVENTION_TYPES, REFERRAL_INTERVENTION_AGENCY } from '../common/case-catalog';
 import { InterventionCatalogEntry } from './intervention-catalog.entity';
+import { InterAgencyReferralsService } from '../inter-agency-referrals/inter-agency-referrals.service';
 import { roundMoney } from '../common/utils';
 
 /**
@@ -35,6 +36,10 @@ export class CaseInterventionsService {
     private catalogRepo: Repository<InterventionCatalogEntry>,
     @Inject(forwardRef(() => AccessCardsService))
     private accessCardsService: AccessCardsService,
+    // Optional so the service's unit harness can construct it without the whole
+    // referrals module; production always injects it (the module imports it).
+    @Optional()
+    private interAgencyReferrals?: InterAgencyReferralsService,
   ) {}
 
   /**
@@ -158,6 +163,25 @@ export class CaseInterventionsService {
       }
     } catch (e) {
       console.warn('Failed to auto-log intervention to access card:', e);
+    }
+
+    // A referral intervention IS a referral: create/reuse the inter-agency
+    // referral row so the worker does not enter the same referral twice in the
+    // referrals step. The intervention is already saved; a failure here must
+    // not turn a successful log into a 500 — the next referral step still
+    // offers the manual path.
+    if (saved.interventionType && this.interAgencyReferrals && REFERRAL_INTERVENTION_AGENCY[saved.interventionType]) {
+      try {
+        await this.interAgencyReferrals.ensureReferralForIntervention({
+          caseId,
+          interventionType: saved.interventionType,
+          serviceName: saved.serviceName,
+          notes: saved.notes,
+          createdBy: callerId,
+        });
+      } catch (e) {
+        console.warn('Failed to auto-record the referral for this intervention:', e);
+      }
     }
 
     return saved;

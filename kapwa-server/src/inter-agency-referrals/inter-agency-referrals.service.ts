@@ -11,6 +11,7 @@ import { User, UserRole } from '../auth/user.entity';
 import { Agency } from '../agencies/agency.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { middleInitialOf } from '../common/person-name';
+import { REFERRAL_INTERVENTION_AGENCY } from '../common/case-catalog';
 import { Case } from '../cases/case.entity';
 import { InterAgencyReferral } from './inter-agency-referral.entity';
 import { IssueEndorsementLetterInput } from './dto/inter-agency-referrals.zod';
@@ -153,6 +154,52 @@ export class InterAgencyReferralsService {
     };
 
     return buildEndorsementLetterPdf(data);
+  }
+
+  /**
+   * A referral intervention is a referral record, not a second data entry.
+   * Called after the intervention row is saved: resolve the partner agency for
+   * the type (Referral to PAO → PAO), reuse an existing referral to that
+   * agency on the case, or create the row the endorsement letter is built from.
+   * Returns null for non-referral services or missing reference data.
+   */
+  async ensureReferralForIntervention(input: {
+    caseId: string;
+    interventionType: string;
+    serviceName: string;
+    notes?: string | null;
+    createdBy?: string;
+  }): Promise<InterAgencyReferral | null> {
+    const toAgencyCode = REFERRAL_INTERVENTION_AGENCY[input.interventionType];
+    if (!toAgencyCode) return null;
+
+    const [fromAgency, toAgency] = await Promise.all([
+      this.agencyRepo.findOne({ where: { code: 'MSWDO', isActive: true } }),
+      this.agencyRepo.findOne({ where: { code: toAgencyCode, isActive: true } }),
+    ]);
+    if (!fromAgency || !toAgency) return null;
+
+    const caseRow = await this.caseRepo.findOne({ where: { id: input.caseId } });
+    if (!caseRow?.beneficiaryId) return null;
+    const ben = await this.benRepo.findOne({ where: { id: caseRow.beneficiaryId } });
+    if (!ben?.personId) return null;
+
+    const existing = await this.repo.findOne({
+      where: { caseId: input.caseId, toAgencyId: toAgency.id },
+      order: { createdAt: 'DESC' },
+    });
+    if (existing) return existing;
+
+    const reason = input.notes?.trim() || input.serviceName;
+    return this.repo.save(this.repo.create({
+      caseId: input.caseId,
+      personId: ben.personId,
+      fromAgencyId: fromAgency.id,
+      toAgencyId: toAgency.id,
+      reason,
+      notes: input.notes?.trim() || undefined,
+      createdBy: input.createdBy,
+    }));
   }
 
   async findForCase(caseId: string, caller: User) {

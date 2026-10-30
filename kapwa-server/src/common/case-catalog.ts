@@ -47,6 +47,17 @@ export function isFinancialIntervention(code: string | null | undefined): boolea
   return !!code && FINANCIAL_INTERVENTION_TYPES.includes(code);
 }
 
+/**
+ * Referral interventions and the partner agency their record belongs to.
+ * Logging one auto-records the inter-agency referral (the row the endorsement
+ * letter is built from), so the worker does not enter the same referral again
+ * in the referrals step. Historical rows keep their type; the map is only used
+ * when a new intervention is created.
+ */
+export const REFERRAL_INTERVENTION_AGENCY: Readonly<Record<string, string>> = {
+  referral_pao: 'PAO',
+};
+
 /** The form formats an intervention row may oblige (mirrors the client's INTERVENTION_FORM_FORMATS). */
 export const INTERVENTION_FORM_FORMATS = [
   'social_case_study_report',

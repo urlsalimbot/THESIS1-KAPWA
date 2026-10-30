@@ -141,6 +141,7 @@ const en = {
       "serviceNamePlaceholder": "e.g., Counseling Session, Home Visit",
       "submitForReviewHint": "Submit for admin review to activate the case.",
       "interventionNotNeededBadge": "Intervention not needed",
+      "referralAutoLink": "Saving this also records the inter-agency referral to the Public Attorney’s Office — it will be ready in Inter-agency Referrals.",
       "interventionNotNeededActive": "No intervention is issued for this case; referrals cover the service.",
       "interventionDecisionFailed": "Could not save the intervention decision",
       "markInterventionNotNeeded": "No interventions issued",

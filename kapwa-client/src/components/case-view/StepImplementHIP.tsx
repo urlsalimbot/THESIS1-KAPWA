@@ -597,6 +597,12 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
               </div>
             )}
 
+            {form.interventionType === 'referral_pao' && (
+              <p className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary">
+                {t('caseView.implement.referralAutoLink', 'Saving this also records the inter-agency referral to the Public Attorney’s Office — it will be ready in Inter-agency Referrals.')}
+              </p>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="intv-delivery-date">{t('caseView.implement.deliveryDate', 'Delivery Date')}</Label>

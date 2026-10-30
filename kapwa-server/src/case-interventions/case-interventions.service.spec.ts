@@ -13,9 +13,41 @@ function mockService() {
   // No custom catalog entries by default: every code the tests use is built in.
   const catalogRepo = { findOne: jest.fn().mockResolvedValue(null) };
   const accessCardsService = { autoLogFromIntervention: jest.fn().mockResolvedValue(undefined) };
-  const svc = new CaseInterventionsService(interventionRepo as any, matrixRepo as any, catalogRepo as any, accessCardsService as any);
-  return { interventionRepo, matrixRepo, catalogRepo, accessCardsService, svc };
+  const referralsService = { ensureReferralForIntervention: jest.fn().mockResolvedValue(null) };
+  const svc = new CaseInterventionsService(
+    interventionRepo as any, matrixRepo as any, catalogRepo as any, accessCardsService as any, referralsService as any,
+  );
+  return { interventionRepo, matrixRepo, catalogRepo, accessCardsService, referralsService, svc };
 }
+
+describe('CaseInterventionsService — referral interventions', () => {
+  it('auto-records the inter-agency referral when a referral intervention is logged', async () => {
+    const { interventionRepo, referralsService, svc } = mockService();
+    (interventionRepo.manager.query as jest.Mock).mockResolvedValue([]);
+
+    await svc.create('c1', {
+      serviceName: 'Referral to PAO',
+      interventionType: 'referral_pao',
+    }, 'u1');
+
+    expect(referralsService.ensureReferralForIntervention).toHaveBeenCalledWith({
+      caseId: 'c1',
+      interventionType: 'referral_pao',
+      serviceName: 'Referral to PAO',
+      notes: undefined,
+      createdBy: 'u1',
+    });
+  });
+
+  it('does not touch the referral register for an ordinary service', async () => {
+    const { interventionRepo, referralsService, svc } = mockService();
+    (interventionRepo.manager.query as jest.Mock).mockResolvedValue([]);
+
+    await svc.create('c1', { serviceName: 'Food pack', interventionType: 'food_pack' }, 'u1');
+
+    expect(referralsService.ensureReferralForIntervention).not.toHaveBeenCalled();
+  });
+});
 
 describe('CaseInterventionsService enrollment + financial gating', () => {
   it('refuses an intervention without an enrollment on the case', async () => {

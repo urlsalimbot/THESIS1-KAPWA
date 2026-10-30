@@ -1918,6 +1918,7 @@ const fil: EnLocale = {
       "serviceNamePlaceholder": "hal., Counseling Session, Home Visit",
       "submitForReviewHint": "Isumite para sa review ng admin upang ma-activate ang kaso.",
       "interventionNotNeededBadge": "Hindi kailangan ang interbensyon",
+      "referralAutoLink": "Irerehistro rin nito ang inter-agency referral sa Public Attorney’s Office — makikita ito sa Inter-agency Referrals.",
       "interventionNotNeededActive": "Walang interbensyon na ibibigay para sa kasong ito; ang referral ang sumasaklaw sa serbisyo.",
       "interventionDecisionFailed": "Hindi na-save ang desisyon sa interbensyon",
       "markInterventionNotNeeded": "Walang interbensyon na ibinigay",

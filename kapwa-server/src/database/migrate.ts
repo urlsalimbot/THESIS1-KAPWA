@@ -932,7 +932,8 @@ export async function migrate() {
     ('PESO', 'Public Employment Service Office', 'labor', true),
     ('DILG', 'Department of the Interior and Local Government', 'government', true),
     ('DSWD', 'Department of Social Welfare and Development', 'social_services', true),
-    ('DepEd', 'Department of Education', 'education', true)
+    ('DepEd', 'Department of Education', 'education', true),
+    ('PAO', 'Public Attorney''s Office', 'legal', true)
     ON CONFLICT (code) DO NOTHING`);
   await q.query(`CREATE TABLE IF NOT EXISTS agency_contacts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
