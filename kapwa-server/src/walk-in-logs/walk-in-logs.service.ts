@@ -166,6 +166,7 @@ export class WalkInLogsService {
             WHERE b.person_id = p.id ORDER BY c.created_at DESC LIMIT 1
          ) c ON true
         WHERE p.surname ILIKE $1 OR p.first_name ILIKE $1
+           OR (COALESCE(p.first_name,'') || ' ' || COALESCE(p.surname,'')) ILIKE $1
            OR EXISTS (SELECT 1 FROM person_contacts pc WHERE pc.person_id = p.id AND pc.value ILIKE $1)
         ORDER BY p.surname, p.first_name LIMIT 10`,
       [term],
