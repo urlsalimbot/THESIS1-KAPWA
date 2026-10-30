@@ -32,4 +32,7 @@ export const BARANGAY_COLUMNS: BarangayColumn[] = [
   // The source list's barangay, kept verbatim on each deduplication row so the
   // review grid shows the claimed address (the import itself, not KAPWA).
   { table: 'client_import_rows', column: 'barangay' },
+  // Front-desk visit log; the client's self-reported barangay for visit
+  // statistics (GAD/barangay disaggregation), not a household link.
+  { table: 'walk_in_logs', column: 'barangay' },
 ];
