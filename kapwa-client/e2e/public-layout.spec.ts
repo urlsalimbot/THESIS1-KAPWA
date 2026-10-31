@@ -140,9 +140,16 @@ test('the register success state keeps its icon inline, not in a tile', async ({
   await page.locator('[name="password"]').fill('Password123!');
   await page.locator('[name="confirmPassword"]').fill('Password123!');
   await page.locator('[name="dateOfBirth"]').fill('1990-01-01');
-  // the barangay is a Radix select
-  await page.getByRole('combobox').first().click();
+  await page.locator('[name="placeOfBirth"]').fill('Norzagaray, Bulacan');
+  await page.getByRole('radio', { name: 'Female' }).click();
+  await page.locator('[name="street"]').fill('Purok 1');
+  await page.locator('[name="occupation"]').fill('Teacher');
+  await page.locator('[name="estimatedMonthlyIncome"]').fill('15000');
+  await page.getByLabel('Civil Status').click();
+  await page.getByRole('option', { name: 'Single' }).click();
+  await page.getByLabel('Barangay').click();
   await page.getByRole('option').first().click();
+  await page.getByLabel('Data privacy consent').click();
   await page.locator('button[type="submit"]').first().click();
 
   const heading = page.getByRole('heading', { level: 1 });
