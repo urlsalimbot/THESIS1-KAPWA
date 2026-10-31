@@ -100,7 +100,7 @@ export const IntakeInputSchema = z.object({
   sourceReferral: SourceReferralSchema.optional(),
   case: z.object({
     serviceRequested: z.array(z.string()).optional(),
-    requirementsChecklist: z.record(z.boolean()).optional(),
+    requirementsChecklist: z.record(z.string(), z.boolean()).optional(),
     assessedBy: z.string().optional(),
     assignedWorkerId: z.string().optional(),
   }),

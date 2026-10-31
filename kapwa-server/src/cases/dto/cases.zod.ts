@@ -3,7 +3,7 @@ import { CaseStatus } from '../case.entity';
 
 export const CreateCaseSchema = z.object({
   serviceRequested: z.array(z.string()).optional(),
-  requirementsChecklist: z.record(z.boolean()).optional(),
+  requirementsChecklist: z.record(z.string(), z.boolean()).optional(),
   beneficiaryId: z.string().uuid().optional(),
   assignedWorkerId: z.string().uuid().optional(),
 });
@@ -59,12 +59,12 @@ export const AssessmentSchema = z.object({
     'Family Head and Other Needy Adult',
   ]),
   natureOfService: z.array(z.string()).optional(),
-  financialSubsidies: z.record(z.unknown()).optional(),
+  financialSubsidies: z.record(z.string(), z.unknown()).optional(),
   amountAssistance: z.preprocess(v => v === '' || v === null || v === undefined ? undefined : v, z.number().positive().optional()),
   modeFinancialAssistance: z.preprocess(v => v === '' || v === null || v === undefined ? undefined : v, z.enum(['Cash', 'Cheque']).optional()),
   sourceOfFund: z.string().optional(),
   legislatorSpecify: z.string().optional().nullable(),
-  otherAssistance: z.record(z.unknown()).optional(),
+  otherAssistance: z.record(z.string(), z.unknown()).optional(),
   interviewedBy: z.string().optional(),
   clientSignature: z.string().optional(),
 });
@@ -140,12 +140,12 @@ export const AssessmentV2Schema = z.object({
   swdiScore: z.preprocess(v => v === '' || v === null || v === undefined ? undefined : v, z.number().min(0).max(100).optional()),
   familyDialogueNotes: z.string().optional(),
   natureOfService: z.array(z.string()).optional(),
-  financialSubsidies: z.record(z.unknown()).optional(),
+  financialSubsidies: z.record(z.string(), z.unknown()).optional(),
   amountAssistance: z.preprocess(v => v === '' || v === null || v === undefined ? undefined : v, z.number().positive().optional()),
   modeFinancialAssistance: z.preprocess(v => v === '' || v === null || v === undefined ? undefined : v, z.enum(['Cash', 'Cheque']).optional()),
   sourceOfFund: z.string().optional(),
   legislatorSpecify: z.string().optional().nullable(),
-  otherAssistance: z.record(z.unknown()).optional(),
+  otherAssistance: z.record(z.string(), z.unknown()).optional(),
   interviewedBy: z.string().optional(),
   clientSignature: z.string().optional(),
 });
@@ -164,7 +164,7 @@ export const ClosureSchema = z.object({
 });
 
 export const RequirementsSchema = z.object({
-  requirementsChecklist: z.record(z.boolean()),
+  requirementsChecklist: z.record(z.string(), z.boolean()),
 });
 
 export const ReferralDecisionSchema = z.object({

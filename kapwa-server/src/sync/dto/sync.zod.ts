@@ -5,7 +5,7 @@ export const SyncChangeSchema = z.object({
   tableName: z.string(),
   recordId: z.string(),
   operation: z.enum(['INSERT', 'UPDATE', 'DELETE']),
-  payload: z.record(z.any()),
+  payload: z.record(z.string(), z.any()),
   clientUpdatedAt: z.string().datetime(),
 });
 

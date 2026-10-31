@@ -35,7 +35,7 @@ export const CreateProgramSchema = z.object({
   fundSources: z.array(z.string()).optional(),
   approvalWorkflow: z.array(ApprovalStepSchema).optional(),   // WAS: z.array(z.string())
   legalBasis: z.string().optional(),                            // NEW
-  formTemplate: z.record(z.any()).optional(),
+  formTemplate: z.record(z.string(), z.any()).optional(),
   interventions: z.array(ProgramInterventionInputSchema).optional(),
   isActive: z.boolean().optional(),
 }).refine((d) => uniqueMatrix(d.interventions), {
@@ -51,7 +51,7 @@ export const UpdateProgramSchema = z.object({
   fundSources: z.array(z.string()).optional(),
   approvalWorkflow: z.array(ApprovalStepSchema).optional(),
   legalBasis: z.string().optional(),
-  formTemplate: z.record(z.any()).optional(),
+  formTemplate: z.record(z.string(), z.any()).optional(),
   interventions: z.array(ProgramInterventionInputSchema).optional(),
   isActive: z.boolean().optional(),
 }).refine((d) => uniqueMatrix(d.interventions), {

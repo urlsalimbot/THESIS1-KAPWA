@@ -26,10 +26,10 @@ jobs:
           cache-dependency-path: kapwa-server/package-lock.json
       - run: npm ci --legacy-peer-deps
       - name: Audit production dependencies
-        # Fails on a high or critical advisory in anything that ships. Dev
-        # tooling is excluded on purpose: its advisories are real but they do
-        # not reach a user, and gating on them would block unrelated work.
-        run: npm audit --omit=dev --audit-level=high
+        # Fails on an unallowlisted high/critical advisory in anything that
+        # ships. The only allowlisted chain is MinIO's transitive CJS
+        # query-string packages (no patched CJS release).
+        run: node ../.github/scripts/audit-gate.mjs
       - name: Lint
         # run without --fix so violations fail the build
         run: npx eslint "{src,test}/**/*.ts"
@@ -55,10 +55,10 @@ jobs:
           cache-dependency-path: kapwa-client/package-lock.json
       - run: npm ci
       - name: Audit production dependencies
-        # Fails on a high or critical advisory in anything that ships. Dev
-        # tooling is excluded on purpose: its advisories are real but they do
-        # not reach a user, and gating on them would block unrelated work.
-        run: npm audit --omit=dev --audit-level=high
+        # Fails on an unallowlisted high/critical advisory in anything that
+        # ships. The only allowlisted chain is MinIO's transitive CJS
+        # query-string packages (no patched CJS release).
+        run: node ../.github/scripts/audit-gate.mjs
       - name: Typecheck
         run: npm run typecheck
       - name: Test

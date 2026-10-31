@@ -7,7 +7,7 @@ export const CreateReferralSchema = z.object({
   extension: z.string().optional(),
   gender: z.string().optional(),
   dob: z.string().optional(),
-  address: z.record(z.any()).optional(),
+  address: z.record(z.string(), z.any()).optional(),
   phone: z.string().optional(),
   personId: z.string().uuid().optional(),
   reason: z.string().min(1, 'Reason for referral is required'),
