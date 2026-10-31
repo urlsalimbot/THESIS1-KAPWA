@@ -4,11 +4,10 @@ import * as fs from 'fs';
 /**
  * Social Case Study Report — the office's burial and medical forms, digitized.
  *
- * The two paper forms (pdf-samples/SCSR-Buryal, SCSR-Medikal) share a skeleton:
- * client data, a family table, and a list of interview questions. What the
- * database already knows is filled in; what only the social worker can answer
- * (education, religion, the interview answers) is left as a rule to write on —
- * the same way the paper form does it.
+ * This is the finished report, not the intake/interview form. The case's
+ * assessment supplies the narrative sections (main problem, additional family
+ * information, recommendation); the family table and client data come from the
+ * registry. The two paper forms only choose their family-table headings.
  *
  * The rendered style follows the office's own Word template
  * (pdf-samples/SCSR-output1/2): letterhead with both seals, a centred title,
@@ -48,6 +47,12 @@ export interface ScsrPdfInput {
     contact: string;
   };
   family: ScsrFamilyRow[];
+  /** The case assessment, rendered as the report's narrative sections. */
+  narrative: {
+    mainProblem: string;
+    additionalInfo: string;
+    recommendation: string;
+  };
   preparedByName: string;
   preparedByRole: string;
   notedByName: string;
@@ -61,61 +66,6 @@ const M = 54;
 const LEFT = M;
 const RIGHT = A4[0] - M;
 const WIDTH = RIGHT - LEFT;
-
-/** Interview questions, in the order they appear on the paper form. */
-const QUESTIONS: Record<ScsrKind, { family: string[]; specific: string[] }> = {
-  burial: {
-    family: [
-      'Saan isinilang silang mag-asawa?',
-      'Kung walang asawa, saan isinilang ang mga magulang?',
-      'Kailan ikinasal?',
-      'Kung hiwalay, kailan nagkahiwalay?',
-      'Kung nagsasama, ilang taon na nagsasama?',
-      'Saan nagkakilala? Anong okasyon o pangyayari?',
-      'Ilang taon nang nakatira dito sa Norzagaray?',
-      'Ilan ang anak?',
-      'Ano ang kanilang pinagkukunan ng ikinabubuhay ng pamilya?',
-      'Sino kasama sa bahay?',
-      'May sariling linya ba ng kuryente at tubig?',
-      'Kung wala, saan o kanino nakatira?',
-      'Sino ang naghahanap buhay sa pamilya at ano ang hanapbuhay nito?',
-    ],
-    specific: [
-      'Ano ang inilalapit na tulong?',
-      'Kailan namatay?',
-      'Magkano ang bayarin sa punenarya?',
-      'Kanino dadalhin ang case study?',
-    ],
-  },
-  medical: {
-    family: [
-      'Saan isinilang silang mag-asawa?',
-      'Kung walang asawa, saan isinilang ang mga magulang?',
-      'Kailan ikinasal?',
-      'Kung hiwalay, kailan nagkahiwalay?',
-      'Kung nagsasama, ilang taon na nagsasama?',
-      'Saan nagkakilala? Anong okasyon o pangyayari?',
-      'Ilang taon nang nakatira dito sa Norzagaray?',
-      'Ilan ang anak?',
-      'Kung walang asawa, ilan magkakapatid?',
-      'Ano ang kanilang pinagkukunan ng ikinabubuhay ng pamilya?',
-      'Sino kasama sa bahay?',
-      'May sarili bang bahay? Saan ito yari?',
-      'Kung wala sariling bahay, saan o kanino nakatira?',
-      'May sariling linya ba ng kuryente at tubig?',
-      'Sino ang naghahanap buhay sa pamilya at ano ang hanapbuhay nito?',
-      'Ano ang karadaman at kailan nagsimula ito?',
-    ],
-    specific: [
-      'Kung naka-confine, saan at kailan pa?',
-      'Kung hindi, outpatient na ba?',
-      'Ano ang inilalapit ng tulong?',
-      'Ano ang gamutan na kailangan gawin sa kliyente?',
-      'Ano ang kalagayan ng kliyente sa kasalukuyan?',
-      'Saan siya nanapu ng tulong?',
-    ],
-  },
-};
 
 /** Family table columns differ slightly per form; `w` sums to 1. */
 const FAMILY_COLS: Record<ScsrKind, Array<{ label: string; w: number; key: keyof ScsrFamilyRow }>> = {
@@ -154,7 +104,7 @@ export async function buildScsrPdf(input: ScsrPdfInput): Promise<Buffer> {
   drawTitle(doc, input);
   drawClientData(doc, input);
   drawFamilyTable(doc, input);
-  drawQuestions(doc, input);
+  drawNarrative(doc, input);
   drawSignatures(doc, input);
 
   doc.end();
@@ -286,25 +236,20 @@ function drawFamilyTable(doc: any, input: ScsrPdfInput) {
   doc.y = top + HEADER_H + rows.length * ROW_H + 14;
 }
 
-function drawQuestions(doc: any, input: ScsrPdfInput) {
-  const section = (title: string, questions: string[]) => {
-    if (doc.y > A4[1] - M - 60) doc.addPage();
+function drawNarrative(doc: any, input: ScsrPdfInput) {
+  const section = (title: string, body: string) => {
+    if (doc.y > A4[1] - M - 80) doc.addPage();
     doc.font('Helvetica-Bold').fontSize(11).fillColor('#111')
       .text(title, LEFT, doc.y);
     doc.y += 8;
-    questions.forEach((q) => {
-      if (doc.y > A4[1] - M - 34) doc.addPage();
-      doc.font('Helvetica').fontSize(9.5).fillColor('#111')
-        .text(q, LEFT, doc.y, { lineBreak: false });
-      doc.y += 13;
-      blankRule(doc, LEFT, doc.y, WIDTH);
-      doc.y += 12;
-    });
-    doc.y += 4;
+    doc.font('Helvetica').fontSize(10).fillColor('#111')
+      .text(body?.trim() || '—', LEFT, doc.y, { width: WIDTH, align: 'justify', lineGap: 2 });
+    doc.y += 14;
   };
 
-  section('TUNGKOL SA PAMILYA', QUESTIONS[input.kind].family);
-  section('TUNGKOL SA PANGANGAILANGAN', QUESTIONS[input.kind].specific);
+  section('III.    PANGUNAHING SULIRANIN', input.narrative.mainProblem);
+  section('IV.    KARAGDAGANG IMPORMASYON TUNGKOL SA KLIYENTE AT SA KANIYANG PAMILYA', input.narrative.additionalInfo);
+  section('V.    REKOMENDASYON', input.narrative.recommendation);
 }
 
 function drawSignatures(doc: any, input: ScsrPdfInput) {

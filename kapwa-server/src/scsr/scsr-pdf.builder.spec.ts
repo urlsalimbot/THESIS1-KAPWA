@@ -22,6 +22,11 @@ const base: Omit<ScsrPdfInput, 'kind'> = {
   family: [
     { name: 'ELENA BAUTISTA CRUZ', age: '50', relationship: 'ANAK', occupation: 'HOUSEKEEPER', income: '12,000' },
   ],
+  narrative: {
+    mainProblem: 'NAGKAROON NG SAKIT ANG KLIYENTE AT KAILANGAN NG tulong medical.',
+    additionalInfo: 'NAMUMUHAY ANG PAMILYA SA POBLACION AT NAGTATRABAHO SA KONSTRUKSYON.',
+    recommendation: 'IREREKOMENDA ANG MEDICAL ASSISTANCE PARA SA PAGGAMOT.',
+  },
   preparedByName: 'JUAN DELA CRUZ',
   preparedByRole: 'SOCIAL WORKER',
   notedByName: 'ROSARIO MENDOZA',
@@ -29,34 +34,38 @@ const base: Omit<ScsrPdfInput, 'kind'> = {
 };
 
 describe('buildScsrPdf', () => {
-  it('renders the burial form with its own questions and letterhead', async () => {
+  it('renders the finished burial report with its narrative sections', async () => {
     const text = searchableText(await buildScsrPdf({ ...base, kind: 'burial' }));
 
     for (const s of [
       'SOCIAL CASE STUDY REPORT', '(BURYAL)', 'Petsa: OKTUBRE 17, 2026',
       'I.    DATOS NG KLIYENTE', 'II.    BUMUBUO NG PAMILYA',
-      'TUNGKOL SA PAMILYA', 'TUNGKOL SA PANGANGAILANGAN',
+      'III.    PANGUNAHING SULIRANIN',
+      'IV.    KARAGDAGANG IMPORMASYON TUNGKOL SA KLIYENTE AT SA KANIYANG PAMILYA',
+      'V.    REKOMENDASYON',
       // Filled from the case:
       'LAUDES BAUTISTA RAMOS', '78 TAONG GULANG', 'MARSO 2, 1948',
       'WIDOWED', 'BABAE', 'ELENA BAUTISTA CRUZ', '09171234567',
       'ELENA BAUTISTA CRUZ', 'HOUSEKEEPER',
-      // The burial questions the paper form asks:
-      'Magkano ang bayarin sa punenarya?', 'Kailan namatay?',
+      // The assessment becomes the report narrative, not an interview form:
+      'NAGKAROON NG SAKIT ANG KLIYENTE',
+      'NAMUMUHAY ANG PAMILYA SA POBLACION',
+      'IREREKOMENDA ANG MEDICAL ASSISTANCE',
       // Signatories:
       'Inihanda ni:', 'JUAN DELA CRUZ', 'Sa Kaalaman ni:', 'ROSARIO MENDOZA',
     ]) expect(text).toContain(s);
+    expect(text).not.toContain('Magkano ang bayarin sa punenarya?');
   });
 
-  it('renders the medical form with its treatment questions instead', async () => {
+  it('renders the same finished-report narrative for the medical form', async () => {
     const text = searchableText(await buildScsrPdf({ ...base, kind: 'medical' }));
 
     expect(text).toContain('(MEDIKAL)');
-    expect(text).toContain('Ano ang gamutan na kailangan gawin sa kliyente?');
-    expect(text).toContain('Kung naka-confine, saan at kailan pa?');
+    expect(text).toContain('III.    PANGUNAHING SULIRANIN');
+    expect(text).toContain('NAGKAROON NG SAKIT ANG KLIYENTE');
+    expect(text).not.toContain('Ano ang gamutan na kailangan gawin sa kliyente?');
     // The medical form's family table has its own column order.
     expect(text).toContain('RELASYON SA KLIYENTE');
-    // …and no burial questions leak into it.
-    expect(text).not.toContain('punenarya');
   });
 
   it('keeps the family table columns per form', async () => {

@@ -80,6 +80,11 @@ export class ScsrExportService {
         contact: person?.phone ?? claimantPerson?.phone ?? '',
       },
       family: familyRows(ben?.household),
+      narrative: {
+        mainProblem: c.problemsPresented ?? '',
+        additionalInfo: c.familyDialogueNotes ?? '',
+        recommendation: c.socialWorkerAssessment ?? '',
+      },
       preparedByName: upper(fullName(c.assignedWorker) || c.assignedWorkerName || ''),
       preparedByRole: 'SOCIAL WORKER',
       notedByName: upper(fullName(await this.firstActiveAdmin())),
