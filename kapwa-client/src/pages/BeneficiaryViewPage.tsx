@@ -622,7 +622,7 @@ export function BeneficiaryViewPage() {
               ) : (
                 <div className="space-y-1.5 max-h-60 overflow-y-auto">
                   {beneficiary.cases.map((c) => (
-                    <div key={c.id} className="flex items-center justify-between rounded bg-muted/50 px-2.5 py-2 text-sm cursor-pointer hover:bg-muted transition-colors" onClick={() => navigate(`/cases/${c.id}`)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate(`/cases/${c.id}`)}>
+                    <div key={c.id} className="flex items-center justify-between rounded bg-muted/50 px-2.5 py-2 text-sm cursor-pointer hover:bg-muted transition-colors" onClick={() => navigate(`/cases/${c.id}`)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/cases/${c.id}`); } }}>
                       <div className="min-w-0 flex-1 mr-2">
                         <p className="font-medium text-foreground truncate">{c.program}</p>
 

@@ -210,7 +210,7 @@ export function DashboardPage() {
   return (
     <PageShell title={t('dashboard.title', 'Dashboard')} description={t('dashboard.description', 'Overview of social welfare operations and metrics.')} cachedAt={lastSync ?? undefined}
       actions={
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {role === 'admin' && (
             <>
               {fundUtilizationButton}

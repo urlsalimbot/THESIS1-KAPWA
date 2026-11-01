@@ -66,9 +66,9 @@ function ClientSearch({ onPick }: { onPick: (option: LinkOption) => void }) {
   }
   return (
     <div className="space-y-2">
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search existing person by name or phone" aria-label="Search existing client" />
-        <Button type="button" variant="outline" onClick={() => void search()} disabled={searching}>
+        <Button type="button" variant="outline" onClick={() => void search()} disabled={searching} className="sm:w-auto w-full">
           <Search size={14} className="mr-1" /> {searching ? 'Searching…' : 'Search'}
         </Button>
       </div>

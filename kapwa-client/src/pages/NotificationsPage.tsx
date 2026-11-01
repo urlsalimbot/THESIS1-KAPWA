@@ -170,12 +170,14 @@ export function NotificationsPage() {
             <div className="flex rounded-md border text-xs">
               <Button variant="ghost"
                 onClick={() => setFilter('all')}
+                aria-pressed={filter === 'all'}
                 className={cn('px-3 py-1 rounded-l-md transition-colors', filter === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted')}
               >
                 {t('notifications.all', 'All')}
               </Button>
               <Button variant="ghost"
                 onClick={() => setFilter('unread')}
+                aria-pressed={filter === 'unread'}
                 className={cn('px-3 py-1 rounded-r-md transition-colors', filter === 'unread' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted')}
               >
                 {t('notifications.unread', 'Unread')}
