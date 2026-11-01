@@ -138,7 +138,15 @@ export class WalkInLogsService {
     const qb = this.repo.createQueryBuilder('w')
       .orderBy('w.visitedAt', 'DESC')
       .addOrderBy('w.queueNo', 'DESC');
-    if (filters.date) qb.andWhere(`(w.visitedAt AT TIME ZONE 'Asia/Manila')::date = :date`, { date: filters.date });
+    if (filters.date) {
+      // A range, not a ::date cast: TypeORM's named-parameter parser reads the
+      // cast's `:date` as a parameter and produces invalid SQL.
+      const start = new Date(`${filters.date}T00:00:00+08:00`);
+      if (!Number.isNaN(start.getTime())) {
+        const end = new Date(start.getTime() + 86_400_000);
+        qb.andWhere('w.visitedAt >= :start AND w.visitedAt < :end', { start, end });
+      }
+    }
     if (filters.status) qb.andWhere('w.status = :status', { status: filters.status });
     if (filters.purposeCode) qb.andWhere('w.purposeCode = :purposeCode', { purposeCode: filters.purposeCode });
     if (filters.q?.trim()) {

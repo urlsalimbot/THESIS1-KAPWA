@@ -38,6 +38,19 @@ describe('WalkInLogsService', () => {
     expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ createdBy: 'u1', assignedTo: 'u1' }));
   });
 
+  it('filters a visit day with a range instead of a ::date cast', async () => {
+    const repo = repoMock();
+    const svc = new WalkInLogsService(repo as any);
+    await svc.list(1, 20, { date: '2026-11-01' });
+    expect(repo.qb.andWhere).toHaveBeenCalledWith(
+      'w.visitedAt >= :start AND w.visitedAt < :end',
+      {
+        start: new Date('2026-11-01T00:00:00+08:00'),
+        end: new Date('2026-11-02T00:00:00+08:00'),
+      },
+    );
+  });
+
   it('stamps service start and completion timestamps on status changes', async () => {
     const repo = repoMock();
     repo.findOne.mockResolvedValue({ id: 'w1', status: 'waiting', timeIn: new Date('2026-10-30T01:00:00Z') });
