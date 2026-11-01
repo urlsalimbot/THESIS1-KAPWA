@@ -165,7 +165,7 @@ describe('ApprovalPipelinePage', () => {
   it('marks every accomplished step done, including enrollments and court hearings', async () => {
     renderWithSWR(<ApprovalPipelinePage />);
     const label = await screen.findByText('NORZ-2026-0006');
-    const card = label.closest('div.cursor-pointer') as HTMLElement;
+    const card = label.closest('.cursor-pointer') as HTMLElement;
     expect(card).toBeTruthy();
 
     // CICL carries 8 steps: assessment, discernment, enrollments, interventions,

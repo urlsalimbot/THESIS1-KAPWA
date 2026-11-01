@@ -135,9 +135,10 @@ export function ApprovalPipelinePage() {
                   three parallel phases. */}
               <div className="space-y-3 max-h-[70vh] overflow-y-auto overscroll-contain pr-1">
                 {group.items.map(c => (
-                  <div
+                  <button
+                    type="button"
                     key={c.id}
-                    className="border border-border rounded-lg p-3 hover:shadow-sm transition-shadow cursor-pointer"
+                    className="w-full border border-border rounded-lg p-3 text-left hover:shadow-sm transition-shadow cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     onClick={() => navigate(`/cases/${c.id}`)}
                   >
                     <div className="flex items-start justify-between mb-2">
@@ -192,7 +193,7 @@ export function ApprovalPipelinePage() {
                       {t('approvals.openCase', 'Open case to act')}
                       <ArrowRight size={12} aria-hidden="true" />
                     </span>
-                  </div>
+                  </button>
                 ))}
                 {group.items.length === 0 && (
                   <p className="text-xs text-muted-foreground text-center py-4">{t('approvals.noCases', 'No cases')}</p>

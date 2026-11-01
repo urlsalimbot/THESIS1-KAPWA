@@ -123,7 +123,7 @@ export function AnnouncementsPage() {
                     {a.excerpt && (
                       <p className="text-sm text-muted-foreground mt-1 truncate">{a.excerpt}</p>
                     )}
-                    <p className="text-xs text-muted-foreground/80 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {a.publishedAt
                         ? `${t('announcements.publishedOn', 'Published')} ${formatDate(a.publishedAt)}`
                         : `${t('announcements.updatedOn', 'Updated')} ${formatDate(a.updatedAt)}`}

@@ -16,7 +16,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
 import { ContactMessagesPanel } from '@/components/ContactMessagesPanel';
@@ -298,12 +297,26 @@ export function MessagesPage() {
   return (
     <PageShell title={t('messages.title', 'Messages')} description={t('messages.description', 'Chat with your team')}>
       {isStaff && (
-        <Tabs value={tab} onValueChange={(v) => setTab(v as 'chat' | 'contact')} className="mb-3 w-fit">
-          <TabsList>
-            <TabsTrigger value="chat">{t('messages.tabChat', 'Chat')}</TabsTrigger>
-            <TabsTrigger value="contact">{t('messages.tabContact', 'Contact Messages')}</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="mb-3 flex w-fit items-center rounded-lg bg-muted p-1" role="group" aria-label={t('messages.views', 'Message views')}>
+          <Button
+            type="button"
+            size="sm"
+            variant={tab === 'chat' ? 'secondary' : 'ghost'}
+            aria-pressed={tab === 'chat'}
+            onClick={() => setTab('chat')}
+          >
+            {t('messages.tabChat', 'Chat')}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={tab === 'contact' ? 'secondary' : 'ghost'}
+            aria-pressed={tab === 'contact'}
+            onClick={() => setTab('contact')}
+          >
+            {t('messages.tabContact', 'Contact Messages')}
+          </Button>
+        </div>
       )}
       {tab === 'contact' && isStaff ? (
         <ContactMessagesPanel />

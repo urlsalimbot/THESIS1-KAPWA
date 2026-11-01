@@ -6,7 +6,7 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
     class="flex flex-col gap-3 lg:gap-4 short:gap-2.5"
   >
     <div
-      class="flex items-start justify-between gap-3"
+      class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
     >
       <div
         class="flex items-center gap-3 min-w-0"
@@ -27,7 +27,7 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
         </div>
       </div>
       <div
-        class="flex items-center gap-2 shrink-0"
+        class="flex flex-wrap items-center gap-2 sm:shrink-0"
       >
         <button
           aria-label="+ New Beneficiary"
@@ -461,7 +461,7 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
               >
                 <a
                   aria-label="Go to previous page"
-                  class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-transparent hover:bg-accent hover:text-accent-foreground hover:border-border h-10 px-4 py-2 gap-1 pl-2.5 pointer-events-none opacity-50"
+                  class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-transparent hover:bg-accent hover:text-accent-foreground hover:border-border h-10 px-4 py-2 gap-1 pl-2.5 pointer-events-none text-muted-foreground"
                 >
                   <svg
                     aria-hidden="true"
@@ -500,7 +500,7 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
               >
                 <a
                   aria-label="Go to next page"
-                  class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-transparent hover:bg-accent hover:text-accent-foreground hover:border-border h-10 px-4 py-2 gap-1 pr-2.5 pointer-events-none opacity-50"
+                  class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-transparent hover:bg-accent hover:text-accent-foreground hover:border-border h-10 px-4 py-2 gap-1 pr-2.5 pointer-events-none text-muted-foreground"
                 >
                   <span>
                     Next

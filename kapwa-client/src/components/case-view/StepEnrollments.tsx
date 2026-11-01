@@ -288,7 +288,7 @@ export function StepEnrollments({ caseId, caseData, userRole, readOnly, lockRead
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteTarget && removeEnrollment(deleteTarget)} className="bg-destructive text-white hover:bg-destructive/90">
+            <AlertDialogAction onClick={() => deleteTarget && removeEnrollment(deleteTarget)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {t('common.remove', 'Remove')}
             </AlertDialogAction>
           </AlertDialogFooter>

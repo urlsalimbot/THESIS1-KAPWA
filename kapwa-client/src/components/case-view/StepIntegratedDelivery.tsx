@@ -217,7 +217,7 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => revoke(r.id)} className="bg-destructive text-white hover:bg-destructive/90">
+                              <AlertDialogAction onClick={() => revoke(r.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                                 {t('caseView.integrated.revokeConfirm', 'Revoke')}
                               </AlertDialogAction>
                             </AlertDialogFooter>

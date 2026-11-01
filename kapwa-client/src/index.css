@@ -193,7 +193,7 @@ body {
      and --card (4.06:1 / 4.35:1 before). Dark mode already passes. */
   --accent: #B94A34;
   --accent-foreground: #FFFFFF;
-  --destructive: #DC2626;
+  --destructive: #B91C1C;
   --destructive-foreground: #FFFFFF;
   --border: #D8D4CE;
   --input: #D8D4CE;
@@ -283,8 +283,8 @@ body {
   --muted-foreground: #9CA3AF;
   --accent: #E07A5F;
   --accent-foreground: #0D1B2A;
-  --destructive: #EF4444;
-  --destructive-foreground: #F8F7F4;
+  --destructive: #F87171;
+  --destructive-foreground: #0D1B2A;
   --border: #2A3A4A;
   --input: #3D5A80;
   --ring: #E07A5F;

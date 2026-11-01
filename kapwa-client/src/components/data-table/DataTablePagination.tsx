@@ -97,7 +97,7 @@ export function DataTablePagination<TData>({
             <PaginationItem>
               <PaginationPrevious
                 onClick={() => table.previousPage()}
-                className={!table.getCanPreviousPage() ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                className={!table.getCanPreviousPage() ? 'pointer-events-none text-muted-foreground' : 'cursor-pointer'}
               />
             </PaginationItem>
             {getPaginationItems(pageIndex, pageCount).map((item) =>
@@ -120,7 +120,7 @@ export function DataTablePagination<TData>({
             <PaginationItem>
               <PaginationNext
                 onClick={() => table.nextPage()}
-                className={!table.getCanNextPage() ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                className={!table.getCanNextPage() ? 'pointer-events-none text-muted-foreground' : 'cursor-pointer'}
               />
             </PaginationItem>
           </PaginationContent>

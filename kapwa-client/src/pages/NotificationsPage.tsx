@@ -157,7 +157,7 @@ export function NotificationsPage() {
   return (
     <PageShell title={t('notifications.title', 'Notifications')} description={t('notifications.description', 'View and manage your notifications')}>
       <div className="rounded-lg border bg-card">
-        <div className="flex items-center justify-between border-b px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
           <div className="flex items-center gap-3">
             <h2 className="text-sm font-semibold text-foreground">{t('notifications.title', 'Notifications')}</h2>
             {unreadCount > 0 && (
@@ -166,7 +166,7 @@ export function NotificationsPage() {
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex rounded-md border text-xs">
               <Button variant="ghost"
                 onClick={() => setFilter('all')}
@@ -245,7 +245,7 @@ export function NotificationsPage() {
                         {relativeNotificationTime(n.createdAt, t)}
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground/80 mt-0.5">{n.message}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
                     <div className="flex items-center gap-2 mt-1.5">
                       <span className={cn('text-xs px-1.5 py-0.5 rounded', categoryColors[n.category] || 'bg-muted text-muted-foreground')}>
                         {categoryLabels[n.category] ? t(categoryLabels[n.category].key, categoryLabels[n.category].label) : n.category}

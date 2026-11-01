@@ -43,7 +43,7 @@ export function PageShell({ title, description, actions, backTo, cachedAt, child
 
   return (
     <div className="flex flex-col gap-3 lg:gap-4 short:gap-2.5">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-3 min-w-0">
           {backTo && (
             <Button variant="outline" size="sm" onClick={handleBack} className="shrink-0 -ml-1.5">
@@ -61,7 +61,7 @@ export function PageShell({ title, description, actions, backTo, cachedAt, child
           </div>
         </div>
         {actions && (
-          <div className="flex items-center gap-2 shrink-0">{actions}</div>
+          <div className="flex flex-wrap items-center gap-2 sm:shrink-0">{actions}</div>
         )}
       </div>
       {isStale && ageDisplay && (

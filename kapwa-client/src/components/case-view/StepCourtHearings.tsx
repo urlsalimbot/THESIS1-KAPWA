@@ -327,7 +327,7 @@ export function StepCourtHearings({ caseId, caseData, userRole, readOnly, lockRe
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteTarget && remove(deleteTarget)} className="bg-destructive text-white hover:bg-destructive/90">
+            <AlertDialogAction onClick={() => deleteTarget && remove(deleteTarget)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {t('common.remove', 'Remove')}
             </AlertDialogAction>
           </AlertDialogFooter>

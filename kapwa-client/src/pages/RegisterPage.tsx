@@ -233,7 +233,7 @@ export function RegisterPage() {
           <CardTitle as="h1" className="flex items-center justify-center gap-2.5 text-2xl font-bold tracking-tight">
             <HandHeart size={24} className="text-accent" aria-hidden="true" />{t('auth.claimantRegistration', 'Claimant Registration')}</CardTitle>
           <CardDescription className="text-base">
-            {t('auth.registerDescription', 'Create an account to track your services and applications.')}
+            {t('auth.registerDescription', 'Create your account and submit your intake for MSWDO review. Middle name, name extension and PhilSys number may be left blank.')}
           </CardDescription>
         </CardHeader>
         <CardContent>

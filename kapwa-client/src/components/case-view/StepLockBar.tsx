@@ -259,7 +259,7 @@ export function StepLockBar({
                 Said in both languages, and on the strip itself rather than only in
                 a toast, because the fields are disabled before anyone presses
                 anything. */}
-            <span className="text-xs text-muted-foreground/80">
+            <span className="text-xs text-muted-foreground">
               {t('caseView.lock.sealedNotice', 'This step is sealed. Unlock it to make changes, then seal it again.')}
             </span>
           </span>

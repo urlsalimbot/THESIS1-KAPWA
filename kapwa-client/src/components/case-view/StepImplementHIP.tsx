@@ -423,7 +423,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
                             {intv.modeOfDelivery && <span>{intv.modeOfDelivery}</span>}
                             {intv.fundSource && <span>{intv.fundSource}</span>}
                           </div>
-                          {intv.notes && <p className="text-sm text-muted-foreground/80 mt-1">{intv.notes}</p>}
+                          {intv.notes && <p className="text-sm text-muted-foreground mt-1">{intv.notes}</p>}
                           {/* The form obligation is recorded on the row (copied
                               from the program matrix at logging time), so it
                               renders on the saved card too — it used to exist
@@ -743,7 +743,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteTarget && handleDelete(deleteTarget)} className="bg-destructive text-white hover:bg-destructive/90">
+            <AlertDialogAction onClick={() => deleteTarget && handleDelete(deleteTarget)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {t('common.remove', 'Remove')}
             </AlertDialogAction>
           </AlertDialogFooter>

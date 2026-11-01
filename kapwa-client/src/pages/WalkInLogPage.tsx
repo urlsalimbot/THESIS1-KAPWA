@@ -231,7 +231,7 @@ export function WalkInLogPage() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Quick add walk-in</CardTitle>
-              <CardDescription>Record the client and purpose at the information desk. Linking a person/case is optional.</CardDescription>
+              <CardDescription>Record the client and purpose at the information desk. Name is optional for an inquiry; purpose is required. Linking a person/case is optional.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <ClientSearch onPick={pick} />
@@ -250,7 +250,7 @@ export function WalkInLogPage() {
                     <SelectContent>{['Male', 'Female', 'Other'].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <div><Label htmlFor="wi-dob">Date of birth</Label><Input id="wi-dob" type="date" value={form.dateOfBirth} onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })} /></div>
+                <div><Label htmlFor="wi-dob">Date of birth (optional)</Label><Input id="wi-dob" type="date" value={form.dateOfBirth} onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })} /></div>
                 <div>
                   <Label>Barangay</Label>
                   <Select value={form.barangay} onValueChange={(v) => setForm({ ...form, barangay: v })}>
@@ -260,7 +260,7 @@ export function WalkInLogPage() {
                 </div>
                 <div><Label htmlFor="wi-contact">Contact number</Label><Input id="wi-contact" value={form.contactNumber} onChange={(e) => setForm({ ...form, contactNumber: e.target.value })} placeholder="09XX XXX XXXX" /></div>
                 <div>
-                  <Label>Purpose</Label>
+                  <Label>Purpose *</Label>
                   <Select value={form.purposeCode} onValueChange={(v) => setForm({ ...form, purposeCode: v })}>
                     <SelectTrigger aria-label="Purpose"><SelectValue /></SelectTrigger>
                     <SelectContent>{WALK_IN_PURPOSES.map((p) => <SelectItem key={p.code} value={p.code}>{p.label}</SelectItem>)}</SelectContent>
@@ -282,11 +282,11 @@ export function WalkInLogPage() {
           <div className="flex flex-wrap items-end gap-2">
             <div><Label htmlFor="wi-filter-date">Date</Label><Input id="wi-filter-date" type="date" value={date} onChange={(e) => { setDate(e.target.value); setPage(1); }} /></div>
             <div><Label>Status</Label><Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}><SelectTrigger className="w-44" aria-label="Status filter"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem>{WALK_IN_STATUSES.map((s) => <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>)}</SelectContent></Select></div>
-            <div><Label>Purpose</Label><Select value={purpose} onValueChange={(v) => { setPurpose(v); setPage(1); }}><SelectTrigger className="w-52" aria-label="Purpose filter"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All purposes</SelectItem>{WALK_IN_PURPOSES.map((p) => <SelectItem key={p.code} value={p.code}>{p.label}</SelectItem>)}</SelectContent></Select></div>
+            <div><Label>Purpose *</Label><Select value={purpose} onValueChange={(v) => { setPurpose(v); setPage(1); }}><SelectTrigger className="w-52" aria-label="Purpose filter"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All purposes</SelectItem>{WALK_IN_PURPOSES.map((p) => <SelectItem key={p.code} value={p.code}>{p.label}</SelectItem>)}</SelectContent></Select></div>
             <div className="min-w-48 flex-1"><Label htmlFor="wi-search">Search</Label><Input id="wi-search" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Name, purpose, contact" /></div>
           </div>
 
-          <div className="overflow-hidden rounded-lg border">
+          <div className="overflow-x-auto rounded-lg border">
             <Table>
               <TableHeader><TableRow><TableHead>#</TableHead><TableHead>Time</TableHead><TableHead>Client</TableHead><TableHead>Purpose</TableHead><TableHead>Status</TableHead><TableHead>Wait / service</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
@@ -369,6 +369,7 @@ function WalkInReports() {
         <Stat label="Avg wait" value={`${data?.waitingMinutes ?? 0} min`} />
         <Stat label="Visit → case" value={`${data?.conversions.rate ?? 0}%`} />
       </div>
+      <p className="text-sm text-muted-foreground">Choose a date range to review visit volume, outcomes, waiting time, conversion and GAD breakdowns.</p>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Breakdown title="By purpose" data={data?.purposes} labels={walkInPurposeLabel} />
         <Breakdown title="By barangay" data={data?.barangays} />

@@ -6,7 +6,7 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
     class="flex flex-col gap-3 lg:gap-4 short:gap-2.5"
   >
     <div
-      class="flex items-start justify-between gap-3"
+      class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
     >
       <div
         class="flex items-center gap-3 min-w-0"
@@ -27,7 +27,7 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
         </div>
       </div>
       <div
-        class="flex items-center gap-2 shrink-0"
+        class="flex flex-wrap items-center gap-2 sm:shrink-0"
       >
         <div
           class="flex gap-2"
