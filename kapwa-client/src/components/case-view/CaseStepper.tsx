@@ -41,7 +41,7 @@ export const STATUS_INDEX: Record<string, number> = {
 };
 
 /** The steps every case template carries, in display order. */
-export const COMMON_STEP_KEYS = [
+const COMMON_STEP_KEYS = [
   'assessment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
 ] as const;
 

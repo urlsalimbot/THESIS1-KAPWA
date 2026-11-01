@@ -1,6 +1,6 @@
 export type MaskableField = 'name' | 'phone' | 'address' | 'dob' | 'philsys';
 
-export const MASK_DISPLAY: Record<MaskableField, string> = {
+const MASK_DISPLAY: Record<MaskableField, string> = {
   name: '********',
   phone: '***-***-****',
   address: '*******',

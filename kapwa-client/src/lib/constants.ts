@@ -174,7 +174,6 @@ export const BARANGAYS = [
   'Matictic', 'Minuyan', 'Partida', 'Pinagtulayan', 'Poblacion',
   'San Lorenzo', 'San Mateo', 'Tigbe',
 ] as const;
-export const AGE_RANGES = ['0-7', '8-17', '18-59', '60+'] as const;
 export const CLIENT_CATEGORIES = ['Children', 'Youth', 'Women', 'PWD', 'Senior', 'Indigent', '4Ps', 'IP', 'Family'] as const;
 
 export const CIVIL_STATUSES = ['Single', 'Married', 'Widowed', 'Separated', 'Annulled'] as const;
@@ -197,7 +196,7 @@ export const CLIENT_CATEGORIES_V2 = [
  * it renders as-is in the Case Category column; the groups are only the
  * `<optgroup>` structure of the step-1 select.
  */
-export interface CaseCategoryGroup {
+interface CaseCategoryGroup {
   /** i18n key for the group's optgroup label. */
   key: string;
   /** English optgroup label. */
@@ -255,19 +254,6 @@ export const CASE_CATEGORY_GROUPS: CaseCategoryGroup[] = [
     ],
   },
 ];
-
-export const FINANCIAL_SUBSIDIES = [
-  'Food Subsidy', 'Livelihood', 'Education', 'Medical',
-  'Guarantee Letter', 'Burial', 'Transportation',
-] as const;
-
-export const SOURCE_OF_FUND = [
-  'Regular Funds', 'Donation', 'Priority Development Assistance Fund', 'Others',
-] as const;
-
-export const OTHER_ASSISTANCE = [
-  'Food Pack', 'Used Clothing', 'Hot Meal', 'Assistive Devices', 'Other',
-] as const;
 
 export const FAMILY_MEMBER_STATUSES = ['Employed', 'Self-Employed', 'Unemployed', 'Student', 'Retired', 'Dependent', 'OFW'] as const;
 

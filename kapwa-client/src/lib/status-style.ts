@@ -7,7 +7,7 @@
  * classes in chips — adding a status meant editing every copy, and a change in
  * one screen could disagree with every other.
  */
-export const CASE_STATUS_CLASS: Record<string, string> = {
+const CASE_STATUS_CLASS: Record<string, string> = {
   enrolled: 'badge-pending',
   assessed: 'badge-review',
   in_review: 'badge-review',

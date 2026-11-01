@@ -29,8 +29,8 @@ export const WALK_IN_STATUSES = [
   { code: 'no_service', label: 'No service', className: 'bg-muted text-muted-foreground' },
 ] as const;
 
-export type WalkInStatus = (typeof WALK_IN_STATUSES)[number]['code'];
-export type WalkInPurpose = (typeof WALK_IN_PURPOSES)[number]['code'];
+type WalkInStatus = (typeof WALK_IN_STATUSES)[number]['code'];
+type WalkInPurpose = (typeof WALK_IN_PURPOSES)[number]['code'];
 
 export function walkInPurposeLabel(code: string): string {
   return WALK_IN_PURPOSES.find((p) => p.code === code)?.label ?? code;

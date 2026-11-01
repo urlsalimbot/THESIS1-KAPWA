@@ -6,14 +6,14 @@ import {
 } from 'lucide-react';
 import { FEATURE_ANALYTICS_ENABLED } from './feature-flags';
 
-export interface NavItem {
+interface NavItem {
   path: string;
   label: string;
   icon: React.ReactNode;
   roles: string[];
 }
 
-export interface NavGroup {
+interface NavGroup {
   label: string;
   items: NavItem[];
 }

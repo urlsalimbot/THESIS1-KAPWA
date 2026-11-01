@@ -26,7 +26,7 @@ import { lazy, Suspense } from 'react';
  * lands and the content-area fallback has nothing to show. The map mirrors the
  * nav config; an unlisted path is simply not prefetched.
  */
-export const ROUTE_PREFETCH: Record<string, () => Promise<unknown>> = {
+const ROUTE_PREFETCH: Record<string, () => Promise<unknown>> = {
   '/dashboard': () => import('./pages/DashboardPage'),
   '/coordinator/dashboard': () => import('./pages/CoordinatorDashboardPage'),
   '/intake': () => import('./pages/IntakePage'),

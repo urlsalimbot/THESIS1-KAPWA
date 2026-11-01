@@ -7,7 +7,7 @@
  * owns. Everything else without an `@` is the local shorthand the staff type
  * (`admin`), which still gets the domain.
  */
-export const OFFICE_ISSUED_ID = /^[A-Za-z]{2,4}-\d/;
+const OFFICE_ISSUED_ID = /^[A-Za-z]{2,4}-\d/;
 
 export function normalizeLoginIdentifier(raw: string): string {
   const value = raw.trim();

@@ -455,7 +455,7 @@ export async function downloadAccessCardPdf(beneficiaryId: string) {
   URL.revokeObjectURL(url);
 }
 
-export function dispositionFilename(res: Response, fallback: string): string {
+function dispositionFilename(res: Response, fallback: string): string {
   const disposition = res.headers?.get('Content-Disposition') || '';
   const match = /filename="([^"]+)"/.exec(disposition);
   return match?.[1] || fallback;

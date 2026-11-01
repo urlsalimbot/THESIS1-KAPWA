@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export const STALE_AFTER_MS = 5 * 60 * 1000; // 5 minutes (matches SWR stale-while-revalidate)
+const STALE_AFTER_MS = 5 * 60 * 1000; // 5 minutes (matches SWR stale-while-revalidate)
 
 const POLL_INTERVAL_MS = 30 * 1000; // 30 seconds
 

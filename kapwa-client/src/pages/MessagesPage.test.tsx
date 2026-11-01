@@ -16,7 +16,6 @@ vi.mock('../lib/chat-socket', () => ({
     off: vi.fn(),
   })),
   disconnectSocket: vi.fn(),
-  sendMessage: vi.fn(),
   emitTyping: vi.fn(),
 }));
 
