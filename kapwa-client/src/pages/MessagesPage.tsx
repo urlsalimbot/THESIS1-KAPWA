@@ -571,11 +571,11 @@ export function MessagesPage() {
                     })}
                     {isTyping && (
                       <div className="flex justify-start mb-1.5">
-                        <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
-                          <div className="flex gap-1">
-                            <span className="h-2 w-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: '0ms' }} />
-                            <span className="h-2 w-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: '150ms' }} />
-                            <span className="h-2 w-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: '300ms' }} />
+                        <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3" role="status" aria-label={t('messages.typing', 'Typing…')}>
+                          <div className="flex gap-1" aria-hidden="true">
+                            <span className="h-2 w-2 rounded-full bg-muted-foreground/60 animate-pulse" style={{ animationDelay: '0ms' }} />
+                            <span className="h-2 w-2 rounded-full bg-muted-foreground/60 animate-pulse" style={{ animationDelay: '150ms' }} />
+                            <span className="h-2 w-2 rounded-full bg-muted-foreground/60 animate-pulse" style={{ animationDelay: '300ms' }} />
                           </div>
                         </div>
                       </div>
