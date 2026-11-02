@@ -67,18 +67,9 @@ export class ExportService {
    * end day is inclusive (the controller's `endDate` is midnight).
    */
   private async serviceSummaryRows(startDate?: string, endDate?: string) {
-    const params: unknown[] = [];
-    const where: string[] = [];
-    if (startDate) {
-      params.push(startDate);
-      where.push(`ci.delivery_date >= $${params.length}::date`);
-    }
-    if (endDate) {
-      params.push(endDate);
-      // `date + 1` makes the end day inclusive without timezone math.
-      where.push(`ci.delivery_date < $${params.length}::date + 1`);
-    }
-    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    // Fixed placeholders keep the statement static; sentinel bounds cover an
+    // omitted start/end. `date + 1` makes the end day inclusive without
+    // timezone math.
     const rows: any[] = await this.caseRepo.query(
       `SELECT COALESCE(p.name, ci.service_name) AS program,
               COALESCE(ci.category, 'Uncategorized') AS category,
@@ -89,10 +80,11 @@ export class ExportService {
          LEFT JOIN cases c ON c.id = ci.case_id
          LEFT JOIN beneficiaries b ON b.id = COALESCE(c.beneficiary_id, ci.beneficiary_id)
          LEFT JOIN programs p ON p.id = ci.program_id
-         ${whereSql}
+        WHERE ci.delivery_date >= $1::date
+          AND ci.delivery_date < $2::date + 1
         GROUP BY 1, 2
         ORDER BY 1, 2`,
-      params,
+      [startDate ?? '1900-01-01', endDate ?? '2999-12-31'],
     );
     return (rows ?? []).map((r) => ({
       Program: r.program ?? '',
