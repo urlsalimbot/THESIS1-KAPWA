@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, UseGuards, Res, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, Res, HttpStatus, BadRequestException } from '@nestjs/common';
 import { Response } from 'express';
 import { z } from 'zod';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
@@ -22,6 +22,15 @@ const GenerateCertificateSchema = z.object({
   details: z.string().trim().optional(),
 });
 
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Date-only query params stay strings so the Manila calendar day is preserved. */
+function dayParam(value?: string): string | undefined {
+  if (!value) return undefined;
+  if (!DAY_RE.test(value)) throw new BadRequestException('Dates must be YYYY-MM-DD.');
+  return value;
+}
+
 @ApiTags('Export')
 @Controller('export')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -42,8 +51,8 @@ export class ExportController {
     @Res() res?: Response,
   ) {
     if (!res) return;
-    const start = startDate ? new Date(startDate) : undefined;
-    const end = endDate ? new Date(endDate) : undefined;
+    const start = dayParam(startDate);
+    const end = dayParam(endDate);
 
     if (format === 'csv') {
       const { buffer, filename } = await this.exportService.exportAuditLogCsv(start, end);
@@ -71,8 +80,8 @@ export class ExportController {
     @Res() res?: Response,
   ) {
     if (!res) return;
-    const start = startDate ? new Date(startDate) : undefined;
-    const end = endDate ? new Date(endDate) : undefined;
+    const start = dayParam(startDate);
+    const end = dayParam(endDate);
 
     if (format === 'csv') {
       const { buffer, filename } = await this.exportService.exportServiceSummaryCsv(start, end);

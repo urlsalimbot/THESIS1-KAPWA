@@ -165,4 +165,31 @@ describe('DashboardService', () => {
     const result = await service.getSlaCompliance();
     expect(result.slaStatus).toBe('compliant');
   });
+
+  describe('getDailyCounts', () => {
+    it('rejects a missing month instead of binding an Invalid Date', async () => {
+      await expect(service.getDailyCounts(NaN, NaN)).rejects.toThrow('year and month are required');
+    });
+
+    it('counts interventions and cases per Manila day', async () => {
+      caseRepoMock.manager.query = jest.fn()
+        .mockResolvedValueOnce([{ date: '2026-11-01', count: '2' }])
+        .mockResolvedValueOnce([
+          { date: '2026-11-01', count: '1' },
+          { date: '2026-11-02', count: '3' },
+        ]);
+
+      const result = await service.getDailyCounts(2026, 11);
+
+      expect(caseRepoMock.manager.query).toHaveBeenNthCalledWith(
+        1,
+        expect.stringContaining('case_interventions'),
+        ['2026-11-01', '2026-12-01'],
+      );
+      expect(result).toEqual({
+        '2026-11-01': { interventions: 2, cases: 1 },
+        '2026-11-02': { interventions: 0, cases: 3 },
+      });
+    });
+  });
 });

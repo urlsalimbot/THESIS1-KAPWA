@@ -73,7 +73,6 @@ const NewUserPage = lazy(() => import('./pages/NewUserPage').then(m => ({ defaul
 const UsersPanelPage = lazy(() => import('./pages/UsersPanelPage').then(m => ({ default: m.UsersPanelPage })));
 const ClaimantDashboardPage = lazy(() => import('./pages/ClaimantDashboardPage').then(m => ({ default: m.ClaimantDashboardPage })));
 const ApprovalPipelinePage = lazy(() => import('./pages/ApprovalPipelinePage').then(m => ({ default: m.ApprovalPipelinePage })));
-const MfaSetupPage = lazy(() => import('./pages/MfaSetupPage').then(m => ({ default: m.MfaSetupPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const CoordinatorDashboardPage = lazy(() => import('./pages/CoordinatorDashboardPage').then(m => ({ default: m.CoordinatorDashboardPage })));
 const CoordinatorReferralFormPage = lazy(() => import('./pages/CoordinatorReferralFormPage').then(m => ({ default: m.CoordinatorReferralFormPage })));

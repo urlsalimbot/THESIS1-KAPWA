@@ -625,6 +625,13 @@ describe('CasesService', () => {
     });
   });
 
+  describe('getTrackerRange', () => {
+    it('rejects missing bounds instead of binding an Invalid Date', async () => {
+      await expect(service.getTrackerRange(undefined as any, undefined as any))
+        .rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
+
   describe('findById', () => {
     it('should return case by id', async () => {
       const caseEntity = { id: '1', status: CaseStatus.ENROLLED, updatedAt: new Date() } as Case;

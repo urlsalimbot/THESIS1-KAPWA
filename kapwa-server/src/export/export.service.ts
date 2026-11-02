@@ -25,8 +25,22 @@ export class ExportService {
     private readonly org: OrgService,
   ) {}
 
-  async exportAuditLogCsv(startDate?: Date, endDate?: Date): Promise<{ buffer: Buffer; filename: string }> {
-    const rows = await this.auditService.getAuditLog(undefined, undefined, 10000);
+  async exportAuditLogCsv(startDate?: string, endDate?: string): Promise<{ buffer: Buffer; filename: string }> {
+    const all = await this.auditService.getAuditLog(undefined, undefined, 10000);
+    // Query params are date-only (YYYY-MM-DD) and the end day is inclusive.
+    // The audit trail is a Manila-office record, so compare Manila calendar
+    // days rather than UTC instants.
+    // shortcut: filters in memory over the 10k-row cap, upgrade to SQL bounds
+    // if an audit trail ever needs exporting beyond that window.
+    const manilaDay = (v: Date | string) =>
+      new Date(v).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+    const rows = all.filter((r: any) => {
+      const day = manilaDay(r.created_at);
+      if (day === 'Invalid Date') return false;
+      if (startDate && day < startDate) return false;
+      if (endDate && day > endDate) return false;
+      return true;
+    });
     this.logger.warn(`EXPORT: audit-log CSV, ${rows.length} log rows`);
 
     const { stringify } = require('csv-stringify/sync');
@@ -46,15 +60,64 @@ export class ExportService {
     };
   }
 
-  async exportServiceSummaryCsv(_startDate?: Date, _endDate?: Date): Promise<{ buffer: Buffer; filename: string }> {
+  /**
+   * Per-program service rollup behind both service-summary formats.
+   *
+   * `delivery_date` is a date column, so the bounds are plain dates and the
+   * end day is inclusive (the controller's `endDate` is midnight).
+   */
+  private async serviceSummaryRows(startDate?: string, endDate?: string) {
+    const params: unknown[] = [];
+    const where: string[] = [];
+    if (startDate) {
+      params.push(startDate);
+      where.push(`ci.delivery_date >= $${params.length}::date`);
+    }
+    if (endDate) {
+      params.push(endDate);
+      // `date + 1` makes the end day inclusive without timezone math.
+      where.push(`ci.delivery_date < $${params.length}::date + 1`);
+    }
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const rows: any[] = await this.caseRepo.query(
+      `SELECT COALESCE(p.name, ci.service_name) AS program,
+              COALESCE(ci.category, 'Uncategorized') AS category,
+              COUNT(*)::int AS services,
+              COALESCE(SUM(ci.amount), 0) AS amount,
+              COUNT(DISTINCT COALESCE(b.household_id, c.beneficiary_id, ci.beneficiary_id))::int AS households
+         FROM case_interventions ci
+         LEFT JOIN cases c ON c.id = ci.case_id
+         LEFT JOIN beneficiaries b ON b.id = COALESCE(c.beneficiary_id, ci.beneficiary_id)
+         LEFT JOIN programs p ON p.id = ci.program_id
+         ${whereSql}
+        GROUP BY 1, 2
+        ORDER BY 1, 2`,
+      params,
+    );
+    return (rows ?? []).map((r) => ({
+      Program: r.program ?? '',
+      Category: r.category ?? '',
+      'Services Rendered': Number(r.services ?? 0),
+      'Total Amount': Number(r.amount ?? 0),
+      'Unique Households': Number(r.households ?? 0),
+    }));
+  }
+
+  async exportServiceSummaryCsv(startDate?: string, endDate?: string): Promise<{ buffer: Buffer; filename: string }> {
     const { stringify } = require('csv-stringify/sync');
-    const csv = stringify([], { header: true });
+    const rows = await this.serviceSummaryRows(startDate, endDate);
+    const csv = stringify(rows, {
+      header: true,
+      columns: ['Program', 'Category', 'Services Rendered', 'Total Amount', 'Unique Households'],
+    });
     const dateStr = new Date().toISOString().slice(0, 10);
+    this.logger.warn(`EXPORT: service-summary CSV, ${rows.length} rows`);
     return { buffer: Buffer.from(csv), filename: `service-summary-${dateStr}.csv` };
   }
 
-  async exportServiceSummaryXlsx(_startDate?: Date, _endDate?: Date): Promise<Buffer> {
+  async exportServiceSummaryXlsx(startDate?: string, endDate?: string): Promise<Buffer> {
     const ExcelJS = require('exceljs');
+    const rows = await this.serviceSummaryRows(startDate, endDate);
     const workbook = new ExcelJS.Workbook();
     const ws = workbook.addWorksheet('Service Summary');
     ws.columns = [
@@ -66,7 +129,15 @@ export class ExportService {
     ];
     const headerRow = ws.getRow(1);
     headerRow.font = { bold: true };
+    rows.forEach((r) => ws.addRow({
+      program: r.Program,
+      category: r.Category,
+      services: r['Services Rendered'],
+      amount: r['Total Amount'],
+      households: r['Unique Households'],
+    }));
     const buf = await workbook.xlsx.writeBuffer();
+    this.logger.warn(`EXPORT: service-summary XLSX, ${rows.length} rows`);
     return Buffer.from(buf);
   }
 

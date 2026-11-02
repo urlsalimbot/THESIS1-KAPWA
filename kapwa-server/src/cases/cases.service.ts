@@ -1151,8 +1151,11 @@ export class CasesService {
 
   async getTrackerRange(startDate: string, endDate: string, status?: string, barangay?: string) {
     const start = new Date(startDate);
-    start.setHours(0, 0, 0, 0);
     const end = new Date(endDate);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      throw new BadRequestException('start and end are required (YYYY-MM-DD).');
+    }
+    start.setHours(0, 0, 0, 0);
     end.setHours(23, 59, 59, 999);
     return this.getTrackerEntries(start, end, status, barangay);
   }

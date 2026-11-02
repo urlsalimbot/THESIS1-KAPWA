@@ -1,6 +1,6 @@
 import { RECENT_CASES_LIMIT, SLA_OVERDUE_DAYS } from '../common/constants';
 import { paginate } from '../common/constants';
-import { Injectable, Optional } from '@nestjs/common';
+import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Case, CaseStatus } from '../cases/case.entity';
@@ -324,30 +324,43 @@ export class DashboardService {
   }
 
   async getDailyCounts(year: number, month: number) {
+    if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+      throw new BadRequestException('year and month are required (month 1-12).');
+    }
     const key = `dashboard:dailyCounts:${year}-${month}`;
     const compute = async () => {
-      const start = new Date(year, month - 1, 1);
-      const end = new Date(year, month, 1);
+      const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+      const monthEnd = new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10);
 
-      const interventions: any[] = [];
-
-      const casesCreated = await this.caseRepo
-        .createQueryBuilder('c')
-        .select('c.created_at', 'date')
-        .addSelect('COUNT(*)', 'count')
-        .where('c.created_at >= :start AND c.created_at < :end', { start, end })
-        .groupBy('c.created_at')
-        .orderBy('c.created_at', 'ASC')
-        .getRawMany();
+      // Date keys come back as strings in Manila time: `toISOString()` on a
+      // local-midnight Date would shift the day backwards for UTC+8.
+      const [interventions, casesCreated] = await Promise.all([
+        this.caseRepo.manager.query(
+          `SELECT to_char(ci.delivery_date, 'YYYY-MM-DD') AS date, COUNT(*) AS count
+             FROM case_interventions ci
+            WHERE ci.delivery_date >= $1::date AND ci.delivery_date < $2::date
+            GROUP BY ci.delivery_date`,
+          [monthStart, monthEnd],
+        ),
+        this.caseRepo.manager.query(
+          `SELECT to_char((c.created_at AT TIME ZONE 'Asia/Manila')::date, 'YYYY-MM-DD') AS date,
+                  COUNT(*) AS count
+             FROM cases c
+            WHERE (c.created_at AT TIME ZONE 'Asia/Manila')::date >= $1::date
+              AND (c.created_at AT TIME ZONE 'Asia/Manila')::date < $2::date
+            GROUP BY 1`,
+          [monthStart, monthEnd],
+        ),
+      ]);
 
       const dayMap: Record<string, { interventions: number; cases: number }> = {};
-      for (const row of interventions) {
-        const d = new Date(row.date).toISOString().slice(0, 10);
+      for (const row of interventions ?? []) {
+        const d = row.date;
         if (!dayMap[d]) dayMap[d] = { interventions: 0, cases: 0 };
         dayMap[d].interventions += Number(row.count);
       }
-      for (const row of casesCreated) {
-        const d = new Date(row.date).toISOString().slice(0, 10);
+      for (const row of casesCreated ?? []) {
+        const d = row.date;
         if (!dayMap[d]) dayMap[d] = { interventions: 0, cases: 0 };
         dayMap[d].cases += Number(row.count);
       }

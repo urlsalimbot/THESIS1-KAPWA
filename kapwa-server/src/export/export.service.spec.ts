@@ -35,15 +35,24 @@ describe('ExportService', () => {
   });
 
   describe('exportServiceSummaryCsv', () => {
-    it('generates valid CSV with header row', async () => {
-      const result = await service.exportServiceSummaryCsv(new Date('2026-01-01'), new Date('2026-06-01'));
-      expect(result.buffer).toBeInstanceOf(Buffer);
+    it('writes the header and the aggregated rows', async () => {
+      caseRepo.query.mockResolvedValue([
+        { program: 'AICS', category: 'Medical', services: 3, amount: '4500', households: 2 },
+      ]);
+      const result = await service.exportServiceSummaryCsv('2026-01-01', '2026-06-01');
+      const text = result.buffer.toString('utf8');
+      expect(text.split('\n')[0]).toBe('Program,Category,Services Rendered,Total Amount,Unique Households');
+      expect(text).toContain('AICS,Medical,3,4500,2');
       expect(result.filename).toMatch(/service-summary-\d{4}-\d{2}-\d{2}\.csv/);
+      const [sql, params] = caseRepo.query.mock.calls[0];
+      expect(sql).toContain('case_interventions');
+      expect(params).toEqual(['2026-01-01', '2026-06-01']);
     });
 
-    it('handles empty data', async () => {
+    it('still emits a header when there is no data', async () => {
+      caseRepo.query.mockResolvedValue([]);
       const result = await service.exportServiceSummaryCsv();
-      expect(result.buffer).toBeInstanceOf(Buffer);
+      expect(result.buffer.toString('utf8').trim()).toBe('Program,Category,Services Rendered,Total Amount,Unique Households');
       expect(result.filename).toMatch(/service-summary-\d{4}-\d{2}-\d{2}\.csv/);
     });
   });
@@ -59,6 +68,22 @@ describe('ExportService', () => {
       expect(result.filename).toBe('audit-logs.csv');
       expect(text).toContain('action,table,entity,actor,timestamp');
       expect(text).toContain('case.create,case,c1,Rosario Mendoza,');
+    });
+
+    it('keeps only rows inside the requested Manila date range, end day inclusive', async () => {
+      auditService.getAuditLog.mockResolvedValue([
+        { action: 'a.before', reference_id: '1', created_at: new Date('2026-09-30T23:59:00+08:00') },
+        { action: 'a.first', reference_id: '2', created_at: new Date('2026-10-01T00:30:00+08:00') },
+        { action: 'a.last', reference_id: '3', created_at: new Date('2026-10-02T23:00:00+08:00') },
+        { action: 'a.after', reference_id: '4', created_at: new Date('2026-10-03T00:10:00+08:00') },
+      ] as any);
+
+      const result = await service.exportAuditLogCsv('2026-10-01', '2026-10-02');
+      const text = result.buffer.toString('utf8');
+      expect(text).toContain('a.first');
+      expect(text).toContain('a.last');
+      expect(text).not.toContain('a.before');
+      expect(text).not.toContain('a.after');
     });
   });
 
