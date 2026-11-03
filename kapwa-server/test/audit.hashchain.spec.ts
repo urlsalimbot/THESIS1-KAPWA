@@ -1,10 +1,10 @@
 import { Test } from '@nestjs/testing';
-import { AuditService } from '../src/audit/audit.service';
+import { AuditService } from '../src/audit/audit.service.js';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Case } from '../src/cases/case.entity';
-import { Beneficiary } from '../src/beneficiaries/beneficiary.entity';
-import { ConsentLedger } from '../src/beneficiaries/consent-ledger.entity';
-import { CacheService } from '../src/common/cache.service';
+import { Case } from '../src/cases/case.entity.js';
+import { Beneficiary } from '../src/beneficiaries/beneficiary.entity.js';
+import { ConsentLedger } from '../src/beneficiaries/consent-ledger.entity.js';
+import { CacheService } from '../src/common/cache.service.js';
 import * as crypto from 'crypto';
 
 describe('AuditService — Hash Chain', () => {

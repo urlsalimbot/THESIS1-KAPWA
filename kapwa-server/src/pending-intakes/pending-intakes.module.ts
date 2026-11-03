@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { PendingIntake } from './pending-intake.entity';
-import { PendingIntakesService } from './pending-intakes.service';
-import { PendingIntakesController } from './pending-intakes.controller';
+import { PendingIntake } from './pending-intake.entity.js';
+import { PendingIntakesService } from './pending-intakes.service.js';
+import { PendingIntakesController } from './pending-intakes.controller.js';
 
 @Module({
   imports: [TypeOrmModule.forFeature([PendingIntake])],

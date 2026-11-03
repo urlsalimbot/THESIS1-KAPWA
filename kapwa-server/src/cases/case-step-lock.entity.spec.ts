@@ -1,8 +1,9 @@
+import { esmDirname } from '../common/esm-path.js';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { getMetadataArgsStorage } from 'typeorm';
-import { CaseStepLock } from './case-step-lock.entity';
-import { CaseStepLocksStepKey0000000000079 } from '../database/migrations/CaseStepLocksStepKey0000000000079';
+import { CaseStepLock } from './case-step-lock.entity.js';
+import { CaseStepLocksStepKey0000000000079 } from '../database/migrations/CaseStepLocksStepKey0000000000079.js';
 
 // Records the SQL a migration emits without touching a database.
 class RecordingQueryRunner {
@@ -13,7 +14,7 @@ class RecordingQueryRunner {
   }
 }
 
-const MIGRATE_TS = readFileSync(join(__dirname, '..', 'database', 'migrate.ts'), 'utf8');
+const MIGRATE_TS = readFileSync(join(esmDirname(import.meta.url), '..', 'database', 'migrate.ts'), 'utf8');
 
 describe('CaseStepLock entity', () => {
   const storage = getMetadataArgsStorage();

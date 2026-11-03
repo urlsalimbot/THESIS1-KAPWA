@@ -1,7 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ConsentLedger } from '../../beneficiaries/consent-ledger.entity';
+import { ConsentLedger } from '../../beneficiaries/consent-ledger.entity.js';
 
 @Injectable()
 export class ConsentGuard implements CanActivate {

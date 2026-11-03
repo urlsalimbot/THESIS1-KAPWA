@@ -1,13 +1,13 @@
-import { DEFAULT_PAGE_SIZE } from '../common/constants';
+import { DEFAULT_PAGE_SIZE } from '../common/constants.js';
 import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike, FindOptionsWhere, Not } from 'typeorm';
-import { User, UserRole } from '../auth/user.entity';
-import { UserBarangayAssignment } from '../auth/user-barangay-assignment.entity';
-import { AccountProvisioningService } from '../accounts/account-provisioning.service';
-import * as bcrypt from 'bcrypt';
+import { User, UserRole } from '../auth/user.entity.js';
+import { UserBarangayAssignment } from '../auth/user-barangay-assignment.entity.js';
+import { AccountProvisioningService } from '../accounts/account-provisioning.service.js';
+import bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { maskEmail } from '../common/mailer.service';
+import { maskEmail } from '../common/mailer.service.js';
 
 export interface CreateUserInput {
   email: string;

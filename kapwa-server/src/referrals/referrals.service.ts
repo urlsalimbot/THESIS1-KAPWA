@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Referral, ReferralStatus } from './referral.entity';
-import { Person } from '../beneficiaries/person.entity';
-import type { CreateReferralInput, DeclineReferralInput } from './dto/referrals.zod';
-import { buildReferralGisPdf, ReferralGisData } from './referral-gis.builder';
+import { Referral, ReferralStatus } from './referral.entity.js';
+import { Person } from '../beneficiaries/person.entity.js';
+import type { CreateReferralInput, DeclineReferralInput } from './dto/referrals.zod.js';
+import { buildReferralGisPdf, ReferralGisData } from './referral-gis.builder.js';
 
 @Injectable()
 export class ReferralsService {

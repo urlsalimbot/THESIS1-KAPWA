@@ -1,8 +1,8 @@
 import { Entity, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Expose, Exclude } from 'class-transformer';
-import { Household } from './household.entity';
-import { Person } from './person.entity';
-import { BaseEntity } from '../common/base.entity';
+import { Household } from './household.entity.js';
+import { Person } from './person.entity.js';
+import { BaseEntity } from '../common/base.entity.js';
 
 @Entity('beneficiaries')
 export class Beneficiary extends BaseEntity {

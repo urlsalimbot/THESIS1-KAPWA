@@ -1,7 +1,9 @@
+import { esmDirname } from '../common/esm-path.js';
+import { nodeRequire } from '../common/node-require.js';
 import * as path from "path";
 import * as fs from "fs";
-import { GisPdfData } from "./gis-export.types";
-import { ORG_LOCATION, REPORT_FALLBACK_SIGNATORIES } from "../common/constants";
+import { GisPdfData } from "./gis-export.types.js";
+import { ORG_LOCATION, REPORT_FALLBACK_SIGNATORIES } from "../common/constants.js";
 
 // ---------------------------------------------------------------------------
 // Municipal General Intake Sheet — the MSWDO Norzagaray local form.
@@ -37,7 +39,7 @@ const HEADER_TITLE = "GENERAL INTAKE SHEET";
 
 export async function buildMunicipalGisPdf(data: GisPdfData): Promise<Buffer> {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const PDFDocument = require("pdfkit");
+  const PDFDocument = nodeRequire("pdfkit");
   const doc = new PDFDocument({
     size: "A4",
     margins: { top: 18, bottom: 16, left: LEFT, right: 595.28 - RIGHT },
@@ -57,7 +59,7 @@ export async function buildMunicipalGisPdf(data: GisPdfData): Promise<Buffer> {
 
   // ---- fonts --------------------------------------------------------------
   const registerFont = (name: string, file: string): string | null => {
-    const p = path.join(__dirname, "assets", file);
+    const p = path.join(esmDirname(import.meta.url), "assets", file);
     try {
       if (fs.existsSync(p)) {
         doc.registerFont(name, p);
@@ -217,7 +219,7 @@ export async function buildMunicipalGisPdf(data: GisPdfData): Promise<Buffer> {
 
   // ---- letterhead ---------------------------------------------------------
   {
-    const logoPath = path.join(__dirname, "assets", "DSWD-Logo.png");
+    const logoPath = path.join(esmDirname(import.meta.url), "assets", "DSWD-Logo.png");
     if (fs.existsSync(logoPath)) {
       try {
         doc.image(logoPath, LEFT, 20, { width: 50, height: 50 });

@@ -1,4 +1,4 @@
-import { CreateBeneficiarySchema } from './beneficiaries.zod';
+import { CreateBeneficiarySchema } from './beneficiaries.zod.js';
 
 const base = { surname: 'Santos', firstName: 'Maria', gender: 'Female' as const };
 

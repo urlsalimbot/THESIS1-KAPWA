@@ -1,13 +1,13 @@
 import { Entity, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
-import { Case } from './case.entity';
+import { BaseEntity } from '../common/base.entity.js';
+import type { Case } from './case.entity.js';
 
 @Entity('case_referrals')
 export class CaseReferral extends BaseEntity {
   @Column({ name: 'case_id' })
   caseId!: string;
 
-  @ManyToOne(() => Case, c => c.referralRows, { onDelete: 'CASCADE' })
+  @ManyToOne('Case', 'referralRows', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'case_id' })
   case!: Case;
 

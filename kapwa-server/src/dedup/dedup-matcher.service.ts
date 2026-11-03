@@ -1,4 +1,4 @@
-import { MatchSignals, soundex } from '../intake/match-scoring';
+import { MatchSignals, soundex } from '../intake/match-scoring.js';
 
 /**
  * Person-level matcher for client deduplication (spec §4).

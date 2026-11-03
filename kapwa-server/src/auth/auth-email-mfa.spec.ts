@@ -1,20 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuthService } from './auth.service';
+import { AuthService } from './auth.service.js';
 import { JwtService } from '@nestjs/jwt';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User, MfaMethod } from './user.entity';
-import { UserToken } from './user-token.entity';
-import { UserBarangayAssignment } from './user-barangay-assignment.entity';
-import { Person } from '../beneficiaries/person.entity';
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
-import { OtpService } from '../otp/otp.service';
-import { SmsGatewayService } from '../otp/sms-gateway.service';
-import { EmailService } from '../email/email.service';
-import * as bcrypt from 'bcrypt';
+import { User, MfaMethod } from './user.entity.js';
+import { UserToken } from './user-token.entity.js';
+import { UserBarangayAssignment } from './user-barangay-assignment.entity.js';
+import { Person } from '../beneficiaries/person.entity.js';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity.js';
+import { OtpService } from '../otp/otp.service.js';
+import { SmsGatewayService } from '../otp/sms-gateway.service.js';
+import { EmailService } from '../email/email.service.js';
+import bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 
-jest.mock('bcrypt');
 
 describe('AuthService — email OTP MFA', () => {
   let service: AuthService;
@@ -25,6 +24,7 @@ describe('AuthService — email OTP MFA', () => {
   const hash = (code: string) => crypto.createHash('sha256').update(code).digest('hex');
 
   beforeEach(async () => {
+    jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
     repoMock = { findOne: jest.fn(), create: jest.fn(), save: jest.fn() };
     const tokenRepoMock = { findOne: jest.fn(), create: jest.fn(), save: jest.fn(), delete: jest.fn() };
     jwtMock = { sign: jest.fn().mockReturnValue('signed-token'), verify: jest.fn() };

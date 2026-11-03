@@ -1,12 +1,12 @@
 import { Controller, Post, Body, Param, UseGuards, Request } from '@nestjs/common';
-import { IntakeService } from './intake.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { AbacGuard } from '../auth/guards/abac.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { IntakeInputCheckedSchema, IntakeInput, MatchCheckInputSchema, MatchCheckInput, ConfirmMatchInputSchema, ConfirmMatchInput } from './dto/intake.zod';
-import { AuthenticatedRequest } from '../auth/types';
+import { IntakeService } from './intake.service.js';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { AbacGuard } from '../auth/guards/abac.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { IntakeInputCheckedSchema, IntakeInput, MatchCheckInputSchema, MatchCheckInput, ConfirmMatchInputSchema, ConfirmMatchInput } from './dto/intake.zod.js';
+import { AuthenticatedRequest } from '../auth/types.js';
 
 @Controller('intake')
 @UseGuards(JwtAuthGuard, RolesGuard, AbacGuard)

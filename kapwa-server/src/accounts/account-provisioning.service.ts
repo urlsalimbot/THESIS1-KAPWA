@@ -1,20 +1,20 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
+import bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { User, UserRole } from '../auth/user.entity';
-import { UserToken } from '../auth/user-token.entity';
-import { Person } from '../beneficiaries/person.entity';
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
-import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
-import { EmailService } from '../email/email.service';
-import { SmsGatewayService } from '../otp/sms-gateway.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationCategory, NotificationType } from '../notifications/notification.entity';
-import { AuditLogService } from '../audit/audit-log.service';
-import { BCRYPT_SALT_ROUNDS } from '../common/constants';
-import { nextSequenceValue } from '../database/sequences';
+import { User, UserRole } from '../auth/user.entity.js';
+import { UserToken } from '../auth/user-token.entity.js';
+import { Person } from '../beneficiaries/person.entity.js';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity.js';
+import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity.js';
+import { EmailService } from '../email/email.service.js';
+import { SmsGatewayService } from '../otp/sms-gateway.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
+import { NotificationCategory, NotificationType } from '../notifications/notification.entity.js';
+import { AuditLogService } from '../audit/audit-log.service.js';
+import { BCRYPT_SALT_ROUNDS } from '../common/constants.js';
+import { nextSequenceValue } from '../database/sequences.js';
 
 export interface ProvisionClaimantInput {
   claimantPersonId: string;

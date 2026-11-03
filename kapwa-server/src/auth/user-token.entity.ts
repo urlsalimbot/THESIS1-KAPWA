@@ -1,10 +1,10 @@
 import { Entity, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
-import { User } from './user.entity';
+import { BaseEntity } from '../common/base.entity.js';
+import type { User } from './user.entity.js';
 
 @Entity('user_tokens')
 export class UserToken extends BaseEntity {
-  @ManyToOne(() => User, u => u.tokens, { onDelete: 'CASCADE' })
+  @ManyToOne('User', 'tokens', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user!: User;
 

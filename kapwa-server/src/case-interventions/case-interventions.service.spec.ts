@@ -1,4 +1,4 @@
-import { CaseInterventionsService } from './case-interventions.service';
+import { CaseInterventionsService } from './case-interventions.service.js';
 
 function mockService() {
   const interventionRepo = {

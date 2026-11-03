@@ -1,4 +1,4 @@
-import { BARANGAYS, BARANGAY_NAMES, exportFileName } from './constants';
+import { BARANGAYS, BARANGAY_NAMES, exportFileName } from './constants.js';
 
 describe('BARANGAY_NAMES', () => {
   // MSWDO Norzagaray operates 13 barangays — no more, no fewer. This list is

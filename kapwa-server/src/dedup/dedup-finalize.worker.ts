@@ -2,8 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ClientImportOperation } from './dedup.entity';
-import { DedupService } from './dedup.service';
+import { ClientImportOperation } from './dedup.entity.js';
+import { DedupService } from './dedup.service.js';
 
 /**
  * Runs queued dedup finalizes (`status = 'finalizing'`) outside the request path.

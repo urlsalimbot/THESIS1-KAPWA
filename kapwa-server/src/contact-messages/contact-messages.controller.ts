@@ -1,13 +1,13 @@
 import { Controller, Get, Param, ParseUUIDPipe, Patch, Post, Body, Request, UseGuards, UseInterceptors, SerializeOptions } from '@nestjs/common';
 import { ClassSerializerInterceptor } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { ContactMessagesService } from './contact-messages.service';
-import { ReplyContactMessageSchema, ReplyContactMessageInput } from './dto/contact-message.zod';
-import { AuthenticatedRequest } from '../auth/types';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { ContactMessagesService } from './contact-messages.service.js';
+import { ReplyContactMessageSchema, ReplyContactMessageInput } from './dto/contact-message.zod.js';
+import { AuthenticatedRequest } from '../auth/types.js';
 
 @ApiTags('Contact Messages')
 @Controller('contact-messages')

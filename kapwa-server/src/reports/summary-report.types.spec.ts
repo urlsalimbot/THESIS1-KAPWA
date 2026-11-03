@@ -1,7 +1,7 @@
 import {
   programColumnKey, selectCaseColumn, buildColumns, codeForColumn, mostRelevantProgram,
   SPEC_COLUMNS,
-} from './summary-report.types';
+} from './summary-report.types.js';
 
 const PROGRAMS = [
   { id: 'p-burial', name: 'Burial Assistance', category: 'Burial' },

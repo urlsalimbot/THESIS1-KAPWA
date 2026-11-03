@@ -1,5 +1,5 @@
-import { searchableText } from '../gis/gis-pdf-test.util';
-import { buildScsrPdf, ScsrPdfInput } from './scsr-pdf.builder';
+import { searchableText } from '../gis/gis-pdf-test.util.js';
+import { buildScsrPdf, ScsrPdfInput } from './scsr-pdf.builder.js';
 
 const base: Omit<ScsrPdfInput, 'kind'> = {
   officeName: 'Municipal Social Welfare and Development Office',

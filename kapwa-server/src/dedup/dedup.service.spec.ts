@@ -1,6 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
-import { DedupService } from './dedup.service';
-import { ColumnMap } from './dedup-parse.service';
+import { DedupService } from './dedup.service.js';
+import { ColumnMap } from './dedup-parse.service.js';
 
 const map: ColumnMap = {
   baseline: { lastName: 'Last Name', firstName: 'First Name', middleName: 'Middle Name', birthDate: 'Birthday', barangay: 'Barangay', remarks: 'Remarks' },

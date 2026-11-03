@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { NotificationsService } from './notifications.service';
-import { Notification, NotificationCategory } from './notification.entity';
-import { NotificationPreference } from './notification-preference.entity';
-import { SmsGatewayService } from '../otp/sms-gateway.service';
-import { NotificationsGateway } from './notifications.gateway';
-import { EmailService } from '../email/email.service';
+import { NotificationsService } from './notifications.service.js';
+import { Notification, NotificationCategory } from './notification.entity.js';
+import { NotificationPreference } from './notification-preference.entity.js';
+import { SmsGatewayService } from '../otp/sms-gateway.service.js';
+import { NotificationsGateway } from './notifications.gateway.js';
+import { EmailService } from '../email/email.service.js';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;

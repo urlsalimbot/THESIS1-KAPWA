@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { computeAgeFromDob } from '../compute-age';
+import { computeAgeFromDob } from '../compute-age.js';
 
 const NAME_EXTENSIONS = ['N/A', 'Jr.', 'Sr.', 'II', 'III', 'IV'] as const;
 

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { IrfCategory, IrfDisposition } from '../irf-case.entity';
+import { IrfCategory, IrfDisposition } from '../irf-case.entity.js';
 
 // Canonical key contract for the Item "A" (reporting person) and Item "B"
 // (person reported) JSONB columns on `irf_cases`. These keys mirror the printed

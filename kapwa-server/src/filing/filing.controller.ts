@@ -1,16 +1,16 @@
-import { MAX_FILE_SIZE } from '../common/constants';
+import { MAX_FILE_SIZE } from '../common/constants.js';
 import { BadRequestException, Controller, Get, Post, Patch, Delete, Param, Query, UseGuards, UploadedFile, Body, Request, UseInterceptors, StreamableFile, Res, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { Response } from 'express';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { FilingService } from './filing.service';
-import { CaseStepLocksService } from '../cases/case-step-locks.service';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { UploadMetadataSchema, VerifyDocumentSchema, VerifyDocumentInput } from './dto/filing.zod';
-import * as fs from 'fs';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { FilingService } from './filing.service.js';
+import { CaseStepLocksService } from '../cases/case-step-locks.service.js';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { UploadMetadataSchema, VerifyDocumentSchema, VerifyDocumentInput } from './dto/filing.zod.js';
+import fs from 'node:fs';
 
 @ApiTags('Filing')
 @Controller('filing')

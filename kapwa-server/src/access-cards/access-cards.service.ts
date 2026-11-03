@@ -1,18 +1,18 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { buildAccessCardPdf } from './access-card-pdf.builder';
-import { AccessCardPdfData } from './access-card-pdf.types';
-import { AccessCardService } from './access-card-service.entity';
-import { LogServiceInput, LogServiceRowSchema } from './dto/access-cards.zod';
+import { buildAccessCardPdf } from './access-card-pdf.builder.js';
+import { AccessCardPdfData } from './access-card-pdf.types.js';
+import { AccessCardService } from './access-card-service.entity.js';
+import { LogServiceInput, LogServiceRowSchema } from './dto/access-cards.zod.js';
 
 /** A category the card's tabs and every logging form agree on. */
 export type AccessCardCategory = NonNullable<LogServiceInput['category']>;
-import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
-import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
-import { Agency } from '../agencies/agency.entity';
-import { User } from '../auth/user.entity';
-import { OrgService } from '../common/org.service';
+import { ConsentLedger } from '../beneficiaries/consent-ledger.entity.js';
+import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity.js';
+import { Agency } from '../agencies/agency.entity.js';
+import { User } from '../auth/user.entity.js';
+import { OrgService } from '../common/org.service.js';
 
 const ACCESS_CARD_PAD_WIDTH = 4;
 @Injectable()

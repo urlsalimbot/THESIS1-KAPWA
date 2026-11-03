@@ -1,7 +1,7 @@
-import { Referral } from '../referrals/referral.entity';
-import { Person } from '../beneficiaries/person.entity';
-import { PersonContact } from '../beneficiaries/person-contact.entity';
-import { PersonAddress } from '../beneficiaries/person-address.entity';
+import { Referral } from '../referrals/referral.entity.js';
+import { Person } from '../beneficiaries/person.entity.js';
+import { PersonContact } from '../beneficiaries/person-contact.entity.js';
+import { PersonAddress } from '../beneficiaries/person-address.entity.js';
 import { instanceToPlain } from 'class-transformer';
 
 describe('Referral wave-2 getters', () => {

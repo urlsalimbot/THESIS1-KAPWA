@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { SmsGatewayService } from './sms-gateway.service';
+import { SmsGatewayService } from './sms-gateway.service.js';
 
 /**
  * `GET /config/public` — client-visible feature flags. Nothing private here:

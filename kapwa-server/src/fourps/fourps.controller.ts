@@ -4,15 +4,15 @@ import {
 } from '@nestjs/common';
 import { ClassSerializerInterceptor } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { AbacGuard } from '../auth/guards/abac.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { Sensitivity } from '../auth/decorators/resource-sensitivity.decorator';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { FourPsService } from './fourps.service';
-import { SchedulePayoutSchema, SchedulePayoutInput, PayoutStatusSchema, PayoutStatusInput } from './dto/fourps.zod';
-import { AuthenticatedRequest } from '../auth/types';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { AbacGuard } from '../auth/guards/abac.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { Sensitivity } from '../auth/decorators/resource-sensitivity.decorator.js';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { FourPsService } from './fourps.service.js';
+import { SchedulePayoutSchema, SchedulePayoutInput, PayoutStatusSchema, PayoutStatusInput } from './dto/fourps.zod.js';
+import { AuthenticatedRequest } from '../auth/types.js';
 
 @ApiTags('4Ps')
 @Controller('fourps')

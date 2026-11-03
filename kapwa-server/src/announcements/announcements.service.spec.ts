@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { AnnouncementsService } from './announcements.service';
-import { Announcement } from './announcement.entity';
-import { FilingService } from '../filing/filing.service';
+import { AnnouncementsService } from './announcements.service.js';
+import { Announcement } from './announcement.entity.js';
+import { FilingService } from '../filing/filing.service.js';
 
 type MockRepo = {
   save: jest.Mock;

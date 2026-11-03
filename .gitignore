@@ -97,3 +97,6 @@ pdf/preview/
 /docs/*
 # …except the audits: they are the record of what was found and fixed.
 !/docs/*-audit*.md
+
+# tsimp compile cache (seeds/dev runner)
+kapwa-server/.tsimp/

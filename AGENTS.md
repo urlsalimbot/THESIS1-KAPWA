@@ -8,13 +8,18 @@ Root `package.json` is a stub; each app has its own `package.json`. CI is `.gith
 
 ## Commands (run from `kapwa-server/` unless noted)
 
-- **Server full suite:** `npx jest --silent` (currently **147 suites / 1,594 tests PASS**). Do NOT use `npm test` — it adds `--coverage` and is slow.
-- **Single spec:** `npx jest <file>` e.g. `npx jest user-wave2`.
+- **Server full suite:** `NODE_OPTIONS=--experimental-vm-modules npx jest --silent` (currently **151 suites / 1,652 tests PASS**). Do NOT use `npm test` — it adds `--coverage` and is slow.
+- **Single spec:** `NODE_OPTIONS=--experimental-vm-modules npx jest <file>` e.g. `npx jest user-wave2`.
 - **Server typecheck:** `npm run typecheck` (`tsc --noEmit`). **Run this before claiming work done.**
 - **Server lint:** `npm run lint` (ESLint with `--fix`).
 - **Client typecheck:** `npm run typecheck` from `kapwa-client/`.
 - **Client tests:** `npm run test:run` (vitest) from `kapwa-client/`.
-- **Migrations:** `npm run migration:run` / `migration:revert` (TypeORM CLI, `-d src/database/data-source.ts`), or `npm run migrate` (= `node dist/database/migrate.js`, needs a prior build; this is the **fresh-boot bootstrap**, see below).
+- **Migrations:** `npm run migration:run` / `migration:revert` (TypeORM CLI via `typeorm-ts-node-esm`, `-d src/database/data-source.ts`), or `npm run migrate` (= `node dist/database/migrate.js`, needs a prior build; this is the **fresh-boot bootstrap**, see below).
+- **Seeds / dev server:** `npm run seed*` and `npm run start:dev` execute TypeScript through `tsimp`; the built server runs as `node dist/main.js`.
+
+## Module system — ESM
+
+`kapwa-server` is native ESM (`"type": "module"`, `module: nodenext`). Relative imports must carry `.js`; use `esmDirname(import.meta.url)` from `src/common/esm-path.ts` instead of `__dirname`, and `nodeRequire` from `src/common/node-require.ts` for lazily loaded CJS packages. Jest needs `NODE_OPTIONS=--experimental-vm-modules` (the npm scripts already set it) and `jest.config.cjs` maps `.js` specifiers back to `.ts`. Do not use `tsx`/esbuild for scripts: it cannot emit decorator metadata, which TypeORM needs.
 
 ## DB bootstrap — critical gotcha
 

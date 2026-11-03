@@ -1,9 +1,9 @@
 import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { INTERVENTION_TYPES } from '../common/case-catalog';
-import { InterventionCatalogEntry } from './intervention-catalog.entity';
-import { CreateServiceTypeInput, UpdateServiceTypeInput } from './dto/intervention-catalog.zod';
+import { INTERVENTION_TYPES } from '../common/case-catalog.js';
+import { InterventionCatalogEntry } from './intervention-catalog.entity.js';
+import { CreateServiceTypeInput, UpdateServiceTypeInput } from './dto/intervention-catalog.zod.js';
 
 /** The code stored on rows and sent by the client, derived once from the label. */
 export function serviceTypeCode(label: string): string {

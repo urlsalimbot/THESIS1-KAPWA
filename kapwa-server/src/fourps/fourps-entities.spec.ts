@@ -1,7 +1,7 @@
 import { getMetadataArgsStorage } from 'typeorm';
-import { CaseComplianceItem } from './fourps-compliance.entity';
-import { CasePayout } from './fourps-payout.entity';
-import { Household } from '../beneficiaries/household.entity';
+import { CaseComplianceItem } from './fourps-compliance.entity.js';
+import { CasePayout } from './fourps-payout.entity.js';
+import { Household } from '../beneficiaries/household.entity.js';
 
 describe('fourps entities', () => {
   const storage = getMetadataArgsStorage();

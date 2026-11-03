@@ -1,5 +1,5 @@
-import { mean, std, zScore, euclidean, median } from './stats';
-import type { FeatureKey, HouseholdFeatureRow } from '../analytics.types';
+import { mean, std, zScore, euclidean, median } from './stats.js';
+import type { FeatureKey, HouseholdFeatureRow } from '../analytics.types.js';
 
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;

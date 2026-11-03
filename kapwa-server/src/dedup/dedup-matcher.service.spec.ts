@@ -1,4 +1,4 @@
-import { personSignals, dedupScore, DEDUP_THRESHOLD_DEFAULT } from './dedup-matcher.service';
+import { personSignals, dedupScore, DEDUP_THRESHOLD_DEFAULT } from './dedup-matcher.service.js';
 
 const sim = (x: string, y: string): number => (x === y ? 1 : 0.5);
 

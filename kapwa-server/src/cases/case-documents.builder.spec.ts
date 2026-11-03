@@ -6,7 +6,7 @@ import {
   money,
   CertificateOfEligibilityData,
   PettyCashVoucherData,
-} from './case-documents.builder';
+} from './case-documents.builder.js';
 
 function searchableText(buf: Buffer): string {
   const raw = buf.toString('latin1');

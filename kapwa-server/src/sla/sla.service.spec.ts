@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { SlaService } from './sla.service';
-import { Case, CaseStatus } from '../cases/case.entity';
-import { Notification } from '../notifications/notification.entity';
+import { SlaService } from './sla.service.js';
+import { Case, CaseStatus } from '../cases/case.entity.js';
+import { Notification } from '../notifications/notification.entity.js';
 
 describe('SlaService', () => {
   let service: SlaService;

@@ -2,11 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ForbiddenException } from '@nestjs/common';
 import { In, Not } from 'typeorm';
-import * as fs from 'fs';
-import { FilingService } from './filing.service';
-import { DocumentVault } from './filing.entity';
-import { Case } from '../cases/case.entity';
-import { DEFAULT_DOC_LIMIT } from '../common/constants';
+import fs from 'node:fs';
+import { FilingService } from './filing.service.js';
+import { DocumentVault } from './filing.entity.js';
+import { Case } from '../cases/case.entity.js';
+import { DEFAULT_DOC_LIMIT } from '../common/constants.js';
 
 describe('FilingService', () => {
   let service: FilingService;

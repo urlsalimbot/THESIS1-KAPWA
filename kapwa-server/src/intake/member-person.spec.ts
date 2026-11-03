@@ -1,5 +1,5 @@
-import { memberToPerson } from './member-person';
-import type { FamilyMemberInput } from './dto/intake.zod';
+import { memberToPerson } from './member-person.js';
+import type { FamilyMemberInput } from './dto/intake.zod.js';
 
 describe('memberToPerson', () => {
   beforeEach(() => {

@@ -1,5 +1,5 @@
 import { UnauthorizedException } from '@nestjs/common';
-import { JwtStrategy } from './jwt.strategy';
+import { JwtStrategy } from './jwt.strategy.js';
 
 describe('JwtStrategy — disabled accounts', () => {
   const config = { get: () => 'test-secret' } as any;

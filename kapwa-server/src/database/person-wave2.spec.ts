@@ -1,6 +1,6 @@
-import { Person } from '../beneficiaries/person.entity';
-import { PersonContact } from '../beneficiaries/person-contact.entity';
-import { PersonAddress } from '../beneficiaries/person-address.entity';
+import { Person } from '../beneficiaries/person.entity.js';
+import { PersonContact } from '../beneficiaries/person-contact.entity.js';
+import { PersonAddress } from '../beneficiaries/person-address.entity.js';
 
 describe('Person wave-2 getters', () => {
   it('assembles legacy flattened fields from child rows', () => {

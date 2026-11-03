@@ -1,5 +1,6 @@
+import { isMain } from '../common/is-main.js';
 import { DataSource } from 'typeorm';
-import { seedPrograms } from './seed-programs';
+import { seedPrograms } from './seed-programs.js';
 
 // Mirrors migration ZBackfillInterventionPrograms…0063: links historical
 // interventions that have no program to the (just-seeded) programme catalogue
@@ -1689,7 +1690,7 @@ await q.query(`
     name TEXT NOT NULL
   )`);
   if (wasFresh) {
-    const { AppDataSource } = await import('./data-source');
+    const { AppDataSource } = await import('./data-source.js');
     // Extensions are installed explicitly above; leaving TypeORM's implicit
     // install enabled makes initialize() run `CREATE EXTENSION` on a second
     // connection, which deadlocks against this still-open transaction (the
@@ -1744,7 +1745,7 @@ await q.query(`
 // error was logged and the process still exited 0 — a deploy could report
 // success with an empty database (the audit's schema-parity check found
 // exactly that, on a bootstrap that had been broken for a day).
-if (require.main === module) {
+if (isMain(import.meta.url)) {
   migrate().catch((err) => {
     console.error('FATAL: fresh-boot bootstrap failed — no schema was applied:');
     if (err instanceof Error) {

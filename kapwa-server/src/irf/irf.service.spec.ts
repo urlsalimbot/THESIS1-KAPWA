@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { IrfService } from './irf.service';
-import { OrgService } from '../common/org.service';
-import { IrfCase, IrfDisposition } from './irf-case.entity';
+import { IrfService } from './irf.service.js';
+import { OrgService } from '../common/org.service.js';
+import { IrfCase, IrfDisposition } from './irf-case.entity.js';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { IrfKeyService } from './irf-key.service';
-import { IrfAuditService } from './irf-audit.service';
+import { IrfKeyService } from './irf-key.service.js';
+import { IrfAuditService } from './irf-audit.service.js';
 import { ForbiddenException, BadRequestException } from '@nestjs/common';
 
 describe('IrfService', () => {

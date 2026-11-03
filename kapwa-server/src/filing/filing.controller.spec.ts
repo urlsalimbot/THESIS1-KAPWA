@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Reflector } from '@nestjs/core';
 import { BadRequestException, ConflictException, StreamableFile } from '@nestjs/common';
-import * as fs from 'fs';
-import { FilingController } from './filing.controller';
-import { FilingService } from './filing.service';
-import { CaseStepLocksService } from '../cases/case-step-locks.service';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { ROLES_KEY } from '../auth/decorators/roles.decorator';
+import fs from 'node:fs';
+import { FilingController } from './filing.controller.js';
+import { FilingService } from './filing.service.js';
+import { CaseStepLocksService } from '../cases/case-step-locks.service.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { ROLES_KEY } from '../auth/decorators/roles.decorator.js';
 
 describe('FilingController — case ID photo endpoint', () => {
   let controller: FilingController;

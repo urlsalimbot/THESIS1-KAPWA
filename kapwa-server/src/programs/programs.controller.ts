@@ -1,12 +1,12 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, UseInterceptors, SerializeOptions } from '@nestjs/common';
 import { ClassSerializerInterceptor } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { ProgramsService } from './programs.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { CreateProgramSchema, UpdateProgramSchema, CreateProgramInput, UpdateProgramInput } from './dto/programs.zod';
+import { ProgramsService } from './programs.service.js';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { CreateProgramSchema, UpdateProgramSchema, CreateProgramInput, UpdateProgramInput } from './dto/programs.zod.js';
 
 @ApiTags('Programs')
 @ApiBearerAuth()

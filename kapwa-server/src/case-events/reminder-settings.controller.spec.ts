@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ReminderSettingsController } from './reminder-settings.controller';
-import { ReminderSettingsService } from './reminder-settings.service';
-import { AbacGuard } from '../auth/guards/abac.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { AuthenticatedRequest } from '../auth/types';
+import { ReminderSettingsController } from './reminder-settings.controller.js';
+import { ReminderSettingsService } from './reminder-settings.service.js';
+import { AbacGuard } from '../auth/guards/abac.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { AuthenticatedRequest } from '../auth/types.js';
 
 describe('ReminderSettingsController', () => {
   let ctrl: ReminderSettingsController;

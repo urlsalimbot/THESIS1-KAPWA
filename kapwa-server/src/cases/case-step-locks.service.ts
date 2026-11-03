@@ -1,28 +1,28 @@
 import { Injectable, BadRequestException, ConflictException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DeepPartial, In, Not } from 'typeorm';
-import { CaseStepLock } from './case-step-lock.entity';
-import { CasesService } from './cases.service';
-import { AuditLogService } from '../audit/audit-log.service';
-import { CaseIntervention } from '../case-interventions/case-intervention.entity';
-import { Program } from '../programs/program.entity';
-import { ProgramEnrollment } from '../case-enrollments/program-enrollment.entity';
-import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
-import { User } from '../auth/user.entity';
-import { CaseEvent } from '../case-events/case-event.entity';
-import { InterventionRequiredDocument } from './intervention-required-document.entity';
-import { CaseStatus } from './case.entity';
+import { CaseStepLock } from './case-step-lock.entity.js';
+import { CasesService } from './cases.service.js';
+import { AuditLogService } from '../audit/audit-log.service.js';
+import { CaseIntervention } from '../case-interventions/case-intervention.entity.js';
+import { Program } from '../programs/program.entity.js';
+import { ProgramEnrollment } from '../case-enrollments/program-enrollment.entity.js';
+import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity.js';
+import { User } from '../auth/user.entity.js';
+import { CaseEvent } from '../case-events/case-event.entity.js';
+import { InterventionRequiredDocument } from './intervention-required-document.entity.js';
+import { CaseStatus } from './case.entity.js';
 
 /**
  * Re-exported, not declared here: `CasesService` has to name the open steps in
  * its review gate, and importing the const from this file would make the two
  * services require each other. See `case-step-labels.ts`.
  */
-export { CASE_STEP_LABELS, stepsDueAt, stepsForCategory, KNOWN_STEP_KEYS, CASE_STEP_UNGUARDED_FIELDS } from './case-step-labels';
+export { CASE_STEP_LABELS, stepsDueAt, stepsForCategory, KNOWN_STEP_KEYS, CASE_STEP_UNGUARDED_FIELDS } from './case-step-labels.js';
 import {
   CASE_STEP_LABELS, CASE_STEP_FLOORS, CASE_STATUS_INDEX, CASE_STEP_UNGUARDED_FIELDS,
   KNOWN_STEP_KEYS, stepsForCategory,
-} from './case-step-labels';
+} from './case-step-labels.js';
 
 // Minimum lifecycle position at which a step may be "done" — `CASE_STEP_FLOORS`
 // in `case-step-labels.ts`, which is where it now lives. It moved out of this

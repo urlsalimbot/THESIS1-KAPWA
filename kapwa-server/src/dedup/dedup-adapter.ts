@@ -1,5 +1,5 @@
 import { DataSource } from 'typeorm';
-import { PersonRecord } from './dedup-match-sweep.service';
+import { PersonRecord } from './dedup-match-sweep.service.js';
 
 /**
  * The sweep's database-facing half: candidate prefilter (pg_trgm over surname

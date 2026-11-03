@@ -1,14 +1,14 @@
 import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Request, UseInterceptors, SerializeOptions, Res } from '@nestjs/common';
 import { ClassSerializerInterceptor } from '@nestjs/common';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { CreateReferralSchema, DeclineReferralSchema, CreateReferralInput, DeclineReferralInput } from './dto/referrals.zod';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { CreateReferralSchema, DeclineReferralSchema, CreateReferralInput, DeclineReferralInput } from './dto/referrals.zod.js';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { AbacGuard } from '../auth/guards/abac.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { ReferralsService } from './referrals.service';
-import { AuthenticatedRequest } from '../auth/types';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { AbacGuard } from '../auth/guards/abac.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { ReferralsService } from './referrals.service.js';
+import { AuthenticatedRequest } from '../auth/types.js';
 
 @ApiTags('Referrals')
 @Controller('referrals')

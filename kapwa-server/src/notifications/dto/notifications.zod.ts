@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { NotificationCategory, NotificationType } from '../notification.entity';
+import { NotificationCategory, NotificationType } from '../notification.entity.js';
 
 export const CreateNotificationSchema = z.object({
   recipientId: z.string().min(1, 'recipientId is required'),

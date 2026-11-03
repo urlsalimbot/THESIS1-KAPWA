@@ -1,5 +1,5 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logger } from '@nestjs/common';
-import { phTime } from '../utils';
+import { phTime } from '../utils.js';
 import { ThrottlerException } from '@nestjs/throttler';
 import { WsException } from '@nestjs/websockets';
 import { Response, Request } from 'express';

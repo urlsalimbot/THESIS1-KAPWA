@@ -1,4 +1,4 @@
-import { mean, std, median, quantile, zScore, gini, lorenzPoints, hhi, euclidean, clamp } from './stats';
+import { mean, std, median, quantile, zScore, gini, lorenzPoints, hhi, euclidean, clamp } from './stats.js';
 
 describe('stats helpers', () => {
   it('computes central tendency and spread', () => {

@@ -1,7 +1,7 @@
-import { AgencyContact } from '../agencies/agency-contact.entity';
-import { ProgramFundSource } from '../programs/program-fund-source.entity';
-import { ProgramRequiredDocument } from '../programs/program-required-document.entity';
-import { Referral } from '../referrals/referral.entity';
+import { AgencyContact } from '../agencies/agency-contact.entity.js';
+import { ProgramFundSource } from '../programs/program-fund-source.entity.js';
+import { ProgramRequiredDocument } from '../programs/program-required-document.entity.js';
+import { Referral } from '../referrals/referral.entity.js';
 
 describe('schema normalization — referrals person link', () => {
   it('supports a nullable person_id', () => {

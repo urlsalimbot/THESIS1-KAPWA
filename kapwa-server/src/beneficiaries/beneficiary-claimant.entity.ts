@@ -1,6 +1,6 @@
 import { Entity, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { Person } from './person.entity';
-import { BaseEntity } from '../common/base.entity';
+import { Person } from './person.entity.js';
+import { BaseEntity } from '../common/base.entity.js';
 
 @Entity('beneficiary_claimants')
 export class BeneficiaryClaimant extends BaseEntity {

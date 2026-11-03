@@ -1,6 +1,6 @@
 import { Reflector } from '@nestjs/core';
-import { UsersController } from './users.controller';
-import { ROLES_KEY } from '../auth/decorators/roles.decorator';
+import { UsersController } from './users.controller.js';
+import { ROLES_KEY } from '../auth/decorators/roles.decorator.js';
 
 describe('UsersController — no delete, disable/enable only', () => {
   const reflector = new Reflector();

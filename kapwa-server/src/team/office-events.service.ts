@@ -1,8 +1,8 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
-import { AuditLogService } from '../audit/audit-log.service';
-import { OfficeEvent } from './office-event.entity';
+import { AuditLogService } from '../audit/audit-log.service.js';
+import { OfficeEvent } from './office-event.entity.js';
 
 // Canonical office-event visibility vocabulary (plan constraint): an event
 // is visible to ordinary staff, or to staff + coordinators. Stored as

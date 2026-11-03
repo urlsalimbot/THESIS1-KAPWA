@@ -1,7 +1,9 @@
+import { esmDirname } from '../common/esm-path.js';
+import { nodeRequire } from '../common/node-require.js';
 import * as path from "path";
 import * as fs from "fs";
-import { GisPdfData } from "./gis-export.types";
-import { ORG_LOCATION } from "../common/constants";
+import { GisPdfData } from "./gis-export.types.js";
+import { ORG_LOCATION } from "../common/constants.js";
 
 // General Intake Sheet — single-page reproduction of DSWD FO3 form
 // DSWD-PMB-GF-011 | REV 01 / 30 SEPT 2022.
@@ -55,7 +57,7 @@ interface CellSpec {
 
 export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const PDFDocument = require("pdfkit");
+  const PDFDocument = nodeRequire("pdfkit");
   const doc = new PDFDocument({
     size: "A4",
     margins: { top: 18, bottom: 18, left: LEFT, right: 595.28 - RIGHT },
@@ -87,7 +89,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
   // the black role maps to its Bold face. If a file is missing the builder
   // falls back to the base-14 Helvetica family so the document still renders.
   const registerFont = (name: string, file: string): string | null => {
-    const p = path.join(__dirname, "assets", file);
+    const p = path.join(esmDirname(import.meta.url), "assets", file);
     try {
       if (fs.existsSync(p)) {
         doc.registerFont(name, p);
@@ -264,7 +266,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
   };
 
   // ---- header -----------------------------------------------------------
-  const logoPath = path.join(__dirname, "assets", "DSWD-Banner.png");
+  const logoPath = path.join(esmDirname(import.meta.url), "assets", "DSWD-Banner.png");
   const logoY = 26;
   const logoH = 60;
 
@@ -1013,7 +1015,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
   
   // SOCOTECH logo — drawn LAST so it sits on top of everything in this
   // section's print order, centred under the approver details.
-  const socotechPath = path.join(__dirname, "assets", "socotech.jpg");
+  const socotechPath = path.join(esmDirname(import.meta.url), "assets", "socotech.jpg");
   if (fs.existsSync(socotechPath)) {
     try {
       doc.image(socotechPath, cxR - 20, y-24, {

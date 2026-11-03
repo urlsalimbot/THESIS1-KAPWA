@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { SyncService } from './sync.service';
-import { SyncController } from './sync.controller';
-import { SyncQueue } from './sync-queue.entity';
-import { VersionVector } from './version-vector.entity';
-import { ConflictResolver } from './conflict-resolver';
-import { IntakeModule } from '../intake/intake.module';
-import { AuthModule } from '../auth/auth.module';
-import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
-import { CasesModule } from '../cases/cases.module';
+import { SyncService } from './sync.service.js';
+import { SyncController } from './sync.controller.js';
+import { SyncQueue } from './sync-queue.entity.js';
+import { VersionVector } from './version-vector.entity.js';
+import { ConflictResolver } from './conflict-resolver.js';
+import { IntakeModule } from '../intake/intake.module.js';
+import { AuthModule } from '../auth/auth.module.js';
+import { ConsentLedger } from '../beneficiaries/consent-ledger.entity.js';
+import { CasesModule } from '../cases/cases.module.js';
 
 @Module({
   imports: [

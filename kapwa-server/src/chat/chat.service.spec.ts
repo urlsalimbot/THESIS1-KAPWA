@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ChatService } from './chat.service';
-import { ChatMessage } from './chat.entity';
-import { User } from '../auth/user.entity';
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
-import { Case } from '../cases/case.entity';
+import { ChatService } from './chat.service.js';
+import { ChatMessage } from './chat.entity.js';
+import { User } from '../auth/user.entity.js';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity.js';
+import { Case } from '../cases/case.entity.js';
 
 describe('ChatService', () => {
   let service: ChatService;

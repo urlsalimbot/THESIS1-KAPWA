@@ -1,3 +1,5 @@
+import { esmDirname } from '../common/esm-path.js';
+import { nodeRequire } from '../common/node-require.js';
 // Incident Report Form (Blotter) — exact reproduction of the MSWDO Norzagaray
 // paper form as a generated PDF.
 //
@@ -123,7 +125,7 @@ function formatDateTime(value?: Date | string | null): string {
 
 export async function buildIrfPdf(data: IrfPdfData, opts: IrfPdfOptions = {}): Promise<Buffer> {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const PDFDocument = require('pdfkit');
+  const PDFDocument = nodeRequire('pdfkit');
   const docOptions: Record<string, unknown> = {
     size: 'A4',
     margins: { top: 24, bottom: 24, left: 24, right: 24 },
@@ -237,14 +239,14 @@ export async function buildIrfPdf(data: IrfPdfData, opts: IrfPdfOptions = {}): P
   // Title block: municipality badge (left), centred title, DSWD logo (right)
   const sealCx = titleX + 38;
   const sealSize = 48;
-  const sealPath = path.join(__dirname, '..', 'gis', 'assets', 'norzagaray-bulacan-official-logo.png');
+  const sealPath = path.join(esmDirname(import.meta.url), '..', 'gis', 'assets', 'norzagaray-bulacan-official-logo.png');
   if (fs.existsSync(sealPath)) {
     try {
       doc.image(sealPath, sealCx - sealSize / 2, TOP + (R.header - sealSize) / 2, { fit: [sealSize, sealSize] });
     } catch { /* header renders without the badge */ }
   }
 
-  const logoPath = path.join(__dirname, '..', 'gis', 'assets', 'DSWD-Logo.png');
+  const logoPath = path.join(esmDirname(import.meta.url), '..', 'gis', 'assets', 'DSWD-Logo.png');
   if (fs.existsSync(logoPath)) {
     try {
       doc.image(logoPath, RIGHT - 62, TOP + 6, { fit: [54, 54] });

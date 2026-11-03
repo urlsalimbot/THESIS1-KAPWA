@@ -1,10 +1,10 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { UnprocessableEntityException } from '@nestjs/common';
-import { AnalyticsService } from './analytics.service';
-import { Case } from '../cases/case.entity';
-import { CacheService } from '../common/cache.service';
-import { complementSuppression } from './suppression';
+import { AnalyticsService } from './analytics.service.js';
+import { Case } from '../cases/case.entity.js';
+import { CacheService } from '../common/cache.service.js';
+import { complementSuppression } from './suppression.js';
 
 describe('AnalyticsService', () => {
   let service: AnalyticsService;

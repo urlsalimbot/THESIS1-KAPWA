@@ -1,7 +1,7 @@
 import { Reflector } from '@nestjs/core';
 import { BadRequestException, NotFoundException, StreamableFile } from '@nestjs/common';
-import { DedupController } from './dedup.controller';
-import { RemarksController } from './remarks.controller';
+import { DedupController } from './dedup.controller.js';
+import { RemarksController } from './remarks.controller.js';
 
 const dedup: any = {
   create: jest.fn(), upload: jest.fn(), list: jest.fn(), detail: jest.fn(),

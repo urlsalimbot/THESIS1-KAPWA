@@ -1,15 +1,15 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
-import { CaseEvent } from './case-event.entity';
-import { Case } from '../cases/case.entity';
-import { CaseStepLocksService } from '../cases/case-step-locks.service';
-import { TeamScheduleSyncService } from '../team/team-schedule-sync.service';
-import { AuditLogService } from '../audit/audit-log.service';
-import { CreateCaseEventInput, CreateCaseEventSchema, UpdateCaseEventInput, UpdateCaseEventSchema } from './dto/case-events.zod';
+import { CaseEvent } from './case-event.entity.js';
+import { Case } from '../cases/case.entity.js';
+import { CaseStepLocksService } from '../cases/case-step-locks.service.js';
+import { TeamScheduleSyncService } from '../team/team-schedule-sync.service.js';
+import { AuditLogService } from '../audit/audit-log.service.js';
+import { CreateCaseEventInput, CreateCaseEventSchema, UpdateCaseEventInput, UpdateCaseEventSchema } from './dto/case-events.zod.js';
 
-export { LEGAL_CATEGORIES } from './case-events.constants';
-import { LEGAL_CATEGORIES, shouldSyncCaseEvent } from './case-events.constants';
+export { LEGAL_CATEGORIES } from './case-events.constants.js';
+import { LEGAL_CATEGORIES, shouldSyncCaseEvent } from './case-events.constants.js';
 
 @Injectable()
 export class CaseEventsService {

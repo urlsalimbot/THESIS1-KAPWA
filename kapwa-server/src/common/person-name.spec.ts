@@ -1,4 +1,4 @@
-import { displayFullName, middleInitialOf } from './person-name';
+import { displayFullName, middleInitialOf } from './person-name.js';
 
 describe('person-name display', () => {
   it('shows the middle name in full on application screens', () => {

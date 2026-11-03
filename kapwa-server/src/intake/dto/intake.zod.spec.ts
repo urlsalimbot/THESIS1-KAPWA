@@ -1,4 +1,4 @@
-import { FamilyMemberSchema, IntakeInputCheckedSchema, IntakeInputSchema } from './intake.zod';
+import { FamilyMemberSchema, IntakeInputCheckedSchema, IntakeInputSchema } from './intake.zod.js';
 
 describe('PersonSchema (via IntakeInputSchema)', () => {
   const address = { street: '12 Probe St', barangay: 'Bigte', city: 'Norzagaray', province: 'Bulacan', region: 'Region III', postalCode: '3013' };

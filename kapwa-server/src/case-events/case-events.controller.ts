@@ -1,12 +1,12 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { AbacGuard } from '../auth/guards/abac.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { AuthenticatedRequest } from '../auth/types';
-import { CaseEventsService } from './case-events.service';
-import { CreateCaseEventInput, UpdateCaseEventInput } from './dto/case-events.zod';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { AbacGuard } from '../auth/guards/abac.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { AuthenticatedRequest } from '../auth/types.js';
+import { CaseEventsService } from './case-events.service.js';
+import { CreateCaseEventInput, UpdateCaseEventInput } from './dto/case-events.zod.js';
 
 // Court hearings + scheduled home visits on a case. Writes are
 // admin + social_worker (the same matrix every case write route uses);

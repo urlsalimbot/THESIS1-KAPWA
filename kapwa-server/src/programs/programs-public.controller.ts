@@ -1,6 +1,6 @@
 import { Controller, Get, Param, NotFoundException, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { ProgramsService } from './programs.service';
+import { ProgramsService } from './programs.service.js';
 
 // Public read-only view of active programs. Guards nothing — the website's
 // public visitors must see available assistance programs without an account.

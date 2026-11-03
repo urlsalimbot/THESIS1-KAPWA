@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { BeneficiaryRemarksService } from './beneficiary-remarks.service';
+import { BeneficiaryRemarksService } from './beneficiary-remarks.service.js';
 
 function mockRepo(over: any = {}) {
   return {

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpStatus } from '@nestjs/common';
-import { ExportController } from './export.controller';
-import { ExportService } from './export.service';
+import { ExportController } from './export.controller.js';
+import { ExportService } from './export.service.js';
 
 describe('ExportController month validation', () => {
   let controller: ExportController;

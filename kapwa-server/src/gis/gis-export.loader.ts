@@ -1,10 +1,10 @@
 import { NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
-import { Case } from '../cases/case.entity';
-import { CaseIntervention } from '../case-interventions/case-intervention.entity';
-import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
-import { GisPdfData, GisAddressData } from './gis-export.types';
-import { middleInitialOf } from '../common/person-name';
+import { Case } from '../cases/case.entity.js';
+import { CaseIntervention } from '../case-interventions/case-intervention.entity.js';
+import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity.js';
+import { GisPdfData, GisAddressData } from './gis-export.types.js';
+import { middleInitialOf } from '../common/person-name.js';
 
 export interface GisCaseLoaderDeps {
   caseRepo: Repository<Case>;

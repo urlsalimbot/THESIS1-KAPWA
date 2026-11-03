@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { SummaryReportData } from './summary-report.types';
-import { buildSummaryReportPdf } from './summary-report-pdf.builder';
+import { SummaryReportData } from './summary-report.types.js';
+import { buildSummaryReportPdf } from './summary-report-pdf.builder.js';
 
 @Injectable()
 export class SummaryReportPdfBuilder {

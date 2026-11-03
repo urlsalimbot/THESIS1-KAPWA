@@ -1,7 +1,7 @@
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
-import { Agency } from '../agencies/agency.entity';
-import { DECIMAL_AS_NUMBER } from '../common/transformers';
+import { BaseEntity } from '../common/base.entity.js';
+import { Agency } from '../agencies/agency.entity.js';
+import { DECIMAL_AS_NUMBER } from '../common/transformers.js';
 
 @Entity('access_card_services')
 export class AccessCardService extends BaseEntity {

@@ -7,15 +7,15 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User, UserRole } from '../auth/user.entity';
-import { Agency } from '../agencies/agency.entity';
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
-import { middleInitialOf } from '../common/person-name';
-import { REFERRAL_INTERVENTION_AGENCY } from '../common/case-catalog';
-import { Case } from '../cases/case.entity';
-import { InterAgencyReferral } from './inter-agency-referral.entity';
-import { IssueEndorsementLetterInput } from './dto/inter-agency-referrals.zod';
-import { buildEndorsementLetterPdf, EndorsementLetterData } from './endorsement-letter.builder';
+import { User, UserRole } from '../auth/user.entity.js';
+import { Agency } from '../agencies/agency.entity.js';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity.js';
+import { middleInitialOf } from '../common/person-name.js';
+import { REFERRAL_INTERVENTION_AGENCY } from '../common/case-catalog.js';
+import { Case } from '../cases/case.entity.js';
+import { InterAgencyReferral } from './inter-agency-referral.entity.js';
+import { IssueEndorsementLetterInput } from './dto/inter-agency-referrals.zod.js';
+import { buildEndorsementLetterPdf, EndorsementLetterData } from './endorsement-letter.builder.js';
 
 /**
  * The module's whole surface is the endorsement letter: issuing it records the

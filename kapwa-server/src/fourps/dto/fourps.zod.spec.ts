@@ -1,4 +1,4 @@
-import { SchedulePayoutSchema, PayoutStatusSchema } from './fourps.zod';
+import { SchedulePayoutSchema, PayoutStatusSchema } from './fourps.zod.js';
 
 describe('fourps zod schemas', () => {
   it('accepts a minimal payout schedule', () => {

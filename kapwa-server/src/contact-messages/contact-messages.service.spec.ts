@@ -1,10 +1,10 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ContactMessagesService } from './contact-messages.service';
-import { ContactMessage, ContactMessageReply } from './contact-message.entity';
-import { User } from '../auth/user.entity';
-import { NotificationsService } from '../notifications/notifications.service';
-import { MailerService } from '../common/mailer.service';
+import { ContactMessagesService } from './contact-messages.service.js';
+import { ContactMessage, ContactMessageReply } from './contact-message.entity.js';
+import { User } from '../auth/user.entity.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
+import { MailerService } from '../common/mailer.service.js';
 
 describe('ContactMessagesService', () => {
   let svc: ContactMessagesService;

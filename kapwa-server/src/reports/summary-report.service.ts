@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { User } from '../auth/user.entity';
-import { OrgService } from '../common/org.service';
-import { REPORT_FALLBACK_SIGNATORIES } from '../common/constants';
+import { User } from '../auth/user.entity.js';
+import { OrgService } from '../common/org.service.js';
+import { REPORT_FALLBACK_SIGNATORIES } from '../common/constants.js';
 import {
   CaseClassificationInput, CaseListRow, ReportColumn, SummaryCounts, SummaryReportData,
   buildColumns, selectCaseColumn,
-} from './summary-report.types';
+} from './summary-report.types.js';
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 

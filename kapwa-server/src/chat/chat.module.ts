@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
-import { ChatService } from './chat.service';
-import { ChatController } from './chat.controller';
-import { ChatGateway } from './chat.gateway';
-import { ChatMessage } from './chat.entity';
-import { User } from '../auth/user.entity';
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
-import { Case } from '../cases/case.entity';
+import { ChatService } from './chat.service.js';
+import { ChatController } from './chat.controller.js';
+import { ChatGateway } from './chat.gateway.js';
+import { ChatMessage } from './chat.entity.js';
+import { User } from '../auth/user.entity.js';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity.js';
+import { Case } from '../cases/case.entity.js';
 
 @Module({
   imports: [

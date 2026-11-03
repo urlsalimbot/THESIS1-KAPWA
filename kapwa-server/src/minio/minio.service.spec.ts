@@ -1,4 +1,4 @@
-import { MinioService } from './minio.service';
+import { MinioService } from './minio.service.js';
 import type { ConfigService } from '@nestjs/config';
 
 function makeService(env: Record<string, string> = {}) {

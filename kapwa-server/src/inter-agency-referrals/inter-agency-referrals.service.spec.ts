@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { InterAgencyReferralsService } from './inter-agency-referrals.service';
-import { InterAgencyReferral } from './inter-agency-referral.entity';
-import { Agency } from '../agencies/agency.entity';
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
-import { Case } from '../cases/case.entity';
-import { User, UserRole } from '../auth/user.entity';
+import { InterAgencyReferralsService } from './inter-agency-referrals.service.js';
+import { InterAgencyReferral } from './inter-agency-referral.entity.js';
+import { Agency } from '../agencies/agency.entity.js';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity.js';
+import { Case } from '../cases/case.entity.js';
+import { User, UserRole } from '../auth/user.entity.js';
 
 function agencyUser(id: string, agencyId: string) {
   return { id, role: 'social_worker', agencyId } as any;

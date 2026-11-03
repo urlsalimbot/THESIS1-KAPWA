@@ -1,6 +1,6 @@
 import { Entity, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
-import { Case } from './case.entity';
+import { BaseEntity } from '../common/base.entity.js';
+import type { Case } from './case.entity.js';
 
 // Follow-up / home visits recorded during the Phase-Out (Evaluate Help Given)
 // step. Normalized child table of `cases` so the visit history is queryable and
@@ -11,7 +11,7 @@ export class CaseFollowUpVisit extends BaseEntity {
   @Column({ name: 'case_id' })
   caseId!: string;
 
-  @ManyToOne(() => Case, c => c.followUpVisitRows, { onDelete: 'CASCADE' })
+  @ManyToOne('Case', 'followUpVisitRows', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'case_id' })
   case!: Case;
 

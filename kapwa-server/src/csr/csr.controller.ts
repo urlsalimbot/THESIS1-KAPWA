@@ -1,11 +1,11 @@
 import { Controller, Get, Post, Body, UseGuards, Req } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { CsrService } from './csr.service';
-import { createCsrSchema } from './dto/csr.zod';
-import { AuthenticatedRequest } from '../auth/types';
-import { ZodPipe } from '../common/pipes/zod.pipe';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { CsrService } from './csr.service.js';
+import { createCsrSchema } from './dto/csr.zod.js';
+import { AuthenticatedRequest } from '../auth/types.js';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
 import { z } from 'zod';
 
 @Controller('csr')

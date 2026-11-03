@@ -1,11 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ProgramEnrollment } from './program-enrollment.entity';
-import { Program } from '../programs/program.entity';
-import { Case } from '../cases/case.entity';
-import { CreateProgramEnrollmentInput, UpdateProgramEnrollmentInput } from './dto/case-enrollments.zod';
-import { programTypeAllowedForCaseCategory } from '../common/case-catalog';
+import { ProgramEnrollment } from './program-enrollment.entity.js';
+import { Program } from '../programs/program.entity.js';
+import { Case } from '../cases/case.entity.js';
+import { CreateProgramEnrollmentInput, UpdateProgramEnrollmentInput } from './dto/case-enrollments.zod.js';
+import { programTypeAllowedForCaseCategory } from '../common/case-catalog.js';
 
 export interface ProgramEnrollmentView {
   id: string;

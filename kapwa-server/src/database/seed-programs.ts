@@ -1,6 +1,7 @@
+import { isMain } from '../common/is-main.js';
 import { DataSource } from 'typeorm';
 import { v7 as uuidv7 } from 'uuid';
-import { AppDataSource } from './data-source';
+import { AppDataSource } from './data-source.js';
 
 interface ProgramSeed {
   id: string;
@@ -500,7 +501,7 @@ async function main() {
   await AppDataSource.destroy();
 }
 
-if (require.main === module) {
+if (isMain(import.meta.url)) {
   main().catch((err) => {
     console.error('Seed failed:', err);
     process.exit(1);

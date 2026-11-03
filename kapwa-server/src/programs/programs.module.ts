@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ProgramsService } from './programs.service';
-import { ProgramsController } from './programs.controller';
-import { ProgramsPublicController } from './programs-public.controller';
-import { Program } from './program.entity';
-import { ProgramFundSource } from './program-fund-source.entity';
-import { ProgramRequiredDocument } from './program-required-document.entity';
-import { ProgramIntervention } from './program-intervention.entity';
-import { FormVersionHistory } from './form-version-history.entity';
+import { ProgramsService } from './programs.service.js';
+import { ProgramsController } from './programs.controller.js';
+import { ProgramsPublicController } from './programs-public.controller.js';
+import { Program } from './program.entity.js';
+import { ProgramFundSource } from './program-fund-source.entity.js';
+import { ProgramRequiredDocument } from './program-required-document.entity.js';
+import { ProgramIntervention } from './program-intervention.entity.js';
+import { FormVersionHistory } from './form-version-history.entity.js';
 
 @Module({
   imports: [

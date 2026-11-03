@@ -2,15 +2,15 @@ import {
   Body, Controller, DefaultValuePipe, Get, Param, ParseIntPipe, ParseUUIDPipe, Patch, Post, Query, Request, UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { AuthenticatedRequest } from '../auth/types';
-import { WalkInLogsService } from './walk-in-logs.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { AuthenticatedRequest } from '../auth/types.js';
+import { WalkInLogsService } from './walk-in-logs.service.js';
 import {
   CreateWalkInLogInput, CreateWalkInLogSchema, UpdateWalkInLogInput, UpdateWalkInLogSchema,
-} from './walk-in-logs.zod';
+} from './walk-in-logs.zod.js';
 
 @ApiTags('Walk-in Log')
 @Controller('walk-in-logs')

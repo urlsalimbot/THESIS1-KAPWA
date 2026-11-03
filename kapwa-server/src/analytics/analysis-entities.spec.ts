@@ -1,7 +1,7 @@
 import { getMetadataArgsStorage } from 'typeorm';
-import { AnalysisRun } from './analysis-run.entity';
-import { AnalysisRunCluster } from './analysis-run-cluster.entity';
-import { AnalysisRunMember } from './analysis-run-member.entity';
+import { AnalysisRun } from './analysis-run.entity.js';
+import { AnalysisRunCluster } from './analysis-run-cluster.entity.js';
+import { AnalysisRunMember } from './analysis-run-member.entity.js';
 
 describe('analytics entities', () => {
   const storage = getMetadataArgsStorage();

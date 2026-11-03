@@ -1,14 +1,14 @@
-import { DEFAULT_NOTIF_LIMIT } from '../common/constants';
+import { DEFAULT_NOTIF_LIMIT } from '../common/constants.js';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Notification, NotificationCategory, NotificationType } from './notification.entity';
-import { NotificationPreference } from './notification-preference.entity';
-import { SmsGatewayService } from '../otp/sms-gateway.service';
-import { renderTemplate, SmsTemplateKey } from './sms-templates';
-import { UpdatePreferenceInput } from './dto/notifications.zod';
-import { NotificationsGateway } from './notifications.gateway';
-import { EmailService } from '../email/email.service';
+import { Notification, NotificationCategory, NotificationType } from './notification.entity.js';
+import { NotificationPreference } from './notification-preference.entity.js';
+import { SmsGatewayService } from '../otp/sms-gateway.service.js';
+import { renderTemplate, SmsTemplateKey } from './sms-templates.js';
+import { UpdatePreferenceInput } from './dto/notifications.zod.js';
+import { NotificationsGateway } from './notifications.gateway.js';
+import { EmailService } from '../email/email.service.js';
 
 // Reminder categories are default-on for EMAIL when no preference row exists
 // (absent = opted in) — see `checkConsent`.

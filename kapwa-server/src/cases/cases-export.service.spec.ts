@@ -1,14 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException } from '@nestjs/common';
-import { CasesExportService } from './cases-export.service';
-import { OrgService } from '../common/org.service';
-import { Case, CaseStatus } from './case.entity';
-import { CaseHistory } from './case-history.entity';
-import { CaseIntervention } from '../case-interventions/case-intervention.entity';
-import { FilingService } from '../filing/filing.service';
-import { GisExportService } from '../gis/gis-export.service';
-import { IrfExportService } from '../irf/irf-export.service';
+import { CasesExportService } from './cases-export.service.js';
+import { OrgService } from '../common/org.service.js';
+import { Case, CaseStatus } from './case.entity.js';
+import { CaseHistory } from './case-history.entity.js';
+import { CaseIntervention } from '../case-interventions/case-intervention.entity.js';
+import { FilingService } from '../filing/filing.service.js';
+import { GisExportService } from '../gis/gis-export.service.js';
+import { IrfExportService } from '../irf/irf-export.service.js';
+import { PDFDocument } from 'pdf-lib';
 
 describe('CasesExportService', () => {
   let service: CasesExportService;
@@ -244,7 +245,6 @@ describe('CasesExportService — CSR bundle', () => {
   });
 
   it('merges real PDF buffers into one multi-page file', async () => {
-    const { PDFDocument } = require('pdf-lib');
     const page = async () => { const d = await PDFDocument.create(); d.addPage(); return Buffer.from(await d.save()); };
     const caseRepo = { findOne: jest.fn().mockResolvedValue(bundleCase()), manager: { query: jest.fn().mockResolvedValue([]) } };
     const gis = { generateGisPdf: jest.fn().mockResolvedValue(await page()) };

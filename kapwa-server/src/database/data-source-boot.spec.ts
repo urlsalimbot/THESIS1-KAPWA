@@ -1,4 +1,4 @@
-import { AppDataSource } from './data-source';
+import { AppDataSource } from './data-source.js';
 
 describe('deploy-boot guard', () => {
   it('builds postgres metadata for every entity (deploy-boot check)', async () => {

@@ -1,4 +1,5 @@
-import { buildEndorsementLetterPdf, EndorsementLetterData } from './endorsement-letter.builder';
+import PDFDocument from 'pdfkit';
+import { buildEndorsementLetterPdf, EndorsementLetterData } from './endorsement-letter.builder.js';
 
 const DATA: EndorsementLetterData = {
   officeName: 'MSWDO Norzagaray',
@@ -31,8 +32,6 @@ describe('buildEndorsementLetterPdf', () => {
   });
 
   it('draws the municipal and DSWD badges in the letterhead', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const PDFDocument = require('pdfkit');
     const image = jest.spyOn(PDFDocument.prototype, 'image');
     try {
       await buildEndorsementLetterPdf(DATA);

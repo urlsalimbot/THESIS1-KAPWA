@@ -1,7 +1,7 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { phTime } from './common/utils';
+import { phTime } from './common/utils.js';
 
 // Postgres hard-refuses DDL at 1600 columns (dropped-column tombstones count).
 // Fail health well before migrate.js hits that wall, so the deploy gate and

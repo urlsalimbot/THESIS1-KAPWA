@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException } from '@nestjs/common';
-import { CaseInterventionsController } from './case-interventions.controller';
-import { CaseInterventionsService } from './case-interventions.service';
-import { CaseStepLocksService } from '../cases/case-step-locks.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { AuthenticatedRequest } from '../auth/types';
+import { CaseInterventionsController } from './case-interventions.controller.js';
+import { CaseInterventionsService } from './case-interventions.service.js';
+import { CaseStepLocksService } from '../cases/case-step-locks.service.js';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { AuthenticatedRequest } from '../auth/types.js';
 
 /**
  * The intervention routes assert step 1's seal before writing.

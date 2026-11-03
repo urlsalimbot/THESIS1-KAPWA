@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ProgramIntervention } from './program-intervention.entity';
-import { FormVersionHistory } from './form-version-history.entity';
-import { ProgramsService } from './programs.service';
-import { Program } from './program.entity';
+import { ProgramIntervention } from './program-intervention.entity.js';
+import { FormVersionHistory } from './form-version-history.entity.js';
+import { ProgramsService } from './programs.service.js';
+import { Program } from './program.entity.js';
 
 describe('ProgramsService', () => {
   let service: ProgramsService;

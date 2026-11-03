@@ -1,4 +1,4 @@
-import { AuditLogService } from './audit-log.service';
+import { AuditLogService } from './audit-log.service.js';
 
 describe('AuditLogService', () => {
   it('writes one row with the actor and JSON details', async () => {

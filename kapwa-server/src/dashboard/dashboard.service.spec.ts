@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { DashboardService } from './dashboard.service';
-import { Case } from '../cases/case.entity';
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
-import { VersionVector } from '../sync/version-vector.entity';
+import { DashboardService } from './dashboard.service.js';
+import { Case } from '../cases/case.entity.js';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity.js';
+import { VersionVector } from '../sync/version-vector.entity.js';
 
 describe('DashboardService', () => {
   let service: DashboardService;

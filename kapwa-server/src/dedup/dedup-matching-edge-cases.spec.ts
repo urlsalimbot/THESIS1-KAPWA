@@ -1,7 +1,7 @@
-import { personSignals, dedupScore, DEDUP_THRESHOLD_DEFAULT } from './dedup-matcher.service';
-import { trigramSim } from './dedup-adapter';
-import { sweep, RowInput, PersonRepo, HouseholdRepo, InterventionRepo } from './dedup-match-sweep.service';
-import { parseImportFile, ColumnMapError, ColumnMap } from './dedup-parse.service';
+import { personSignals, dedupScore, DEDUP_THRESHOLD_DEFAULT } from './dedup-matcher.service.js';
+import { trigramSim } from './dedup-adapter.js';
+import { sweep, RowInput, PersonRepo, HouseholdRepo, InterventionRepo } from './dedup-match-sweep.service.js';
+import { parseImportFile, ColumnMapError, ColumnMap } from './dedup-parse.service.js';
 
 /**
  * Exhaustive edge-case pass over person matching: similarity, signals, score

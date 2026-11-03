@@ -1,14 +1,15 @@
+import { nodeRequire } from '../common/node-require.js';
 import { Logger, Injectable, BadRequestException, ForbiddenException, OnApplicationShutdown } from '@nestjs/common';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
-import { SyncQueue } from './sync-queue.entity';
-import { VersionVector } from './version-vector.entity';
-import { ConflictResolver } from './conflict-resolver';
-import { SyncRequestInput } from './dto/sync.zod';
-import { IntakeService } from '../intake/intake.service';
-import { isValidTransition } from '../cases/case-fsm';
-import { CaseStatus } from '../cases/case.entity';
-import { CaseStepLocksService } from '../cases/case-step-locks.service';
+import { SyncQueue } from './sync-queue.entity.js';
+import { VersionVector } from './version-vector.entity.js';
+import { ConflictResolver } from './conflict-resolver.js';
+import { SyncRequestInput } from './dto/sync.zod.js';
+import { IntakeService } from '../intake/intake.service.js';
+import { isValidTransition } from '../cases/case-fsm.js';
+import { CaseStatus } from '../cases/case.entity.js';
+import { CaseStepLocksService } from '../cases/case-step-locks.service.js';
 
 const IDEMPOTENCY_TTL_MS = 86_400_000; // 24h
 const MAX_CACHE_SIZE = 10_000;
@@ -683,7 +684,7 @@ export class SyncService implements OnApplicationShutdown {
     changes: Array<Record<string, unknown>>,
   ): boolean {
     try {
-      const crypto = require("crypto");
+      const crypto = nodeRequire("crypto");
       const message = JSON.stringify({ deviceId, changes });
       const keyBuffer = Buffer.from(deviceId, 'hex');
 

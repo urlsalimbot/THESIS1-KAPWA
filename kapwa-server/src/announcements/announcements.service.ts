@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as sanitizeHtml from 'sanitize-html';
-import { Announcement } from './announcement.entity';
-import { FilingService } from '../filing/filing.service';
+import sanitizeHtml from 'sanitize-html';
+import { Announcement } from './announcement.entity.js';
+import { FilingService } from '../filing/filing.service.js';
 
 export interface AnnouncementWithPhotos {
   id: string;

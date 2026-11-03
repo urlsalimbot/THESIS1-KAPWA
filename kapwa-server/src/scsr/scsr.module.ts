@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ScsrExportService } from './scsr-export.service';
-import { Case } from '../cases/case.entity';
-import { User } from '../auth/user.entity';
-import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
-import { Person } from '../beneficiaries/person.entity';
+import { ScsrExportService } from './scsr-export.service.js';
+import { Case } from '../cases/case.entity.js';
+import { User } from '../auth/user.entity.js';
+import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity.js';
+import { Person } from '../beneficiaries/person.entity.js';
 
 /**
  * Social Case Study Report export (burial + medical). OrgService comes from the

@@ -1,7 +1,7 @@
 import * as zlib from 'zlib';
-import { buildAccessCardPdf } from './access-card-pdf.builder';
-import { AccessCardPdfData } from './access-card-pdf.types';
-import { isLandscape, searchableText } from '../gis/gis-pdf-test.util';
+import { buildAccessCardPdf } from './access-card-pdf.builder.js';
+import { AccessCardPdfData } from './access-card-pdf.types.js';
+import { isLandscape, searchableText } from '../gis/gis-pdf-test.util.js';
 
 const fullData: AccessCardPdfData = {
   code: 'NORZ-AC-2026-0001',

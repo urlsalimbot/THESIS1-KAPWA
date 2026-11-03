@@ -1,9 +1,9 @@
 import { Entity, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Expose, Exclude } from 'class-transformer';
-import { BaseEntity } from '../common/base.entity';
-import { User } from '../auth/user.entity';
-import { Case } from '../cases/case.entity';
-import { Person } from '../beneficiaries/person.entity';
+import { BaseEntity } from '../common/base.entity.js';
+import { User } from '../auth/user.entity.js';
+import { Case } from '../cases/case.entity.js';
+import { Person } from '../beneficiaries/person.entity.js';
 
 export enum ReferralStatus {
   PENDING = 'pending',

@@ -1,4 +1,4 @@
-import { WalkInLogsService } from './walk-in-logs.service';
+import { WalkInLogsService } from './walk-in-logs.service.js';
 
 function repoMock() {
   const qb: any = {

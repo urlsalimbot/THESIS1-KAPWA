@@ -1,11 +1,12 @@
+import { nodeRequire } from '../common/node-require.js';
 import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { ORG_LOCATION } from '../common/constants';
-import { OrgService } from '../common/org.service';
-import { ClientImportOperation, ClientImportRow } from './dedup.entity';
-import { DedupOutputWriter } from './dedup.service';
+import { ORG_LOCATION } from '../common/constants.js';
+import { OrgService } from '../common/org.service.js';
+import { ClientImportOperation, ClientImportRow } from './dedup.entity.js';
+import { DedupOutputWriter } from './dedup.service.js';
 
 /**
  * Resolves (once) the first WRITABLE export directory: an explicit
@@ -104,7 +105,7 @@ export class DedupOutputService implements DedupOutputWriter {
    */
   async build(op: ClientImportOperation, rows: ClientImportRow[]): Promise<Buffer> {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const ExcelJS = require('exceljs');
+    const ExcelJS = nodeRequire('exceljs');
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Priority List');
     const grid = outputGrid(op, rows);

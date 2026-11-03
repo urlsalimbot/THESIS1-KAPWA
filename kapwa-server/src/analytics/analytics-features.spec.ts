@@ -1,8 +1,8 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { AnalyticsFeaturesService } from './analytics-features.service';
-import { Household } from '../beneficiaries/household.entity';
-import { MIN_CELL, suppressCount, suppressRatio } from './suppression';
+import { AnalyticsFeaturesService } from './analytics-features.service.js';
+import { Household } from '../beneficiaries/household.entity.js';
+import { MIN_CELL, suppressCount, suppressRatio } from './suppression.js';
 
 describe('suppression', () => {
   it('suppresses counts below the cell minimum', () => {

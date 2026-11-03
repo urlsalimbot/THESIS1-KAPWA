@@ -1,13 +1,13 @@
 import { Entity, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
-import { Program } from './program.entity';
+import { BaseEntity } from '../common/base.entity.js';
+import type { Program } from './program.entity.js';
 
 @Entity('program_fund_sources')
 export class ProgramFundSource extends BaseEntity {
   @Column({ name: 'program_id' })
   programId!: string;
 
-  @ManyToOne(() => Program, p => p.fundSourceRows, { onDelete: 'CASCADE' })
+  @ManyToOne('Program', 'fundSourceRows', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'program_id' })
   program!: Program;
 

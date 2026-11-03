@@ -1,6 +1,6 @@
 import { Entity, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index, Unique } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
-import { Program } from './program.entity';
+import { BaseEntity } from '../common/base.entity.js';
+import type { Program } from './program.entity.js';
 
 /**
  * One row per (program, intervention_type): the Program → Interventions
@@ -17,7 +17,7 @@ export class ProgramIntervention extends BaseEntity {
   // The inverse side of `Program.interventionRows` — TypeORM needs the *relation*
   // here (not the `program_id` column), and without it every Program query
   // fails at `joinColumns`.
-  @ManyToOne(() => Program, (p) => p.interventionRows, { onDelete: 'CASCADE' })
+  @ManyToOne('Program', 'interventionRows', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'program_id' })
   program!: Program;
 

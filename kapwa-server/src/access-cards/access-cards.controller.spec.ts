@@ -1,9 +1,9 @@
 import { Test } from '@nestjs/testing';
-import { AccessCardsController } from './access-cards.controller';
-import { AccessCardsService } from './access-cards.service';
-import { AbacGuard } from '../auth/guards/abac.guard';
-import { exportFileName } from '../common/constants';
-import { ROLES_KEY } from '../auth/decorators/roles.decorator';
+import { AccessCardsController } from './access-cards.controller.js';
+import { AccessCardsService } from './access-cards.service.js';
+import { AbacGuard } from '../auth/guards/abac.guard.js';
+import { exportFileName } from '../common/constants.js';
+import { ROLES_KEY } from '../auth/decorators/roles.decorator.js';
 
 describe('AccessCardsController', () => {
   let controller: AccessCardsController;

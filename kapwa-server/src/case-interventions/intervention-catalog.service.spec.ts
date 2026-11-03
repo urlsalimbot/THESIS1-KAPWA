@@ -1,4 +1,4 @@
-import { InterventionCatalogService } from './intervention-catalog.service';
+import { InterventionCatalogService } from './intervention-catalog.service.js';
 
 function mockCatalog() {
   const repo = {

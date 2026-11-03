@@ -1,8 +1,9 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { outputGrid, exportDir, DedupOutputService } from './dedup-output.service';
-import { ClientImportOperation, ClientImportRow } from './dedup.entity';
+import ExcelJS from 'exceljs';
+import { outputGrid, exportDir, DedupOutputService } from './dedup-output.service.js';
+import { ClientImportOperation, ClientImportRow } from './dedup.entity.js';
 
 const op = {
   id: 'op1',
@@ -68,8 +69,6 @@ describe('DedupOutputService writer', () => {
   });
 
   it('adds the SCSR-style letterhead and title above the priority grid', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const ExcelJS = require('exceljs');
     const svc = new DedupOutputService();
     const headerOp = {
       id: 'op1', source: 'Batch 1.xlsx', createdAt: new Date('2026-10-23T02:00:00Z'),
@@ -82,8 +81,8 @@ describe('DedupOutputService writer', () => {
 
     const buf = await svc.build(headerOp, [headerRow]);
     const wb = new ExcelJS.Workbook();
-    await wb.xlsx.load(buf);
-    const sheet = wb.getWorksheet('Priority List');
+    await wb.xlsx.load(buf as any);
+    const sheet = wb.getWorksheet('Priority List')!;
 
     expect(sheet.getCell('A1').value).toBe('Republic of the Philippines');
     expect(sheet.getCell('A2').value).toBe('Province of Bulacan');
@@ -102,11 +101,9 @@ describe('DedupOutputService writer', () => {
     const named = { ...op, outputName: 'CD-2026-OCT-007.xlsx' } as ClientImportOperation;
     // exportDir() caches its first answer per module, so use a fresh module here
     // rather than leaving the shared cache pointing at this test's temp dir.
-    let FreshService: typeof DedupOutputService | undefined;
-    jest.isolateModules(() => {
-      FreshService = require('./dedup-output.service').DedupOutputService;
-    });
-    const written = await new FreshService!().write(named, rows);
+    jest.resetModules();
+    const { DedupOutputService: FreshService } = await import('./dedup-output.service.js');
+    const written = await new FreshService().write(named, rows);
     expect(path.basename(written)).toBe('CD-2026-OCT-007.xlsx');
     delete process.env.DEDUP_EXPORT_DIR;
   });

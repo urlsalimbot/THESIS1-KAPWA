@@ -1,5 +1,6 @@
+import { esmDirname } from '../common/esm-path.js';
 import { DataSource } from 'typeorm';
-import { SnakeNamingStrategy } from './snake-naming.strategy';
+import { SnakeNamingStrategy } from './snake-naming.strategy.js';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -11,8 +12,8 @@ export const AppDataSource = new DataSource({
   // RDS enforces TLS (rds.force_ssl=1); self-hosted Postgres stays plaintext
   // unless DB_SSL is explicitly enabled.
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-  entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-  migrations: [__dirname + '/migrations/*{.ts,.js}'],
+  entities: [esmDirname(import.meta.url) + '/../**/*.entity{.ts,.js}'],
+  migrations: [esmDirname(import.meta.url) + '/migrations/*{.ts,.js}'],
   namingStrategy: new SnakeNamingStrategy(),
   logging: ['error', 'warn'],
   extra: {

@@ -1,12 +1,12 @@
-import { DEFAULT_MESSAGE_LIMIT } from '../common/constants';
+import { DEFAULT_MESSAGE_LIMIT } from '../common/constants.js';
 import { Controller, Get, Post, Param, Body, UseGuards, Request, Query } from '@nestjs/common';
-import { ChatService } from './chat.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { SendMessageSchema, SendMessageInput } from './dto/chat.zod';
-import { AuthenticatedRequest } from '../auth/types';
+import { ChatService } from './chat.service.js';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { SendMessageSchema, SendMessageInput } from './dto/chat.zod.js';
+import { AuthenticatedRequest } from '../auth/types.js';
 
 @Controller('chat')
 @UseGuards(JwtAuthGuard, RolesGuard)

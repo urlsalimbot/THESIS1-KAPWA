@@ -1,20 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuthService } from './auth.service';
+import { AuthService } from './auth.service.js';
 import { JwtService } from '@nestjs/jwt';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User, UserRole } from './user.entity';
-import { UserToken } from './user-token.entity';
-import { UserBarangayAssignment } from './user-barangay-assignment.entity';
-import { Person } from '../beneficiaries/person.entity';
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
-import { OtpService } from '../otp/otp.service';
-import { SmsGatewayService } from '../otp/sms-gateway.service';
-import { EmailService } from '../email/email.service';
-import { PendingIntakesService } from '../pending-intakes/pending-intakes.service';
-import * as bcrypt from 'bcrypt';
+import { User, UserRole } from './user.entity.js';
+import { UserToken } from './user-token.entity.js';
+import { UserBarangayAssignment } from './user-barangay-assignment.entity.js';
+import { Person } from '../beneficiaries/person.entity.js';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity.js';
+import { OtpService } from '../otp/otp.service.js';
+import { SmsGatewayService } from '../otp/sms-gateway.service.js';
+import { EmailService } from '../email/email.service.js';
+import { PendingIntakesService } from '../pending-intakes/pending-intakes.service.js';
+import bcrypt from 'bcrypt';
+import { createHash } from 'node:crypto';
 
-jest.mock('bcrypt');
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -27,6 +27,8 @@ describe('AuthService', () => {
   let pendingIntakesMock: { create: jest.Mock };
 
   beforeEach(async () => {
+    jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashed' as never);
+    jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
     repoMock = {
       findOne: jest.fn(),
       create: jest.fn(),
@@ -209,9 +211,8 @@ describe('AuthService', () => {
 
   describe('changePassword', () => {
     it('clears mustChangePassword and bumps tokenVersion', async () => {
-      const bcrypt = require('bcrypt');
-      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true);
-      jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashed-new');
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+      jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashed-new' as never);
       const user: any = { id: 'u1', password: 'old-hash', tokenVersion: 0, mustChangePassword: true };
       (repoMock.findOne as jest.Mock).mockResolvedValue(user);
       (repoMock.save as jest.Mock).mockImplementation(async (u: any) => u);
@@ -252,7 +253,7 @@ describe('AuthService', () => {
         id: 'u1',
         mfaEnabled: true,
         mfaMethod: 'email',
-        emailOtpCode: require('crypto').createHash('sha256').update('123456').digest('hex'),
+        emailOtpCode: createHash('sha256').update('123456').digest('hex'),
         emailOtpExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
         emailOtpAttempts: 0,
       };

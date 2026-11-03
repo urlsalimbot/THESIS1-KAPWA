@@ -1,16 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { BeneficiariesService } from './beneficiaries.service';
-import { Person } from './person.entity';
-import { Beneficiary } from './beneficiary.entity';
-import { BeneficiaryRole } from './beneficiary-role.entity';
-import { BeneficiaryClaimant } from './beneficiary-claimant.entity';
-import { ConsentLedger } from './consent-ledger.entity';
-import { Household } from './household.entity';
-import { HouseholdMembership } from './household-membership.entity';
-import { Case } from '../cases/case.entity';
-import { User } from '../auth/user.entity';
+import { BeneficiariesService } from './beneficiaries.service.js';
+import { Person } from './person.entity.js';
+import { Beneficiary } from './beneficiary.entity.js';
+import { BeneficiaryRole } from './beneficiary-role.entity.js';
+import { BeneficiaryClaimant } from './beneficiary-claimant.entity.js';
+import { ConsentLedger } from './consent-ledger.entity.js';
+import { Household } from './household.entity.js';
+import { HouseholdMembership } from './household-membership.entity.js';
+import { Case } from '../cases/case.entity.js';
+import { User } from '../auth/user.entity.js';
 
 describe('BeneficiariesService', () => {
   let service: BeneficiariesService;

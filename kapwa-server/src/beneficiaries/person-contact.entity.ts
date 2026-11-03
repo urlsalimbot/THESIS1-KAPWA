@@ -1,10 +1,10 @@
 import { Entity, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
-import { Person } from './person.entity';
+import { BaseEntity } from '../common/base.entity.js';
+import type { Person } from './person.entity.js';
 
 @Entity('person_contacts')
 export class PersonContact extends BaseEntity {
-  @ManyToOne(() => Person, p => p.contacts, { onDelete: 'CASCADE' })
+  @ManyToOne('Person', 'contacts', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'person_id' })
   person!: Person;
 

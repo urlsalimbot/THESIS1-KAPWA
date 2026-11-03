@@ -1,5 +1,5 @@
 import { Entity, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
+import { BaseEntity } from '../common/base.entity.js';
 
 export const REMINDER_SCOPES = ['system', 'worker'] as const;
 export type ReminderScope = (typeof REMINDER_SCOPES)[number];

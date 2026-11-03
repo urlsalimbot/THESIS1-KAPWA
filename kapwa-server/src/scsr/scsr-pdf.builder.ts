@@ -1,3 +1,5 @@
+import { esmDirname } from '../common/esm-path.js';
+import { nodeRequire } from '../common/node-require.js';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -86,7 +88,7 @@ const FAMILY_COLS: Record<ScsrKind, Array<{ label: string; w: number; key: keyof
 };
 
 export async function buildScsrPdf(input: ScsrPdfInput): Promise<Buffer> {
-  const PDFDocument = require('pdfkit');
+  const PDFDocument = nodeRequire('pdfkit');
   const doc = new PDFDocument({
     size: A4,
     margins: { top: M, bottom: M, left: M, right: M },
@@ -118,8 +120,8 @@ function blankRule(doc: any, x: number, y: number, w: number) {
 }
 
 function drawLetterhead(doc: any, input: ScsrPdfInput) {
-  const sealPath = path.join(__dirname, '..', 'gis', 'assets', 'norzagaray-bulacan-official-logo.png');
-  const dswdPath = path.join(__dirname, '..', 'gis', 'assets', 'DSWD-Logo.png');
+  const sealPath = path.join(esmDirname(import.meta.url), '..', 'gis', 'assets', 'norzagaray-bulacan-official-logo.png');
+  const dswdPath = path.join(esmDirname(import.meta.url), '..', 'gis', 'assets', 'DSWD-Logo.png');
   const BADGE = 52;
 
   if (fs.existsSync(sealPath)) { try { doc.image(sealPath, LEFT, M, { fit: [BADGE, BADGE] }); } catch { /* seal omitted */ } }

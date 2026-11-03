@@ -1,14 +1,14 @@
-import { DEFAULT_PAGE_SIZE } from '../common/constants';
+import { DEFAULT_PAGE_SIZE } from '../common/constants.js';
 import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, UseInterceptors, Request, ForbiddenException } from '@nestjs/common';
 import { ClassSerializerInterceptor, SerializeOptions } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
-import { UsersService } from './users.service';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { AuthenticatedRequest } from '../auth/types';
-import { CreateUserInputSchema, CreateUserInput, UpdateUserSchema, UpdateUserInput } from './dto/users.zod';
+import { UsersService } from './users.service.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { AuthenticatedRequest } from '../auth/types.js';
+import { CreateUserInputSchema, CreateUserInput, UpdateUserSchema, UpdateUserInput } from './dto/users.zod.js';
 
 @ApiTags('Users')
 @Controller('users')

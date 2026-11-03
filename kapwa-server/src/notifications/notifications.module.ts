@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
-import { NotificationsService } from './notifications.service';
-import { NotificationsController } from './notifications.controller';
-import { NotificationsGateway } from './notifications.gateway';
-import { Notification } from './notification.entity';
-import { NotificationPreference } from './notification-preference.entity';
-import { OtpModule } from '../otp/otp.module';
-import { EmailModule } from '../email/email.module';
+import { NotificationsService } from './notifications.service.js';
+import { NotificationsController } from './notifications.controller.js';
+import { NotificationsGateway } from './notifications.gateway.js';
+import { Notification } from './notification.entity.js';
+import { NotificationPreference } from './notification-preference.entity.js';
+import { OtpModule } from '../otp/otp.module.js';
+import { EmailModule } from '../email/email.module.js';
 
 @Module({
   imports: [

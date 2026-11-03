@@ -1,6 +1,6 @@
 import { Entity, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { Program } from './program.entity';
-import { BaseEntity } from '../common/base.entity';
+import { Program } from './program.entity.js';
+import { BaseEntity } from '../common/base.entity.js';
 
 @Entity('form_version_history')
 export class FormVersionHistory extends BaseEntity {

@@ -1,21 +1,25 @@
 import 'reflect-metadata';
-import { SELF_DECLARED_DEPS_METADATA, MODULE_METADATA } from '@nestjs/common/constants';
+import { createRequire } from 'node:module';
+import { SELF_DECLARED_DEPS_METADATA, MODULE_METADATA } from '@nestjs/common/constants.js';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
+// The Nest internals below are CommonJS subpaths with no ESM entry point.
+const nodeRequire = createRequire(import.meta.url);
+
 /**
- * The require graph between `CasesService` and `CaseStepLocksService`, checked
+ * The import graph between `CasesService` and `CaseStepLocksService`, checked
  * by loading the real modules rather than by reading the source.
  *
- * This file deliberately imports neither service at the top. `jest.isolateModules`
+ * This file deliberately imports neither service at the top. `jest.resetModules()`
  * only re-executes modules that are not already in the registry, so a probe
  * living in a spec that imports both statically reads the metadata those
  * imports froze at spec-load time and asserts nothing about the order under
- * test. Here every `require` is a real load, and `jest.resetModules()` keeps
- * the two load orders independent of each other.
+ * test. Here every `await import()` is a real load, and `jest.resetModules()`
+ * keeps the two load orders independent of each other.
  *
  * What it guards: `CaseStepLocksService` injects `CasesService`, so having
  * `cases.service.ts` read `CASE_STEP_LABELS` back out of the locks service makes
- * the two modules require each other. Under `emitDecoratorMetadata` the cycle
+ * the two modules import each other. Under `emitDecoratorMetadata` the cycle
  * hands the locks service a `CasesService` of `undefined` in
  * `design:paramtypes`, Nest then cannot resolve the constructor, and the app
  * dies at boot — while every other test in the suite passes, because they build
@@ -40,7 +44,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
  * two unchecked after the constructor grew; both layers are asserted below so
  * neither can be dropped alone.
  */
-describe('cases step-locks require graph', () => {
+describe('cases step-locks import graph', () => {
   beforeEach(() => {
     jest.resetModules();
   });
@@ -54,7 +58,7 @@ describe('cases step-locks require graph', () => {
    * written against the entity class would pass for the wrong reason or never
    * match at all.
    *
-   * Takes the freshly `require`d class per call so each load order reads its own
+   * Takes the freshly imported class per call so each load order reads its own
    * metadata; hoisting the read out of the test would pin one order and quietly
    * stop covering the other.
    */
@@ -65,20 +69,20 @@ describe('cases step-locks require graph', () => {
     }>;
 
   /** The six `{ index, token }` pairs the locks service's repositories must carry. */
-  const expectedRepoDeps = () => {
-    const { CaseStepLock } = require('./case-step-lock.entity');
-    const { CaseIntervention } = require('../case-interventions/case-intervention.entity');
-    const { Program } = require('../programs/program.entity');
-    const { ProgramEnrollment } = require('../case-enrollments/program-enrollment.entity');
+  const expectedRepoDeps = async () => {
+    const { CaseStepLock } = await import('./case-step-lock.entity.js');
+    const { CaseIntervention } = await import('../case-interventions/case-intervention.entity.js');
+    const { Program } = await import('../programs/program.entity.js');
+    const { ProgramEnrollment } = await import('../case-enrollments/program-enrollment.entity.js');
     // The referrals step's count. `InterAgencyReferral` is registered in
     // `cases.module.ts` forFeature like the others, so it must be named here
     // too: an unregistered repository parameter is invisible in
     // `design:paramtypes` and only fails at bootstrap.
-    const { InterAgencyReferral } = require('../inter-agency-referrals/inter-agency-referral.entity');
+    const { InterAgencyReferral } = await import('../inter-agency-referrals/inter-agency-referral.entity.js');
     // The court_hearings step's count, registered in cases.module.ts forFeature.
-    const { CaseEvent } = require('../case-events/case-event.entity');
+    const { CaseEvent } = await import('../case-events/case-event.entity.js');
     // The crisis-mode documentary minimums, registered in cases.module.ts.
-    const { InterventionRequiredDocument } = require('./intervention-required-document.entity');
+    const { InterventionRequiredDocument } = await import('./intervention-required-document.entity.js');
     return [
       { index: 0, param: getRepositoryToken(CaseStepLock) },
       { index: 2, param: getRepositoryToken(CaseIntervention) },
@@ -103,13 +107,13 @@ describe('cases step-locks require graph', () => {
 
   /**
    * The order `AppModule` gives: the cases module pulls in `cases.service`
-   * first, and the locks service is required afterwards. This is the load order
+   * first, and the locks service is imported afterwards. This is the load order
    * that breaks *silently* — the cycle resolves, and the damage is an
    * `undefined` constructor parameter that Nest only notices at bootstrap.
    */
-  it('resolves the CasesService parameter when cases.service loads first', () => {
-    require('./cases.service');
-    const locks = require('./case-step-locks.service');
+  it('resolves the CasesService parameter when cases.service loads first', async () => {
+    await import('./cases.service.js');
+    const locks = await import('./case-step-locks.service.js');
 
     const paramtypes = Reflect.getMetadata('design:paramtypes', locks.CaseStepLocksService) as unknown[];
 
@@ -135,7 +139,7 @@ describe('cases step-locks require graph', () => {
     // `expect(deps).toEqual([...])` so a failure says *which* repository lost its
     // token instead of printing a single opaque array diff.
     const deps = selfDeclaredDeps(locks.CaseStepLocksService);
-    for (const expected of expectedRepoDeps()) {
+    for (const expected of await expectedRepoDeps()) {
       expect(deps).toEqual(expect.arrayContaining([expected]));
     }
     // And nothing beyond those four: a stray `@Inject` at another index would be
@@ -148,14 +152,14 @@ describe('cases step-locks require graph', () => {
   });
 
   /**
-   * The reverse order, which requires `cases.service` transitively from inside
+   * The reverse order, which imports `cases.service` transitively from inside
    * the locks module. A cycle breaks this one louder — `cases.service` reads
    * `CASE_STEP_LABELS` while the locks module is only half-loaded — but only if
    * the labels are still coming from the locks service, so it is the load order
    * that catches a move backwards.
    */
-  it('resolves the CasesService parameter when the locks service loads first', () => {
-    const locks = require('./case-step-locks.service');
+  it('resolves the CasesService parameter when the locks service loads first', async () => {
+    const locks = await import('./case-step-locks.service.js');
 
     const paramtypes = Reflect.getMetadata('design:paramtypes', locks.CaseStepLocksService) as unknown[];
 
@@ -171,7 +175,7 @@ describe('cases step-locks require graph', () => {
     // leave Nest with no token to resolve — which the type assertions above
     // could not tell apart from a healthy one.
     const deps = selfDeclaredDeps(locks.CaseStepLocksService);
-    for (const expected of expectedRepoDeps()) {
+    for (const expected of await expectedRepoDeps()) {
       expect(deps).toEqual(expect.arrayContaining([expected]));
     }
     expect(deps.some((d) => d === undefined || d.param === undefined)).toBe(false);
@@ -179,19 +183,19 @@ describe('cases step-locks require graph', () => {
 });
 
 /**
- * The *module* edge the require-graph probes above cannot see.
+ * The *module* edge the import-graph probes above cannot see.
  *
  * `FilingModule` now imports `CasesModule` for `CaseStepLocksService`, and
  * `CasesModule` imports `FilingModule` for `CasesExportService`'s
- * `FilingService`, so the two modules require each other. That is a Nest module
+ * `FilingService`, so the two modules import each other. That is a Nest module
  * cycle, a different failure from the constructor-metadata cycle the probes
  * above pin: the emitted parameter types stay intact, and the damage lands in
- * Nest's module scanner, where a JavaScript require that resolves one side to
+ * Nest's module scanner, where a JavaScript import that resolves one side to
  * `undefined` is the `CircularDependencyException` /
  * `UndefinedModuleException` that kills the app at boot — again invisible to
  * every unit test that builds services by hand.
  *
- * The require-graph technique cannot express it, so this uses two pieces of
+ * The import-graph technique cannot express it, so this uses two pieces of
  * evidence that can:
  *  - the module metadata, asserting each side reaches the other through
  *    `forwardRef`. A plain import is not a `forwardRef`, so dropping either
@@ -217,18 +221,18 @@ describe('cases ↔ filing module edge', () => {
     return wrapper && typeof wrapper.forwardRef === 'function' ? wrapper.forwardRef() : undefined;
   };
 
-  it('filing.module reaches CasesModule through forwardRef', () => {
-    const { FilingModule } = require('../filing/filing.module');
-    const { CasesModule } = require('./cases.module');
+  it('filing.module reaches CasesModule through forwardRef', async () => {
+    const { FilingModule } = await import('../filing/filing.module.js');
+    const { CasesModule } = await import('./cases.module.js');
 
     const imports = (Reflect.getMetadata(MODULE_METADATA.IMPORTS, FilingModule) ?? []) as unknown[];
 
     expect(imports.some((entry) => forwardRefTarget(entry) === CasesModule)).toBe(true);
   });
 
-  it('cases.module reaches FilingModule through forwardRef', () => {
-    const { FilingModule } = require('../filing/filing.module');
-    const { CasesModule } = require('./cases.module');
+  it('cases.module reaches FilingModule through forwardRef', async () => {
+    const { FilingModule } = await import('../filing/filing.module.js');
+    const { CasesModule } = await import('./cases.module.js');
 
     const imports = (Reflect.getMetadata(MODULE_METADATA.IMPORTS, CasesModule) ?? []) as unknown[];
 
@@ -236,11 +240,11 @@ describe('cases ↔ filing module edge', () => {
   });
 
   it('scans the real module graph without an undefined or circular module reference', async () => {
-    const { NestContainer } = require('@nestjs/core/injector/container');
-    const { DependenciesScanner } = require('@nestjs/core/scanner');
-    const { MetadataScanner } = require('@nestjs/core/metadata-scanner');
-    const { GraphInspector } = require('@nestjs/core/inspector/graph-inspector');
-    const { FilingModule } = require('../filing/filing.module');
+    const { NestContainer } = nodeRequire('@nestjs/core/injector/container');
+    const { DependenciesScanner } = nodeRequire('@nestjs/core/scanner');
+    const { MetadataScanner } = nodeRequire('@nestjs/core/metadata-scanner');
+    const { GraphInspector } = nodeRequire('@nestjs/core/inspector/graph-inspector');
+    const { FilingModule } = await import('../filing/filing.module.js');
 
     const container = new NestContainer();
     const scanner = new DependenciesScanner(

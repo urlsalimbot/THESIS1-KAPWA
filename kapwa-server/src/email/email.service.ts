@@ -1,7 +1,7 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
-import { CircuitBreakerService } from '../common/circuit-breaker.service';
+import { CircuitBreakerService } from '../common/circuit-breaker.service.js';
 
 // ---------------------------------------------------------------------------
 // KAPWA brand tokens (mirrors the client theme in kapwa-client/src/index.css;

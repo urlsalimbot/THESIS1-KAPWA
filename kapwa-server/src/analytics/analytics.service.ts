@@ -1,12 +1,12 @@
 import { Injectable, Optional, UnprocessableEntityException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Case } from '../cases/case.entity';
-import { CacheService } from '../common/cache.service';
-import { gini, hhi, lorenzPoints, quantile } from './models/stats';
-import { holtLinear, movingAverageForecast, mape } from './models/forecast';
-import { pairwiseRules } from './models/associations';
-import { complementSuppression, MIN_CELL, suppressCount, suppressRatio, Suppressed } from './suppression';
+import { Case } from '../cases/case.entity.js';
+import { CacheService } from '../common/cache.service.js';
+import { gini, hhi, lorenzPoints, quantile } from './models/stats.js';
+import { holtLinear, movingAverageForecast, mape } from './models/forecast.js';
+import { pairwiseRules } from './models/associations.js';
+import { complementSuppression, MIN_CELL, suppressCount, suppressRatio, Suppressed } from './suppression.js';
 
 export interface AnalyticsFilters {
   from?: string;

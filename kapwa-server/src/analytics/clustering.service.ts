@@ -1,15 +1,15 @@
 import { Injectable, Logger, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AnalysisRun } from './analysis-run.entity';
-import { AnalysisRunCluster } from './analysis-run-cluster.entity';
-import { AnalysisRunMember } from './analysis-run-member.entity';
-import { AnalyticsFeaturesService } from './analytics-features.service';
-import { AuditLogService } from '../audit/audit-log.service';
-import { FEATURE_KEYS, FeatureKey } from './analytics.types';
-import { prepareMatrix, evaluateCandidates, chooseK } from './models/kmeans';
-import { median } from './models/stats';
-import { complementSuppression, suppressCount, MIN_CELL } from './suppression';
+import { AnalysisRun } from './analysis-run.entity.js';
+import { AnalysisRunCluster } from './analysis-run-cluster.entity.js';
+import { AnalysisRunMember } from './analysis-run-member.entity.js';
+import { AnalyticsFeaturesService } from './analytics-features.service.js';
+import { AuditLogService } from '../audit/audit-log.service.js';
+import { FEATURE_KEYS, FeatureKey } from './analytics.types.js';
+import { prepareMatrix, evaluateCandidates, chooseK } from './models/kmeans.js';
+import { median } from './models/stats.js';
+import { complementSuppression, suppressCount, MIN_CELL } from './suppression.js';
 
 const MIN_DATASET = 20;
 

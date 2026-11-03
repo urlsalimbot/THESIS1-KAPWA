@@ -1,6 +1,6 @@
 import { Entity, Column, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
-import { User } from '../auth/user.entity';
+import { BaseEntity } from '../common/base.entity.js';
+import { User } from '../auth/user.entity.js';
 
 // Team workspace: staff day blocks (field duty, appointments, etc.). One row
 // per user per day, with an optional time window and free-form note.

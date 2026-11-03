@@ -1,6 +1,8 @@
+import { esmDirname } from '../common/esm-path.js';
+import { nodeRequire } from '../common/node-require.js';
 import * as path from 'path';
 import * as fs from 'fs';
-import { BAND_LABELS, CaseListRow, ReportColumn, SummaryReportData, SummaryTable } from './summary-report.types';
+import { BAND_LABELS, CaseListRow, ReportColumn, SummaryReportData, SummaryTable } from './summary-report.types.js';
 
 const PAGE: [number, number] = [936, 612]; // US Legal landscape (8.5in x 13in)
 const M = 28;
@@ -48,7 +50,7 @@ const CASE_COLS: CaseListColumn[] = [
 ];
 
 export async function buildSummaryReportPdf(data: SummaryReportData): Promise<Buffer> {
-  const PDFDocument = require('pdfkit');
+  const PDFDocument = nodeRequire('pdfkit');
   const doc = new PDFDocument({ size: PAGE, margins: { top: M, bottom: M, left: M, right: M }, info: { Title: `Summary Report ${data.year} Semester ${data.semester}`, Author: data.officeName, Subject: 'GAD Database Case Tracker' } });
   const chunks: Buffer[] = [];
   doc.on('data', (c: Buffer) => chunks.push(c));
@@ -89,8 +91,8 @@ export async function buildSummaryReportPdf(data: SummaryReportData): Promise<Bu
 function ordinal(q: number): string { return ['1st', '2nd', '3rd', '4th'][q - 1] ?? `${q}th`; }
 
 function drawLetterhead(doc: any, data: SummaryReportData) {
-  const sealPath = path.join(__dirname, '..', 'gis', 'assets', 'norzagaray-bulacan-official-logo.png');
-  const dswdPath = path.join(__dirname, '..', 'gis', 'assets', 'DSWD-Logo.png');
+  const sealPath = path.join(esmDirname(import.meta.url), '..', 'gis', 'assets', 'norzagaray-bulacan-official-logo.png');
+  const dswdPath = path.join(esmDirname(import.meta.url), '..', 'gis', 'assets', 'DSWD-Logo.png');
   const BADGE = 46;
   const GAP = 20; // keep the seals 20pt from the letterhead text
 

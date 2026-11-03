@@ -1,8 +1,8 @@
 import { Global, Module } from '@nestjs/common';
-import { CircuitBreakerService } from './circuit-breaker.service';
-import { CacheService } from './cache.service';
-import { OrgService } from './org.service';
-import { MailerService } from './mailer.service';
+import { CircuitBreakerService } from './circuit-breaker.service.js';
+import { CacheService } from './cache.service.js';
+import { OrgService } from './org.service.js';
+import { MailerService } from './mailer.service.js';
 
 @Global()
 @Module({

@@ -1,4 +1,4 @@
-import { CaseEnrollmentsService } from './case-enrollments.service';
+import { CaseEnrollmentsService } from './case-enrollments.service.js';
 
 function mockRepo(over: any = {}) {
   return {

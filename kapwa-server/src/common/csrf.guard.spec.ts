@@ -1,5 +1,5 @@
 import { ForbiddenException } from '@nestjs/common';
-import { CsrfGuard } from './csrf.guard';
+import { CsrfGuard } from './csrf.guard.js';
 
 function ctx(method: string, url: string, cookies: Record<string, string> = {}, headers: Record<string, unknown> = {}) {
   const res = { cookie: jest.fn() };

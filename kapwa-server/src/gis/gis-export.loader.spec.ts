@@ -1,6 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
-import { CaseStatus } from '../cases/case.entity';
-import { loadGisData } from './gis-export.loader';
+import { CaseStatus } from '../cases/case.entity.js';
+import { loadGisData } from './gis-export.loader.js';
 
 describe('loadGisData', () => {
   const baseCase = {

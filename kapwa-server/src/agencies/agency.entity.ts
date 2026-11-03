@@ -1,7 +1,7 @@
 import { Entity, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { Expose, Exclude } from 'class-transformer';
-import { BaseEntity } from '../common/base.entity';
-import { AgencyContact } from './agency-contact.entity';
+import { BaseEntity } from '../common/base.entity.js';
+import { AgencyContact } from './agency-contact.entity.js';
 
 @Entity({ name: 'agencies' })
 export class Agency extends BaseEntity {

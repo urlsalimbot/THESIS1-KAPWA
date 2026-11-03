@@ -1,8 +1,8 @@
 import { Test } from '@nestjs/testing';
-import { FourPsController } from './fourps.controller';
-import { FourPsService } from './fourps.service';
-import { AbacGuard } from '../auth/guards/abac.guard';
-import { RESOURCE_SENSITIVITY_KEY } from '../auth/decorators/resource-sensitivity.decorator';
+import { FourPsController } from './fourps.controller.js';
+import { FourPsService } from './fourps.service.js';
+import { AbacGuard } from '../auth/guards/abac.guard.js';
+import { RESOURCE_SENSITIVITY_KEY } from '../auth/decorators/resource-sensitivity.decorator.js';
 
 describe('FourPsController', () => {
   let controller: FourPsController;

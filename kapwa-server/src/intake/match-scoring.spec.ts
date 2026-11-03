@@ -1,4 +1,4 @@
-import { assessMatchCandidate, MatchSignals, soundex } from './match-scoring';
+import { assessMatchCandidate, MatchSignals, soundex } from './match-scoring.js';
 
 // Similarity values are the pg_trgm scores the match-check SQL returns per
 // household (see the matchCheck query). Cases mirror live values probed in

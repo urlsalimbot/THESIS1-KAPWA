@@ -1,22 +1,23 @@
+import { nodeRequire } from '../common/node-require.js';
 import { ConflictException, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Case, CaseStatus } from './case.entity';
-import { CaseHistory } from './case-history.entity';
-import { CaseIntervention } from '../case-interventions/case-intervention.entity';
-import { FilingService } from '../filing/filing.service';
-import { GisExportService, PRINTABLE_CASE_STATUSES } from '../gis/gis-export.service';
-import { IrfExportService } from '../irf/irf-export.service';
-import { OrgService } from '../common/org.service';
-import { ORG_LOCATION, MUNICIPAL_MAYOR } from '../common/constants';
-import { displayFullName } from '../common/person-name';
+import { Case, CaseStatus } from './case.entity.js';
+import { CaseHistory } from './case-history.entity.js';
+import { CaseIntervention } from '../case-interventions/case-intervention.entity.js';
+import { FilingService } from '../filing/filing.service.js';
+import { GisExportService, PRINTABLE_CASE_STATUSES } from '../gis/gis-export.service.js';
+import { IrfExportService } from '../irf/irf-export.service.js';
+import { OrgService } from '../common/org.service.js';
+import { ORG_LOCATION, MUNICIPAL_MAYOR } from '../common/constants.js';
+import { displayFullName } from '../common/person-name.js';
 import { PDFDocument as PdfLib } from 'pdf-lib';
 import {
   buildCertificateOfEligibilityPdf,
   buildPettyCashVoucherPdf,
   CertificateOfEligibilityData,
   PettyCashVoucherData,
-} from './case-documents.builder';
+} from './case-documents.builder.js';
 
 @Injectable()
 export class CasesExportService {
@@ -88,7 +89,7 @@ export class CasesExportService {
   // narrative is intentionally replaced by the bundle.
   private async buildCsrCover(c: Case): Promise<Buffer> {
     const officeName = await this.org.officeName();
-    const PDFDocument = require('pdfkit');
+    const PDFDocument = nodeRequire('pdfkit');
     const doc = new PDFDocument({
       size: 'A4',
       margins: { top: 50, bottom: 50, left: 50, right: 50 },

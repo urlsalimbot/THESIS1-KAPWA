@@ -1,12 +1,12 @@
-import { RECENT_CASES_LIMIT, SLA_OVERDUE_DAYS } from '../common/constants';
-import { paginate } from '../common/constants';
+import { RECENT_CASES_LIMIT, SLA_OVERDUE_DAYS } from '../common/constants.js';
+import { paginate } from '../common/constants.js';
 import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { Case, CaseStatus } from '../cases/case.entity';
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
-import { VersionVector } from '../sync/version-vector.entity';
-import { CacheService } from '../common/cache.service';
+import { Case, CaseStatus } from '../cases/case.entity.js';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity.js';
+import { VersionVector } from '../sync/version-vector.entity.js';
+import { CacheService } from '../common/cache.service.js';
 
 @Injectable()
 export class DashboardService {

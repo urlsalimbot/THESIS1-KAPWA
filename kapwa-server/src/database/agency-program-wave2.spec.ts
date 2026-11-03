@@ -1,12 +1,12 @@
-import { Agency } from '../agencies/agency.entity';
-import { AgencyContact } from '../agencies/agency-contact.entity';
-import { Program } from '../programs/program.entity';
-import { ProgramFundSource } from '../programs/program-fund-source.entity';
-import { ProgramRequiredDocument } from '../programs/program-required-document.entity';
-import { AccessCardService } from '../access-cards/access-card-service.entity';
-import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
-import { Person } from '../beneficiaries/person.entity';
-import { PersonContact } from '../beneficiaries/person-contact.entity';
+import { Agency } from '../agencies/agency.entity.js';
+import { AgencyContact } from '../agencies/agency-contact.entity.js';
+import { Program } from '../programs/program.entity.js';
+import { ProgramFundSource } from '../programs/program-fund-source.entity.js';
+import { ProgramRequiredDocument } from '../programs/program-required-document.entity.js';
+import { AccessCardService } from '../access-cards/access-card-service.entity.js';
+import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity.js';
+import { Person } from '../beneficiaries/person.entity.js';
+import { PersonContact } from '../beneficiaries/person-contact.entity.js';
 import { instanceToPlain } from 'class-transformer';
 
 describe('Agency/Program wave-2 getters', () => {

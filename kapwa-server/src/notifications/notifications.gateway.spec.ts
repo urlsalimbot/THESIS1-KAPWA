@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
-import { NotificationsGateway } from './notifications.gateway';
+import { NotificationsGateway } from './notifications.gateway.js';
 
 interface FakeSocket {
   id: string;

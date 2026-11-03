@@ -1,4 +1,4 @@
-import { UserCreateSchema } from './auth.zod';
+import { UserCreateSchema } from './auth.zod.js';
 
 describe('UserCreateSchema — barangay scope', () => {
   const base = {

@@ -3,7 +3,7 @@ import { Observable, from } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { ConsentLedger } from './consent-ledger.entity';
+import { ConsentLedger } from './consent-ledger.entity.js';
 
 const PII_FIELDS = ['surname', 'firstName', 'middleName', 'address', 'phone', 'dob', 'philsysNumber'];
 

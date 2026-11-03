@@ -2,7 +2,7 @@ import * as crypto from 'crypto';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { SyncQueue } from './sync-queue.entity';
+import { SyncQueue } from './sync-queue.entity.js';
 
 export interface ConflictResult {
   action: 'server_wins' | 'client_wins' | 'append_notes' | 'queued';

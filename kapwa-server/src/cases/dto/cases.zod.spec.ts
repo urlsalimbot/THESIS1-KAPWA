@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
-import { ZodPipe } from '../../common/pipes/zod.pipe';
-import { ApproveCaseSchema, UpdateStatusSchema, AssessmentV2Schema, AdoptionSchema } from './cases.zod';
+import { ZodPipe } from '../../common/pipes/zod.pipe.js';
+import { ApproveCaseSchema, UpdateStatusSchema, AssessmentV2Schema, AdoptionSchema } from './cases.zod.js';
 
 /**
  * The approving path carries no signature. The approver is the authenticated

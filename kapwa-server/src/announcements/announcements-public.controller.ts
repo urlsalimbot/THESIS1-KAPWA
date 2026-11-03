@@ -3,8 +3,8 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Response } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
-import { AnnouncementsService } from './announcements.service';
-import { FilingService } from '../filing/filing.service';
+import { AnnouncementsService } from './announcements.service.js';
+import { FilingService } from '../filing/filing.service.js';
 
 @ApiTags('Announcements (Public)')
 @Controller('announcements/public')

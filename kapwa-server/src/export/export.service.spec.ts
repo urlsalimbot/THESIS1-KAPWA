@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ExportService } from './export.service';
-import { OrgService } from '../common/org.service';
-import { Case } from '../cases/case.entity';
-import { AuditService } from '../audit/audit.service';
+import { ExportService } from './export.service.js';
+import { OrgService } from '../common/org.service.js';
+import { Case } from '../cases/case.entity.js';
+import { AuditService } from '../audit/audit.service.js';
 
 describe('ExportService', () => {
   let service: ExportService;

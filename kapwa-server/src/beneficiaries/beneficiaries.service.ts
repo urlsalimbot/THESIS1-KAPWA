@@ -1,19 +1,19 @@
-import { DEFAULT_LIST_LIMIT, paginate } from '../common/constants';
+import { DEFAULT_LIST_LIMIT, paginate } from '../common/constants.js';
 import { Injectable, NotFoundException, BadRequestException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AuditLogService } from '../audit/audit-log.service';
-import { Person } from './person.entity';
-import { PersonContact } from './person-contact.entity';
-import { PersonAddress } from './person-address.entity';
-import { Beneficiary } from './beneficiary.entity';
-import { BeneficiaryRole } from './beneficiary-role.entity';
-import { BeneficiaryClaimant } from './beneficiary-claimant.entity';
-import { ConsentLedger } from './consent-ledger.entity';
-import { HouseholdMembership } from './household-membership.entity';
-import { Household } from './household.entity';
-import { Case } from '../cases/case.entity';
-import { User } from '../auth/user.entity';
+import { AuditLogService } from '../audit/audit-log.service.js';
+import { Person } from './person.entity.js';
+import { PersonContact } from './person-contact.entity.js';
+import { PersonAddress } from './person-address.entity.js';
+import { Beneficiary } from './beneficiary.entity.js';
+import { BeneficiaryRole } from './beneficiary-role.entity.js';
+import { BeneficiaryClaimant } from './beneficiary-claimant.entity.js';
+import { ConsentLedger } from './consent-ledger.entity.js';
+import { HouseholdMembership } from './household-membership.entity.js';
+import { Household } from './household.entity.js';
+import { Case } from '../cases/case.entity.js';
+import { User } from '../auth/user.entity.js';
 const FAMILY_MEMBER_LIMIT = 50;
 @Injectable()
 export class BeneficiariesService {

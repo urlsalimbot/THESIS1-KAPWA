@@ -3,18 +3,18 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
-import { ClientImportOperation, ClientImportRow, ClientImportMatch, BeneficiaryRemark } from './dedup.entity';
-import { parseImportFile, ColumnMap, ColumnMapError } from './dedup-parse.service';
-import { sweep, RowInput } from './dedup-match-sweep.service';
-import { DedupAdapter } from './dedup-adapter';
+import { ClientImportOperation, ClientImportRow, ClientImportMatch, BeneficiaryRemark } from './dedup.entity.js';
+import { parseImportFile, ColumnMap, ColumnMapError } from './dedup-parse.service.js';
+import { sweep, RowInput } from './dedup-match-sweep.service.js';
+import { DedupAdapter } from './dedup-adapter.js';
 import { v7 as uuidv7 } from 'uuid';
-import { computeEligibility } from './dedup-eligibility.service';
+import { computeEligibility } from './dedup-eligibility.service.js';
 
 export const DEDUP_ADAPTER = 'DEDUP_ADAPTER';
-import { Person } from '../beneficiaries/person.entity';
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
-import { PersonAddress } from '../beneficiaries/person-address.entity';
-import { BeneficiaryRemarksService } from './beneficiary-remarks.service';
+import { Person } from '../beneficiaries/person.entity.js';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity.js';
+import { PersonAddress } from '../beneficiaries/person-address.entity.js';
+import { BeneficiaryRemarksService } from './beneficiary-remarks.service.js';
 
 /** Writes the stored priority-list Excel (Task 8 supplies the implementation). */
 export interface DedupOutputWriter {

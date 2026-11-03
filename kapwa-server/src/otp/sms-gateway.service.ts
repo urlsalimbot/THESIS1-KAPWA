@@ -1,5 +1,6 @@
+import { nodeRequire } from '../common/node-require.js';
 import { Injectable, Logger, Optional } from '@nestjs/common';
-import { CircuitBreakerService } from '../common/circuit-breaker.service';
+import { CircuitBreakerService } from '../common/circuit-breaker.service.js';
 
 @Injectable()
 export class SmsGatewayService {
@@ -11,7 +12,7 @@ export class SmsGatewayService {
     const token = process.env.TWILIO_AUTH_TOKEN || '';
     if (sid.startsWith('AC') && token) {
       try {
-        const twilio = require('twilio');
+        const twilio = nodeRequire('twilio');
         this.twilioClient = twilio(sid, token);
         this.logger.log('Twilio SDK initialized');
       } catch (e) {

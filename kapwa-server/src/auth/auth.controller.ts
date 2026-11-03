@@ -1,14 +1,14 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, Get, Res, UseGuards, Request, UnauthorizedException, BadRequestException, UseInterceptors } from '@nestjs/common';
 import { ClassSerializerInterceptor, SerializeOptions } from '@nestjs/common';
 import type { Response } from 'express';
-import { AuthService, REFRESH_COOKIE, REFRESH_COOKIE_MAX_AGE_MS } from './auth.service';
-import { JwtAuthGuard } from './jwt-auth.guard';
-import { RolesGuard } from './guards/roles.guard';
-import { Roles } from './decorators/roles.decorator';
+import { AuthService, REFRESH_COOKIE, REFRESH_COOKIE_MAX_AGE_MS } from './auth.service.js';
+import { JwtAuthGuard } from './jwt-auth.guard.js';
+import { RolesGuard } from './guards/roles.guard.js';
+import { Roles } from './decorators/roles.decorator.js';
 import { Throttle } from '@nestjs/throttler';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { UserCreateSchema, LoginSchema, MfaEnableSchema, MfaDisableSchema, MfaVerifySchema, MfaResendSchema, OtpVerifySchema, UserCreateInput, ChangePasswordSchema, ChangeEmailSchema, ChangePasswordInput, ChangeEmailInput, VerifyEmailSchema, ResendVerificationSchema, ForgotPasswordSchema, ResetPasswordSchema, ConfirmEmailChangeSchema, UpdatePhoneSchema, UpdatePhoneInput, PersonLinkRequestSchema, PersonLinkVerifySchema, IssuePasswordResetSchema, IssuePasswordResetInput } from './dto/auth.zod';
-import { AuthenticatedRequest } from './types';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { UserCreateSchema, LoginSchema, MfaEnableSchema, MfaDisableSchema, MfaVerifySchema, MfaResendSchema, OtpVerifySchema, UserCreateInput, ChangePasswordSchema, ChangeEmailSchema, ChangePasswordInput, ChangeEmailInput, VerifyEmailSchema, ResendVerificationSchema, ForgotPasswordSchema, ResetPasswordSchema, ConfirmEmailChangeSchema, UpdatePhoneSchema, UpdatePhoneInput, PersonLinkRequestSchema, PersonLinkVerifySchema, IssuePasswordResetSchema, IssuePasswordResetInput } from './dto/auth.zod.js';
+import { AuthenticatedRequest } from './types.js';
 
 /**
  * Credential-guessing budgets, tighter than the global bucket (60 req/min per

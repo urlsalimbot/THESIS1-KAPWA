@@ -1,5 +1,5 @@
 import { getMetadataArgsStorage } from 'typeorm';
-import { AccessCardService } from './access-card-service.entity';
+import { AccessCardService } from './access-card-service.entity.js';
 
 // `cost` is DECIMAL(12,2). node-postgres hands decimals back as strings — it
 // will not round-trip them through a JS float without being asked. So the

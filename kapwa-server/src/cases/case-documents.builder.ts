@@ -1,3 +1,5 @@
+import { esmDirname } from '../common/esm-path.js';
+import { nodeRequire } from '../common/node-require.js';
 // Official MSWDO Norzagaray case documents, reproduced as generated PDFs:
 //   * Certificate of Eligibility  (COE) — 21cm x 7cm landscape paper strip
 //   * Petty Cash Voucher          (PCV) — 21cm x 14cm landscape paper strip
@@ -14,7 +16,7 @@
 
 import * as path from 'path';
 import * as fs from 'fs';
-import { ORG_LOCATION } from '../common/constants';
+import { ORG_LOCATION } from '../common/constants.js';
 
 const CM = 28.3465; // points per centimetre
 export const COE_PAGE: [number, number] = [21 * CM, 7 * CM]; // 595.28 x 198.43
@@ -49,7 +51,7 @@ function longDate(value?: Date | string | null): string {
 function logoPath(): string {
   // Same DSWD seal used by the GIS letterhead. Copied to dist via nest-cli
   // assets, so ../gis/assets resolves from both src (ts-jest) and dist (runtime).
-  return path.join(__dirname, '..', 'gis', 'assets', 'DSWD-Logo.png');
+  return path.join(esmDirname(import.meta.url), '..', 'gis', 'assets', 'DSWD-Logo.png');
 }
 
 function drawLogo(doc: any, cx: number, y: number, size = 20): number {
@@ -171,7 +173,7 @@ export async function buildCertificateOfEligibilityPdf(
   data: CertificateOfEligibilityData,
 ): Promise<Buffer> {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const PDFDocument = require('pdfkit');
+  const PDFDocument = nodeRequire('pdfkit');
   const doc = new PDFDocument({
     size: COE_PAGE,
     margins: { top: 8, bottom: 6, left: 22, right: 22 },
@@ -288,7 +290,7 @@ export async function buildPettyCashVoucherPdf(
   data: PettyCashVoucherData,
 ): Promise<Buffer> {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const PDFDocument = require('pdfkit');
+  const PDFDocument = nodeRequire('pdfkit');
   const doc = new PDFDocument({
     size: PCV_PAGE,
     margins: { top: 10, bottom: 8, left: 14, right: 14 },

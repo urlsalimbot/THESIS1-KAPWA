@@ -9,9 +9,9 @@
  * Run (inside the api container): node dist/database/seed-demo.js
  *   or from the repo: npm run seed:demo
  */
-import { AppDataSource } from './data-source';
-import { seedPrograms } from './seed-programs';
-import { call, login, uploadFile } from './seed-http';
+import { AppDataSource } from './data-source.js';
+import { seedPrograms } from './seed-programs.js';
+import { call, login, uploadFile } from './seed-http.js';
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 

@@ -1,6 +1,7 @@
+import { esmDirname } from './esm-path.js';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { INTERVENTION_TYPES, PROGRAM_TYPES, FINANCIAL_INTERVENTION_TYPES, PROGRAM_TYPES_BY_CASE_CATEGORY } from './case-catalog';
+import { INTERVENTION_TYPES, PROGRAM_TYPES, FINANCIAL_INTERVENTION_TYPES, PROGRAM_TYPES_BY_CASE_CATEGORY } from './case-catalog.js';
 
 // The canonical catalog JSON (repo-root; readable in test runs even though it
 // is not in the Docker image — `case-catalog.ts` mirrors it as literals for
@@ -8,7 +9,7 @@ import { INTERVENTION_TYPES, PROGRAM_TYPES, FINANCIAL_INTERVENTION_TYPES, PROGRA
 // the server copy to it.
 const CATALOG = JSON.parse(
   readFileSync(
-    join(__dirname, '..', '..', '..', 'docs', 'superpowers', 'specs', 'case-catalog.json'),
+    join(esmDirname(import.meta.url), '..', '..', '..', 'docs', 'superpowers', 'specs', 'case-catalog.json'),
     'utf8',
   ),
 ) as {

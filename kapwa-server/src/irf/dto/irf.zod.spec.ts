@@ -1,4 +1,4 @@
-import { CreateIrfSchema, IrfPersonRecordSchema } from './irf.zod';
+import { CreateIrfSchema, IrfPersonRecordSchema } from './irf.zod.js';
 
 describe('IrfPersonRecordSchema', () => {
   it('accepts the canonical Incident Report Form fields', () => {

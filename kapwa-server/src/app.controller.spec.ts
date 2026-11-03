@@ -1,4 +1,4 @@
-import { AppController } from './app.controller';
+import { AppController } from './app.controller.js';
 import { ServiceUnavailableException } from '@nestjs/common';
 
 describe('AppController health', () => {

@@ -1,7 +1,7 @@
 import * as Minio from 'minio';
 import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CircuitBreakerService } from '../common/circuit-breaker.service';
+import { CircuitBreakerService } from '../common/circuit-breaker.service.js';
 
 @Injectable()
 export class MinioService implements OnModuleInit {

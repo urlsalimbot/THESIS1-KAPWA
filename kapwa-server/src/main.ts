@@ -2,13 +2,13 @@ import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { VersioningType } from '@nestjs/common';
 import helmet from 'helmet';
-import * as cookieParser from 'cookie-parser';
-import { AppModule } from './app.module';
-import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+import cookieParser from 'cookie-parser';
+import { AppModule } from './app.module.js';
+import { AllExceptionsFilter } from './common/filters/http-exception.filter.js';
 
 async function runMigrations() {
   try {
-    const { migrate } = await import('./database/migrate');
+    const { migrate } = await import('./database/migrate.js');
     await migrate();
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

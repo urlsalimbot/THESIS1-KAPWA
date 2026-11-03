@@ -1,13 +1,13 @@
 import { Controller, Get, Query, UseGuards, Request, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { DashboardService } from './dashboard.service';
-import { CaseStatus } from '../cases/case.entity';
-import { AuthenticatedRequest } from '../auth/types';
-import { SLA_OVERDUE_DAYS, RECENT_CASES_LIMIT } from '../common/constants';
-import { displayFullName } from '../common/person-name';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { DashboardService } from './dashboard.service.js';
+import { CaseStatus } from '../cases/case.entity.js';
+import { AuthenticatedRequest } from '../auth/types.js';
+import { SLA_OVERDUE_DAYS, RECENT_CASES_LIMIT } from '../common/constants.js';
+import { displayFullName } from '../common/person-name.js';
 
 /**
  * The window values the dashboard's range selector offers. The main dashboard

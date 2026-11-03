@@ -1,10 +1,10 @@
-import { MAX_FILE_SIZE, DEFAULT_DOC_LIMIT } from '../common/constants';
+import { MAX_FILE_SIZE, DEFAULT_DOC_LIMIT } from '../common/constants.js';
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, LessThan, Not, In } from 'typeorm';
-import { DocumentVault } from './filing.entity';
-import { Case } from '../cases/case.entity';
-import * as fs from 'fs';
+import { DocumentVault } from './filing.entity.js';
+import { Case } from '../cases/case.entity.js';
+import fs from 'node:fs';
 import * as path from 'path';
 
 const UPLOAD_DIR = path.resolve(process.cwd(), 'uploads');

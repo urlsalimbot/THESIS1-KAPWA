@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Reflector } from '@nestjs/core';
-import { ProgramsController } from './programs.controller';
-import { ProgramsService } from './programs.service';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { ROLES_KEY } from '../auth/decorators/roles.decorator';
+import { ProgramsController } from './programs.controller.js';
+import { ProgramsService } from './programs.service.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { ROLES_KEY } from '../auth/decorators/roles.decorator.js';
 
 describe('ProgramsController — read access for staff', () => {
   let controller: ProgramsController;

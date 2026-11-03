@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Announcement } from './announcement.entity';
-import { AnnouncementsService } from './announcements.service';
-import { AnnouncementsController } from './announcements.controller';
-import { AnnouncementsPublicController } from './announcements-public.controller';
-import { AuthModule } from '../auth/auth.module';
-import { FilingModule } from '../filing/filing.module';
+import { Announcement } from './announcement.entity.js';
+import { AnnouncementsService } from './announcements.service.js';
+import { AnnouncementsController } from './announcements.controller.js';
+import { AnnouncementsPublicController } from './announcements-public.controller.js';
+import { AuthModule } from '../auth/auth.module.js';
+import { FilingModule } from '../filing/filing.module.js';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Announcement]), AuthModule, FilingModule],

@@ -1,4 +1,4 @@
-import { PROGRAMS } from './seed-programs';
+import { PROGRAMS } from './seed-programs.js';
 
 describe('program seed data', () => {
   const byName = (needle: RegExp) => PROGRAMS.filter(p => needle.test(p.name));

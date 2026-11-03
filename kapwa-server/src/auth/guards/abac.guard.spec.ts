@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Reflector } from '@nestjs/core';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { AbacGuard } from './abac.guard';
-import { AbacService } from '../services/abac.service';
-import { ConsentLedger } from '../../beneficiaries/consent-ledger.entity';
+import { AbacGuard } from './abac.guard.js';
+import { AbacService } from '../services/abac.service.js';
+import { ConsentLedger } from '../../beneficiaries/consent-ledger.entity.js';
 
 describe('AbacGuard (role scoping and denial messages)', () => {
   let guard: AbacGuard;

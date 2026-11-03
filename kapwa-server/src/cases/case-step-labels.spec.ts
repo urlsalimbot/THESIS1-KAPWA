@@ -1,4 +1,4 @@
-import { stepsDueAt, stepsBecomingDueAt, CASE_STEP_FLOORS, CASE_STEP_LABELS, CASE_STATUS_INDEX, stepsForCategory, COMMON_STEPS, categoryStepsFor } from './case-step-labels';
+import { stepsDueAt, stepsBecomingDueAt, CASE_STEP_FLOORS, CASE_STEP_LABELS, CASE_STATUS_INDEX, stepsForCategory, COMMON_STEPS, categoryStepsFor } from './case-step-labels.js';
 
 const COMMON = ['assessment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure'];
 // Court hearings come *after* the inter-agency referral: a case is referred out

@@ -1,5 +1,5 @@
-import type { FamilyMemberInput } from './dto/intake.zod';
-import { computeAgeFromDob } from './compute-age';
+import type { FamilyMemberInput } from './dto/intake.zod.js';
+import { computeAgeFromDob } from './compute-age.js';
 
 export interface MemberPersonData {
   surname: string;

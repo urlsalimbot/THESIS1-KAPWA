@@ -1,6 +1,7 @@
 import { PDFDocument } from 'pdf-lib';
-import { buildSummaryReportPdf } from './summary-report-pdf.builder';
-import { ReportColumn, SummaryReportData, SummaryTable, buildColumns } from './summary-report.types';
+import { inflateSync } from 'node:zlib';
+import { buildSummaryReportPdf } from './summary-report-pdf.builder.js';
+import { ReportColumn, SummaryReportData, SummaryTable, buildColumns } from './summary-report.types.js';
 
 // Columns are the fixed 18-slot reference set regardless of the catalogue.
 
@@ -39,7 +40,7 @@ function searchableText(buf: Buffer): string {
   let m: RegExpExecArray | null;
   while ((m = re.exec(raw)) !== null) {
     try {
-      streams.push(require('zlib').inflateSync(Buffer.from(m[1], 'latin1')).toString('latin1'));
+      streams.push(inflateSync(Buffer.from(m[1], 'latin1')).toString('latin1'));
     } catch { /* not FlateDecode */ }
   }
   const hex = streams.join('\n').match(/<([0-9A-Fa-f]+)>/g) ?? [];

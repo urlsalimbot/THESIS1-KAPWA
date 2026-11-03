@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ReportsController, SUMMARY_REPORT_BUILDER } from './reports.controller';
-import { SummaryReportService } from './summary-report.service';
-import { SummaryReportPdfBuilder } from './summary-report-pdf.service-builder';
-import { CommonModule } from '../common/common.module';
-import { User } from '../auth/user.entity';
+import { ReportsController, SUMMARY_REPORT_BUILDER } from './reports.controller.js';
+import { SummaryReportService } from './summary-report.service.js';
+import { SummaryReportPdfBuilder } from './summary-report-pdf.service-builder.js';
+import { CommonModule } from '../common/common.module.js';
+import { User } from '../auth/user.entity.js';
 
 @Module({
   imports: [TypeOrmModule.forFeature([User]), CommonModule],

@@ -1,11 +1,11 @@
 import { Controller, Post, Get, Put, Delete, Param, Body, UseGuards, Request } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { NotificationsService } from './notifications.service';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { CreateNotificationSchema, CreateNotificationInput, UpdatePreferenceSchema, UpdatePreferenceInput, BulkUpdatePreferencesSchema, BulkUpdatePreferencesInput } from './dto/notifications.zod';
-import { AuthenticatedRequest } from '../auth/types';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { NotificationsService } from './notifications.service.js';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { CreateNotificationSchema, CreateNotificationInput, UpdatePreferenceSchema, UpdatePreferenceInput, BulkUpdatePreferencesSchema, BulkUpdatePreferencesInput } from './dto/notifications.zod.js';
+import { AuthenticatedRequest } from '../auth/types.js';
 
 @Controller('notifications')
 @UseGuards(JwtAuthGuard, RolesGuard)

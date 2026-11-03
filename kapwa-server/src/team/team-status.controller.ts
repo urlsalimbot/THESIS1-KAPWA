@@ -1,11 +1,11 @@
 import { Body, Controller, Get, Put, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { AbacGuard } from '../auth/guards/abac.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { AuthenticatedRequest } from '../auth/types';
-import { TeamStatusService, TeamStatusInput } from './team-status.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { AbacGuard } from '../auth/guards/abac.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { AuthenticatedRequest } from '../auth/types.js';
+import { TeamStatusService, TeamStatusInput } from './team-status.service.js';
 
 // Three routes under /team: `status` (own read/write) and `statuses` (team
 // board). Plan role matrix: admin + social_worker set their own status and
