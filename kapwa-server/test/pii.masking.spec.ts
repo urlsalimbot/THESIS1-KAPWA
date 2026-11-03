@@ -2,8 +2,8 @@ import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { of, firstValueFrom } from 'rxjs';
-import { PiiMaskingInterceptor } from '../src/beneficiaries/pii.interceptor';
-import { ConsentLedger } from '../src/beneficiaries/consent-ledger.entity';
+import { PiiMaskingInterceptor } from '../src/beneficiaries/pii.interceptor.js';
+import { ConsentLedger } from '../src/beneficiaries/consent-ledger.entity.js';
 
 describe('PiiMaskingInterceptor', () => {
   let interceptor: PiiMaskingInterceptor;

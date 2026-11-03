@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
-import { SmsGatewayService } from './sms-gateway.service';
-import { PublicConfigController } from './public-config.controller';
+import { SmsGatewayService } from './sms-gateway.service.js';
+import { PublicConfigController } from './public-config.controller.js';
 
 const envKeys = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_PHONE_NUMBER'] as const;
 

@@ -1,4 +1,4 @@
-import { computeEligibility, EligibilityRowInput } from './dedup-eligibility.service';
+import { computeEligibility, EligibilityRowInput } from './dedup-eligibility.service.js';
 
 const TODAY = '2026-10-09';
 const row = (rowIndex: number, r: Partial<EligibilityRowInput> = {}): EligibilityRowInput => ({

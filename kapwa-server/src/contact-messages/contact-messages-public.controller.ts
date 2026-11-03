@@ -1,8 +1,8 @@
 import { Body, Controller, HttpCode, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { ContactMessagesService } from './contact-messages.service';
-import { CreateContactMessageSchema, CreateContactMessageInput } from './dto/contact-message.zod';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { ContactMessagesService } from './contact-messages.service.js';
+import { CreateContactMessageSchema, CreateContactMessageInput } from './dto/contact-message.zod.js';
 
 // Public submission endpoint for the website contact form. Guards nothing —
 // visitors must be able to reach the MSWDO without an account. Messages are

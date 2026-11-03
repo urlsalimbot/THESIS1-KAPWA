@@ -1,11 +1,11 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { AbacGuard } from '../auth/guards/abac.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { AuthenticatedRequest } from '../auth/types';
-import { OfficeEventsService, OfficeEventInput } from './office-events.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { AbacGuard } from '../auth/guards/abac.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { AuthenticatedRequest } from '../auth/types.js';
+import { OfficeEventsService, OfficeEventInput } from './office-events.service.js';
 
 // Dates travel as YYYY-MM-DD query params. Absent bounds default to the
 // current ISO week (Monday start) so a bare `GET /team/events` still paints

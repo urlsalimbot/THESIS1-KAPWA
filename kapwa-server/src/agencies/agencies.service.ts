@@ -1,9 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Agency } from './agency.entity';
-import { AgencyContact } from './agency-contact.entity';
-import { CreateAgencyInput } from './dto/agencies.zod';
+import { Agency } from './agency.entity.js';
+import { AgencyContact } from './agency-contact.entity.js';
+import { CreateAgencyInput } from './dto/agencies.zod.js';
 
 @Injectable()
 export class AgenciesService {

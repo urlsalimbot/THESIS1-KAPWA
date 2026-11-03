@@ -1,9 +1,9 @@
 import { DataSource } from 'typeorm';
-import { Program } from './program.entity';
-import { ProgramIntervention } from './program-intervention.entity';
-import { ProgramFundSource } from './program-fund-source.entity';
-import { ProgramRequiredDocument } from './program-required-document.entity';
-import { FormVersionHistory } from './form-version-history.entity';
+import { Program } from './program.entity.js';
+import { ProgramIntervention } from './program-intervention.entity.js';
+import { ProgramFundSource } from './program-fund-source.entity.js';
+import { ProgramRequiredDocument } from './program-required-document.entity.js';
+import { FormVersionHistory } from './form-version-history.entity.js';
 
 /**
  * The Program → Services relation, asserted against TypeORM's *built metadata*.

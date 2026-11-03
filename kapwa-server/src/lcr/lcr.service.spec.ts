@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { LcrService } from './lcr.service';
-import { Person } from '../beneficiaries/person.entity';
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
+import { LcrService } from './lcr.service.js';
+import { Person } from '../beneficiaries/person.entity.js';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity.js';
 
 describe('LcrService', () => {
   let service: LcrService;

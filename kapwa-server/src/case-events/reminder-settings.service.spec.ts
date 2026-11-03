@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { ReminderSettingsService } from './reminder-settings.service';
+import { ReminderSettingsService } from './reminder-settings.service.js';
 
 describe('ReminderSettingsService', () => {
   const settings = { find: jest.fn(), findOne: jest.fn(), create: jest.fn(), save: jest.fn() };

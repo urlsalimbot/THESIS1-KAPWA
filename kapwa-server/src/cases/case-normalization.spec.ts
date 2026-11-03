@@ -1,6 +1,6 @@
-import { CaseRequirement } from './case-requirement.entity';
-import { CaseReferral } from './case-referral.entity';
-import { CaseAssistance } from './case-assistance.entity';
+import { CaseRequirement } from './case-requirement.entity.js';
+import { CaseReferral } from './case-referral.entity.js';
+import { CaseAssistance } from './case-assistance.entity.js';
 
 describe('schema normalization — case child entities', () => {
   it('defines case_requirements', () => {

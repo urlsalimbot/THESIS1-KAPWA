@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Case } from '../cases/case.entity';
-import { Notification } from '../notifications/notification.entity';
-import { SlaService } from './sla.service';
-import { SlaController } from './sla.controller';
+import { Case } from '../cases/case.entity.js';
+import { Notification } from '../notifications/notification.entity.js';
+import { SlaService } from './sla.service.js';
+import { SlaController } from './sla.controller.js';
 
 @Module({
   imports: [

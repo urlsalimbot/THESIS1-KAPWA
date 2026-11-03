@@ -16,10 +16,10 @@
  * Run with: npm run seed:prod-demo   (or docker exec <api> node dist/database/seed-prod-demo.js)
  */
 import 'reflect-metadata';
-import * as bcrypt from 'bcrypt';
-import { AppDataSource } from './data-source';
-import { BARANGAYS } from '../common/constants';
-import { seedPrograms } from './seed-programs';
+import bcrypt from 'bcrypt';
+import { AppDataSource } from './data-source.js';
+import { BARANGAYS } from '../common/constants.js';
+import { seedPrograms } from './seed-programs.js';
 
 const API = process.env.API_BASE || 'http://localhost:3000/api/v1';
 const SALT_ROUNDS = 12;

@@ -1,9 +1,9 @@
-import { OTP_MIN, OTP_RANGE, OTP_EXPIRY_MINUTES, OTP_RATE_LIMIT_SECONDS, SECONDS_PER_MINUTE, MS_PER_SECOND } from '../common/constants';
+import { OTP_MIN, OTP_RANGE, OTP_EXPIRY_MINUTES, OTP_RATE_LIMIT_SECONDS, SECONDS_PER_MINUTE, MS_PER_SECOND } from '../common/constants.js';
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
-import { OtpCode } from './otp.entity';
-import { SmsGatewayService } from './sms-gateway.service';
+import { OtpCode } from './otp.entity.js';
+import { SmsGatewayService } from './sms-gateway.service.js';
 import * as crypto from 'crypto';
 
 @Injectable()

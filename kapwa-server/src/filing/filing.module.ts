@@ -1,10 +1,10 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { FilingService } from './filing.service';
-import { FilingController } from './filing.controller';
-import { DocumentVault } from './filing.entity';
-import { Case } from '../cases/case.entity';
-import { CasesModule } from '../cases/cases.module';
+import { FilingService } from './filing.service.js';
+import { FilingController } from './filing.controller.js';
+import { DocumentVault } from './filing.entity.js';
+import { Case } from '../cases/case.entity.js';
+import { CasesModule } from '../cases/cases.module.js';
 
 @Module({
   // `CasesModule` for the step-1 seal assertion on the requirement write routes.

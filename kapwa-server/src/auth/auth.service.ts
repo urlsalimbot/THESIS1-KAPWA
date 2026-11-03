@@ -1,21 +1,21 @@
-import { BCRYPT_SALT_ROUNDS, OTP_EXPIRY_MINUTES, OTP_MIN, OTP_RANGE, OTP_RATE_LIMIT_SECONDS, MS_PER_SECOND, SECONDS_PER_MINUTE } from '../common/constants';
+import { BCRYPT_SALT_ROUNDS, OTP_EXPIRY_MINUTES, OTP_MIN, OTP_RANGE, OTP_RATE_LIMIT_SECONDS, MS_PER_SECOND, SECONDS_PER_MINUTE } from '../common/constants.js';
 import { Logger, Injectable, Optional, UnauthorizedException, ConflictException, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
+import bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { generateTOTPSecret, generateTOTPUri, verifyTOTP } from './totp';
-import { User, MfaMethod, UserRole } from './user.entity';
-import { UserToken } from './user-token.entity';
-import { UserBarangayAssignment } from './user-barangay-assignment.entity';
-import { Person } from '../beneficiaries/person.entity';
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
-import { OtpService } from '../otp/otp.service';
-import { SmsGatewayService } from '../otp/sms-gateway.service';
-import { EmailService } from '../email/email.service';
-import { PendingIntakesService } from '../pending-intakes/pending-intakes.service';
-import type { SelfRegistrationIntakeInput } from './dto/auth.zod';
+import { generateTOTPSecret, generateTOTPUri, verifyTOTP } from './totp.js';
+import { User, MfaMethod, UserRole } from './user.entity.js';
+import { UserToken } from './user-token.entity.js';
+import { UserBarangayAssignment } from './user-barangay-assignment.entity.js';
+import { Person } from '../beneficiaries/person.entity.js';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity.js';
+import { OtpService } from '../otp/otp.service.js';
+import { SmsGatewayService } from '../otp/sms-gateway.service.js';
+import { EmailService } from '../email/email.service.js';
+import { PendingIntakesService } from '../pending-intakes/pending-intakes.service.js';
+import type { SelfRegistrationIntakeInput } from './dto/auth.zod.js';
 
 // Split a legacy single-string name into atomic parts. Heuristic: the first
 // token is the first name, the last token is the last name, and everything in

@@ -1,9 +1,9 @@
 import { Entity, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Expose, Exclude } from 'class-transformer';
-import { BaseEntity } from '../common/base.entity';
-import { displayFullName } from '../common/person-name';
-import { UserToken } from './user-token.entity';
-import { UserBarangayAssignment } from './user-barangay-assignment.entity';
+import { BaseEntity } from '../common/base.entity.js';
+import { displayFullName } from '../common/person-name.js';
+import { UserToken } from './user-token.entity.js';
+import { UserBarangayAssignment } from './user-barangay-assignment.entity.js';
 
 export enum UserRole {
   SW = 'social_worker',

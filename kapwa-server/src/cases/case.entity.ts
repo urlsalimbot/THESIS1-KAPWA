@@ -1,12 +1,12 @@
 import { Entity, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { Expose, Exclude } from 'class-transformer';
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
-import { User } from '../auth/user.entity';
-import { BaseEntity } from '../common/base.entity';
-import { CaseRequirement } from './case-requirement.entity';
-import { CaseReferral } from './case-referral.entity';
-import { CaseAssistance } from './case-assistance.entity';
-import { CaseFollowUpVisit } from './case-follow-up-visit.entity';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity.js';
+import { User } from '../auth/user.entity.js';
+import { BaseEntity } from '../common/base.entity.js';
+import { CaseRequirement } from './case-requirement.entity.js';
+import { CaseReferral } from './case-referral.entity.js';
+import { CaseAssistance } from './case-assistance.entity.js';
+import { CaseFollowUpVisit } from './case-follow-up-visit.entity.js';
 
 export enum CaseStatus {
   ENROLLED = 'enrolled',

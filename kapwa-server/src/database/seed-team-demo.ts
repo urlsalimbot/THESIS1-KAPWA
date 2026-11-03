@@ -1,3 +1,4 @@
+import { isMain } from '../common/is-main.js';
 /**
  * Team-workspace demo seed — calendar simulation for LAN testing.
  *
@@ -36,10 +37,10 @@
  * Run: npm run seed:team-demo
  */
 import { v7 as uuidv7 } from 'uuid';
-import * as bcrypt from 'bcrypt';
+import bcrypt from 'bcrypt';
 import { DataSource } from 'typeorm';
-import { AppDataSource } from './data-source';
-import { BARANGAYS } from '../common/constants';
+import { AppDataSource } from './data-source.js';
+import { BARANGAYS } from '../common/constants.js';
 
 const SALT_ROUNDS = 12;
 const WORKER_PASSWORD = 'worker123';
@@ -540,7 +541,7 @@ export async function seedTeamDemo(): Promise<void> {
   }
 }
 
-if (require.main === module) {
+if (isMain(import.meta.url)) {
   seedTeamDemo().catch((e) => {
     console.error('FATAL:', e.message);
     process.exit(1);

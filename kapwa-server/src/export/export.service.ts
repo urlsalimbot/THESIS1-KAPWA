@@ -1,11 +1,12 @@
+import { nodeRequire } from '../common/node-require.js';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Case } from '../cases/case.entity';
-import { AuditService } from '../audit/audit.service';
-import { OrgService } from '../common/org.service';
-import { ORG_LOCATION } from '../common/constants';
-import { fmtDateLong } from '../common/pdf-format';
+import { Case } from '../cases/case.entity.js';
+import { AuditService } from '../audit/audit.service.js';
+import { OrgService } from '../common/org.service.js';
+import { ORG_LOCATION } from '../common/constants.js';
+import { fmtDateLong } from '../common/pdf-format.js';
 
 function nextMonth(month: string): string {
   const [year, m] = month.split('-').map(Number);
@@ -43,7 +44,7 @@ export class ExportService {
     });
     this.logger.warn(`EXPORT: audit-log CSV, ${rows.length} log rows`);
 
-    const { stringify } = require('csv-stringify/sync');
+    const { stringify } = nodeRequire('csv-stringify/sync');
     const csv = stringify(
       rows.map((r: any) => ({
         action: r.action ?? '',
@@ -96,7 +97,7 @@ export class ExportService {
   }
 
   async exportServiceSummaryCsv(startDate?: string, endDate?: string): Promise<{ buffer: Buffer; filename: string }> {
-    const { stringify } = require('csv-stringify/sync');
+    const { stringify } = nodeRequire('csv-stringify/sync');
     const rows = await this.serviceSummaryRows(startDate, endDate);
     const csv = stringify(rows, {
       header: true,
@@ -108,7 +109,7 @@ export class ExportService {
   }
 
   async exportServiceSummaryXlsx(startDate?: string, endDate?: string): Promise<Buffer> {
-    const ExcelJS = require('exceljs');
+    const ExcelJS = nodeRequire('exceljs');
     const rows = await this.serviceSummaryRows(startDate, endDate);
     const workbook = new ExcelJS.Workbook();
     const ws = workbook.addWorksheet('Service Summary');
@@ -134,7 +135,7 @@ export class ExportService {
   }
 
   async monthlyFundUtilization(month: string, startDate?: string, endDate?: string): Promise<{ buffer: Buffer; filename: string }> {
-    const ExcelJS = require('exceljs');
+    const ExcelJS = nodeRequire('exceljs');
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Fund Utilization');
     sheet.columns = [
@@ -171,7 +172,7 @@ export class ExportService {
       .groupBy('c.status')
       .getRawMany();
 
-    const { stringify } = require('csv-stringify/sync');
+    const { stringify } = nodeRequire('csv-stringify/sync');
     const records = byStatus.map(r => ({
       Status: r.status,
       Count: r.count,
@@ -186,7 +187,7 @@ export class ExportService {
     data: { fullName: string; address?: string; date: string; details?: string },
   ): Promise<{ buffer: Buffer; filename: string }> {
     const officeName = await this.org.officeName();
-    const PDFDocument = require('pdfkit');
+    const PDFDocument = nodeRequire('pdfkit');
     const doc = new PDFDocument({
       size: 'A4',
       margin: 60,

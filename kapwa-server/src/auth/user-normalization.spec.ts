@@ -1,5 +1,5 @@
-import { UserToken } from './user-token.entity';
-import { UserBarangayAssignment } from './user-barangay-assignment.entity';
+import { UserToken } from './user-token.entity.js';
+import { UserBarangayAssignment } from './user-barangay-assignment.entity.js';
 
 describe('schema normalization — user child entities', () => {
   it('defines user_tokens with the expected columns', () => {

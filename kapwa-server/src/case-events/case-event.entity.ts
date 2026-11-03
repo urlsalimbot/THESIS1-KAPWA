@@ -1,6 +1,6 @@
 import { Entity, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
-import { Case } from '../cases/case.entity';
+import { BaseEntity } from '../common/base.entity.js';
+import { Case } from '../cases/case.entity.js';
 
 export const CASE_EVENT_TYPES = ['court_hearing', 'home_visit'] as const;
 export type CaseEventType = (typeof CASE_EVENT_TYPES)[number];

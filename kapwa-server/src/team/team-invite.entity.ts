@@ -1,5 +1,5 @@
 import { Entity, Column, CreateDateColumn } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
+import { BaseEntity } from '../common/base.entity.js';
 
 // Team workspace: schedule suggestions ("invite a colleague to have a
 // schedule block on a date"). Any staff member incl. admin may send; only the

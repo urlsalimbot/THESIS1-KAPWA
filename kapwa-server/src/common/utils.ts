@@ -1,4 +1,4 @@
-import { SATURDAY, SUNDAY } from './constants';
+import { SATURDAY, SUNDAY } from './constants.js';
 
 export function phTime(): string {
   const now = new Date();

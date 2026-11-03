@@ -1,4 +1,4 @@
-import { CaseEventReminderService } from './case-event-reminder.service';
+import { CaseEventReminderService } from './case-event-reminder.service.js';
 
 describe('CaseEventReminderService', () => {
   const events = { find: jest.fn() };

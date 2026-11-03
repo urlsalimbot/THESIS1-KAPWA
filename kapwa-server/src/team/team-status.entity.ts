@@ -1,6 +1,6 @@
 import { Entity, Column, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
-import { User } from '../auth/user.entity';
+import { BaseEntity } from '../common/base.entity.js';
+import { User } from '../auth/user.entity.js';
 
 // Team workspace: current whereabouts status per staff member (in office,
 // field visit, on leave, etc.). One row per user (user_id is UNIQUE); the

@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException } from '@nestjs/common';
-import { FourPsService, ageFromDob } from './fourps.service';
-import { CaseComplianceItem } from './fourps-compliance.entity';
-import { CasePayout } from './fourps-payout.entity';
-import { CaseIntervention } from '../case-interventions/case-intervention.entity';
-import { AccessCardsService } from '../access-cards/access-cards.service';
-import { LogServiceRowSchema } from '../access-cards/dto/access-cards.zod';
+import { FourPsService, ageFromDob } from './fourps.service.js';
+import { CaseComplianceItem } from './fourps-compliance.entity.js';
+import { CasePayout } from './fourps-payout.entity.js';
+import { CaseIntervention } from '../case-interventions/case-intervention.entity.js';
+import { AccessCardsService } from '../access-cards/access-cards.service.js';
+import { LogServiceRowSchema } from '../access-cards/dto/access-cards.zod.js';
 
 // 4Ps now auto-logs to the household access card and (on payout completion)
 // records a case intervention. Both are best-effort collaborators.

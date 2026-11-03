@@ -1,5 +1,5 @@
-import { PersonContact } from './person-contact.entity';
-import { PersonAddress } from './person-address.entity';
+import { PersonContact } from './person-contact.entity.js';
+import { PersonAddress } from './person-address.entity.js';
 
 describe('schema normalization — person child entities', () => {
   it('defines person_contacts with the expected columns', () => {
@@ -53,9 +53,9 @@ describe('person address getter', () => {
   });
 });
 
-import { Beneficiary } from './beneficiary.entity';
-import { Person } from './person.entity';
-import { BeneficiaryRole } from './beneficiary-role.entity';
+import { Beneficiary } from './beneficiary.entity.js';
+import { Person } from './person.entity.js';
+import { BeneficiaryRole } from './beneficiary-role.entity.js';
 
 describe('schema normalization — beneficiary dedup groundwork', () => {
   it('beneficiary still exposes legacy category for Wave-1 compatibility', () => {

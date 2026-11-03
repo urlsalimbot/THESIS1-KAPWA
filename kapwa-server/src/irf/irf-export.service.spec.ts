@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ForbiddenException } from '@nestjs/common';
-import { IrfExportService } from './irf-export.service';
-import { IrfService } from './irf.service';
-import { IrfAuditService } from './irf-audit.service';
-import { IrfCase } from './irf-case.entity';
-import { AgenciesService } from '../agencies/agencies.service';
+import { IrfExportService } from './irf-export.service.js';
+import { IrfService } from './irf.service.js';
+import { IrfAuditService } from './irf-audit.service.js';
+import { IrfCase } from './irf-case.entity.js';
+import { AgenciesService } from '../agencies/agencies.service.js';
 
 describe('IrfExportService', () => {
   let service: IrfExportService;

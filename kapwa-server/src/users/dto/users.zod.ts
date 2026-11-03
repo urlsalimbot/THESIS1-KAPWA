@@ -1,4 +1,4 @@
-import { BARANGAY_NAMES } from '../../common/constants';
+import { BARANGAY_NAMES } from '../../common/constants.js';
 import { z } from 'zod';
 
 export const UserRoleEnum = z.enum([

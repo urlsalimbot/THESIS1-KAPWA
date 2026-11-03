@@ -1,15 +1,15 @@
 import { Controller, Get, Post, Patch, Param, Body, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { AuthenticatedRequest } from '../auth/types';
-import { InterventionCatalogService } from './intervention-catalog.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { AuthenticatedRequest } from '../auth/types.js';
+import { InterventionCatalogService } from './intervention-catalog.service.js';
 import {
   CreateServiceTypeSchema, UpdateServiceTypeSchema,
   CreateServiceTypeInput, UpdateServiceTypeInput,
-} from './dto/intervention-catalog.zod';
+} from './dto/intervention-catalog.zod.js';
 
 @ApiTags('Intervention Catalog')
 @ApiBearerAuth()

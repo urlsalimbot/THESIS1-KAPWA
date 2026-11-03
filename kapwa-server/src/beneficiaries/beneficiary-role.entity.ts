@@ -1,6 +1,6 @@
 import { Entity, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { Person } from './person.entity';
-import { BaseEntity } from '../common/base.entity';
+import type { Person } from './person.entity.js';
+import { BaseEntity } from '../common/base.entity.js';
 
 @Entity('beneficiary_roles')
 export class BeneficiaryRole extends BaseEntity {
@@ -23,7 +23,7 @@ export class BeneficiaryRole extends BaseEntity {
   @Column({ nullable: true })
   category?: string;
 
-  @ManyToOne(() => Person, { nullable: false })
+  @ManyToOne('Person', { nullable: false })
   @JoinColumn({ name: 'person_id' })
   person?: Person;
 

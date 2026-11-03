@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { WalkInLog } from './walk-in-log.entity';
-import { CreateWalkInLogInput, UpdateWalkInLogInput } from './walk-in-logs.zod';
+import { WalkInLog } from './walk-in-log.entity.js';
+import { CreateWalkInLogInput, UpdateWalkInLogInput } from './walk-in-logs.zod.js';
 
 const TERMINAL = new Set(['completed', 'referred', 'incomplete', 'no_service']);
 const MANILA = 'Asia/Manila';

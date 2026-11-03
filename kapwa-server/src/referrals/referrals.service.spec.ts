@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ReferralsService } from './referrals.service';
-import { Referral, ReferralStatus } from './referral.entity';
-import { Person } from '../beneficiaries/person.entity';
+import { ReferralsService } from './referrals.service.js';
+import { Referral, ReferralStatus } from './referral.entity.js';
+import { Person } from '../beneficiaries/person.entity.js';
 
 function pendingReferral(overrides: Partial<Referral> = {}): Referral {
   return {

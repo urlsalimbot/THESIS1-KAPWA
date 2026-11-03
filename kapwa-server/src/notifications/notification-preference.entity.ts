@@ -1,6 +1,6 @@
 import { Entity, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { NotificationCategory } from './notification.entity';
-import { BaseEntity } from '../common/base.entity';
+import { NotificationCategory } from './notification.entity.js';
+import { BaseEntity } from '../common/base.entity.js';
 
 @Entity('notification_preferences')
 export class NotificationPreference extends BaseEntity {

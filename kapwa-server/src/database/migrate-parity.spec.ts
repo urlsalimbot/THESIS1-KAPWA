@@ -1,3 +1,4 @@
+import { esmDirname } from '../common/esm-path.js';
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -7,8 +8,8 @@ import { join } from 'path';
 // table which `migrate.ts` does not know about fails here, instead of failing
 // on some fresh deployment six months later.
 
-const MIGRATIONS_DIR = join(__dirname, 'migrations');
-const MIGRATE_SRC = readFileSync(join(__dirname, 'migrate.ts'), 'utf8');
+const MIGRATIONS_DIR = join(esmDirname(import.meta.url), 'migrations');
+const MIGRATE_SRC = readFileSync(join(esmDirname(import.meta.url), 'migrate.ts'), 'utf8');
 
 const CREATE_RE = /CREATE TABLE\s+(?:IF NOT EXISTS\s+)?([a-z_]+)/g;
 const DROP_RE = /DROP TABLE\s+(?:IF EXISTS\s+)?([a-z_]+)/g;

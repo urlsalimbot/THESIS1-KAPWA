@@ -1,4 +1,4 @@
-import { pairwiseRules } from './associations';
+import { pairwiseRules } from './associations.js';
 
 describe('association rules', () => {
   it('computes support, confidence, and lift against a hand-checked matrix', () => {

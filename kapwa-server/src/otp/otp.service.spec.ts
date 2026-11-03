@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { OtpService } from './otp.service';
-import { OtpCode } from './otp.entity';
-import { SmsGatewayService } from './sms-gateway.service';
+import { OtpService } from './otp.service.js';
+import { OtpCode } from './otp.entity.js';
+import { SmsGatewayService } from './sms-gateway.service.js';
 
 describe('OtpService', () => {
   let service: OtpService;

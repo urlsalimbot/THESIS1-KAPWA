@@ -2,16 +2,16 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, MoreThanOrEqual, Repository } from 'typeorm';
-import { CaseEvent } from './case-event.entity';
-import { CaseEventReminder } from './case-event-reminder.entity';
-import { Case } from '../cases/case.entity';
-import { CaseFollowUpVisit } from '../cases/case-follow-up-visit.entity';
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
-import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
-import { User, UserRole } from '../auth/user.entity';
-import { NotificationsService } from '../notifications/notifications.service';
-import { ReminderSettingsService } from './reminder-settings.service';
-import { NotificationCategory, NotificationType } from '../notifications/notification.entity';
+import { CaseEvent } from './case-event.entity.js';
+import { CaseEventReminder } from './case-event-reminder.entity.js';
+import { Case } from '../cases/case.entity.js';
+import { CaseFollowUpVisit } from '../cases/case-follow-up-visit.entity.js';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity.js';
+import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity.js';
+import { User, UserRole } from '../auth/user.entity.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
+import { ReminderSettingsService } from './reminder-settings.service.js';
+import { NotificationCategory, NotificationType } from '../notifications/notification.entity.js';
 
 const REMINDER_CHANNELS = ['in_app', 'email'] as const;
 

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CaseStatus } from '../case.entity';
+import { CaseStatus } from '../case.entity.js';
 
 export const CreateCaseSchema = z.object({
   serviceRequested: z.array(z.string()).optional(),

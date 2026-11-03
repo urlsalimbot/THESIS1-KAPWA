@@ -1,4 +1,4 @@
-import { PgTrgmAdapter } from './dedup-adapter';
+import { PgTrgmAdapter } from './dedup-adapter.js';
 
 /**
  * The candidate prefilter's ORDER BY is load-bearing. Ranking by

@@ -3,18 +3,18 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthService } from './auth.service';
-import { AuthController } from './auth.controller';
-import { JwtStrategy } from './jwt.strategy';
-import { User } from './user.entity';
-import { UserToken } from './user-token.entity';
-import { UserBarangayAssignment } from './user-barangay-assignment.entity';
-import { Person } from '../beneficiaries/person.entity';
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
-import { AbacService } from './services/abac.service';
-import { OtpModule } from '../otp/otp.module';
-import { EmailModule } from '../email/email.module';
-import { PendingIntakesModule } from '../pending-intakes/pending-intakes.module';
+import { AuthService } from './auth.service.js';
+import { AuthController } from './auth.controller.js';
+import { JwtStrategy } from './jwt.strategy.js';
+import { User } from './user.entity.js';
+import { UserToken } from './user-token.entity.js';
+import { UserBarangayAssignment } from './user-barangay-assignment.entity.js';
+import { Person } from '../beneficiaries/person.entity.js';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity.js';
+import { AbacService } from './services/abac.service.js';
+import { OtpModule } from '../otp/otp.module.js';
+import { EmailModule } from '../email/email.module.js';
+import { PendingIntakesModule } from '../pending-intakes/pending-intakes.module.js';
 
 @Module({
   imports: [

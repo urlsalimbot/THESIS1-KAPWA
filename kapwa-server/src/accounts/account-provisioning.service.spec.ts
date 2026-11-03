@@ -1,4 +1,4 @@
-import { AccountProvisioningService } from './account-provisioning.service';
+import { AccountProvisioningService } from './account-provisioning.service.js';
 
 function build(overrides: any = {}) {
   const userRepo = {

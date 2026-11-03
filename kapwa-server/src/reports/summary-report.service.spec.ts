@@ -1,5 +1,5 @@
-import { SummaryReportService } from './summary-report.service';
-import { SummaryReportData } from './summary-report.types';
+import { SummaryReportService } from './summary-report.service.js';
+import { SummaryReportData } from './summary-report.types.js';
 
 const PROGRAMS = [
   { id: 'p-burial', name: 'Burial Assistance', category: 'Burial' },

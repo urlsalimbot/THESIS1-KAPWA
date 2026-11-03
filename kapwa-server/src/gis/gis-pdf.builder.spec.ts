@@ -1,6 +1,6 @@
-import { buildGisPdf } from './gis-pdf.builder';
-import { GisPdfData } from './gis-export.types';
-import { searchableText } from './gis-pdf-test.util';
+import { buildGisPdf } from './gis-pdf.builder.js';
+import { GisPdfData } from './gis-export.types.js';
+import { searchableText } from './gis-pdf-test.util.js';
 
 const fullData: GisPdfData = {
   controlNo: 'KAPWA-2026-0001',

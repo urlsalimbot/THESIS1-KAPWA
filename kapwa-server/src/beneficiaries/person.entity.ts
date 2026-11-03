@@ -1,9 +1,9 @@
 import { Entity, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Expose, Exclude } from 'class-transformer';
-import { BaseEntity } from '../common/base.entity';
-import { PersonContact } from './person-contact.entity';
-import { PersonAddress } from './person-address.entity';
-import { BeneficiaryRole } from './beneficiary-role.entity';
+import { BaseEntity } from '../common/base.entity.js';
+import { PersonContact } from './person-contact.entity.js';
+import { PersonAddress } from './person-address.entity.js';
+import { BeneficiaryRole } from './beneficiary-role.entity.js';
 
 @Entity('persons')
 export class Person extends BaseEntity {

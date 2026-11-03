@@ -1,5 +1,5 @@
-import { prepareMatrix, runKmeans, silhouette, evaluateCandidates, chooseK, mulberry32 } from './kmeans';
-import type { HouseholdFeatureRow, FeatureKey } from '../analytics.types';
+import { prepareMatrix, runKmeans, silhouette, evaluateCandidates, chooseK, mulberry32 } from './kmeans.js';
+import type { HouseholdFeatureRow, FeatureKey } from '../analytics.types.js';
 
 const FEATURES: FeatureKey[] = ['household_income', 'household_size'];
 

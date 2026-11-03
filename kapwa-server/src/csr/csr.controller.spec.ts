@@ -1,5 +1,5 @@
-import { CsrController } from './csr.controller';
-import { CsrService } from './csr.service';
+import { CsrController } from './csr.controller.js';
+import { CsrService } from './csr.service.js';
 
 describe('CsrController', () => {
   const svc = {

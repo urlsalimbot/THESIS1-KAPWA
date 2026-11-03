@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AccountProvisioningService } from './account-provisioning.service';
-import { User } from '../auth/user.entity';
-import { UserToken } from '../auth/user-token.entity';
-import { Person } from '../beneficiaries/person.entity';
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
-import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
-import { EmailModule } from '../email/email.module';
-import { OtpModule } from '../otp/otp.module';
-import { NotificationsModule } from '../notifications/notifications.module';
-import { AuditModule } from '../audit/audit.module';
+import { AccountProvisioningService } from './account-provisioning.service.js';
+import { User } from '../auth/user.entity.js';
+import { UserToken } from '../auth/user-token.entity.js';
+import { Person } from '../beneficiaries/person.entity.js';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity.js';
+import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity.js';
+import { EmailModule } from '../email/email.module.js';
+import { OtpModule } from '../otp/otp.module.js';
+import { NotificationsModule } from '../notifications/notifications.module.js';
+import { AuditModule } from '../audit/audit.module.js';
 
 @Module({
   imports: [

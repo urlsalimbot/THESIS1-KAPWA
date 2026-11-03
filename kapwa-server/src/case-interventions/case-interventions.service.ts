@@ -1,14 +1,14 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Optional, forwardRef, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CaseIntervention } from './case-intervention.entity';
-import { ProgramIntervention } from '../programs/program-intervention.entity';
-import { CreateCaseInterventionInput, UpdateCaseInterventionInput } from './dto/case-interventions.zod';
-import { AccessCardsService } from '../access-cards/access-cards.service';
-import { isFinancialIntervention, INTERVENTION_TYPES, REFERRAL_INTERVENTION_AGENCY } from '../common/case-catalog';
-import { InterventionCatalogEntry } from './intervention-catalog.entity';
-import { InterAgencyReferralsService } from '../inter-agency-referrals/inter-agency-referrals.service';
-import { roundMoney } from '../common/utils';
+import { CaseIntervention } from './case-intervention.entity.js';
+import { ProgramIntervention } from '../programs/program-intervention.entity.js';
+import { CreateCaseInterventionInput, UpdateCaseInterventionInput } from './dto/case-interventions.zod.js';
+import { AccessCardsService } from '../access-cards/access-cards.service.js';
+import { isFinancialIntervention, INTERVENTION_TYPES, REFERRAL_INTERVENTION_AGENCY } from '../common/case-catalog.js';
+import { InterventionCatalogEntry } from './intervention-catalog.entity.js';
+import { InterAgencyReferralsService } from '../inter-agency-referrals/inter-agency-referrals.service.js';
+import { roundMoney } from '../common/utils.js';
 
 /**
  * A non-financial service renders no money — amount, mode of delivery and fund

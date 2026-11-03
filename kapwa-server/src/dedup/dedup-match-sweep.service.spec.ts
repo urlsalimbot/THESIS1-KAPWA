@@ -1,4 +1,4 @@
-import { sweep, RowInput, MatchCandidate, PersonRepo, HouseholdRepo, InterventionRepo } from './dedup-match-sweep.service';
+import { sweep, RowInput, MatchCandidate, PersonRepo, HouseholdRepo, InterventionRepo } from './dedup-match-sweep.service.js';
 
 const exactSim = (x: string, y: string): number => (x === y ? 1 : 0.2);
 

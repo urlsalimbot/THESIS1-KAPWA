@@ -1,11 +1,11 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { AbacGuard } from '../auth/guards/abac.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { AuthenticatedRequest } from '../auth/types';
-import { TeamInvitesService, TeamInviteInput } from './team-invites.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { AbacGuard } from '../auth/guards/abac.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { AuthenticatedRequest } from '../auth/types.js';
+import { TeamInvitesService, TeamInviteInput } from './team-invites.service.js';
 
 // Schedule suggestions ("invites"): any staff member (incl. admin) may
 // suggest a block for a colleague on a date; only the invitee may accept

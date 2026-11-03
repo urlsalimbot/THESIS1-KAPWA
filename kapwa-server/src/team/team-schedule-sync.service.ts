@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { TeamScheduleBlock } from './team-schedule-block.entity';
-import { Case } from '../cases/case.entity';
-import { CaseEvent } from '../case-events/case-event.entity';
-import { shouldSyncCaseEvent } from '../case-events/case-events.constants';
+import { TeamScheduleBlock } from './team-schedule-block.entity.js';
+import { Case } from '../cases/case.entity.js';
+import { CaseEvent } from '../case-events/case-event.entity.js';
+import { shouldSyncCaseEvent } from '../case-events/case-events.constants.js';
 
 // System-managed mirror of case_events into team_schedule_blocks. This is the
 // ONLY writer of `source='case_event'` blocks: the public team-schedule API

@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { TeamScheduleService } from './team-schedule.service';
-import { TeamScheduleBlock } from './team-schedule-block.entity';
-import { AuditLogService } from '../audit/audit-log.service';
+import { TeamScheduleService } from './team-schedule.service.js';
+import { TeamScheduleBlock } from './team-schedule-block.entity.js';
+import { AuditLogService } from '../audit/audit-log.service.js';
 
 describe('TeamScheduleService', () => {
   let service: TeamScheduleService;

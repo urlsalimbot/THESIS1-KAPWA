@@ -1,13 +1,13 @@
 import { Controller, Post, Get, Param, Body, UseGuards } from '@nestjs/common';
-import { SyncService } from './sync.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { AbacGuard } from '../auth/guards/abac.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { SyncRequestSchema, ResolveConflictSchema } from './dto/sync.zod';
-import { PullRequestInput } from './dto/pull.zod';
-import { PullRequestSchema } from './dto/pull.zod';
-import { ZodPipe } from '../common/pipes/zod.pipe';
+import { SyncService } from './sync.service.js';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { AbacGuard } from '../auth/guards/abac.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { SyncRequestSchema, ResolveConflictSchema } from './dto/sync.zod.js';
+import { PullRequestInput } from './dto/pull.zod.js';
+import { PullRequestSchema } from './dto/pull.zod.js';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
 
 @Controller('sync')
 @UseGuards(JwtAuthGuard, RolesGuard, AbacGuard)

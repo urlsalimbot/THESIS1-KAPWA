@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { IrfCase, KeyWrap } from './irf-case.entity';
+import { IrfCase, KeyWrap } from './irf-case.entity.js';
 import * as crypto from 'crypto';
 
 @Injectable()

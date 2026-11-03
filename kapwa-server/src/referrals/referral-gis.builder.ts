@@ -1,3 +1,4 @@
+import { nodeRequire } from '../common/node-require.js';
 /**
  * GIS-style intake sheet for a coordinator referral — the "imitate the GIS"
  * half of the referral expansion. Same letterhead conventions as the case GIS
@@ -31,7 +32,7 @@ const ORG_LOCATION = { province: 'Bulacan', municipality: 'Norzagaray' };
 
 export async function buildReferralGisPdf(data: ReferralGisData): Promise<Buffer> {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const PDFDocument = require('pdfkit');
+  const PDFDocument = nodeRequire('pdfkit');
   const doc = new PDFDocument({
     size: 'A4',
     margins: { top: 48, bottom: 48, left: 56, right: 56 },

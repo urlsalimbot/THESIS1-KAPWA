@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Program, ApprovalStep } from './program.entity';
-import { ProgramFundSource } from './program-fund-source.entity';
-import { ProgramRequiredDocument } from './program-required-document.entity';
-import { ProgramIntervention } from './program-intervention.entity';
-import { FormVersionHistory } from './form-version-history.entity';
-import { UpdateProgramInput } from './dto/programs.zod';
+import { Program, ApprovalStep } from './program.entity.js';
+import { ProgramFundSource } from './program-fund-source.entity.js';
+import { ProgramRequiredDocument } from './program-required-document.entity.js';
+import { ProgramIntervention } from './program-intervention.entity.js';
+import { FormVersionHistory } from './form-version-history.entity.js';
+import { UpdateProgramInput } from './dto/programs.zod.js';
 
 @Injectable()
 export class ProgramsService {

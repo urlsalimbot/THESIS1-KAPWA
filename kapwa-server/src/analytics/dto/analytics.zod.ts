@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { FEATURE_KEYS } from '../analytics.types';
+import { FEATURE_KEYS } from '../analytics.types.js';
 
 const isoDate = z.string().date();
 

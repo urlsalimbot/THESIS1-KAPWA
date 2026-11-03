@@ -1,4 +1,4 @@
-import { TeamScheduleSyncService } from './team-schedule-sync.service';
+import { TeamScheduleSyncService } from './team-schedule-sync.service.js';
 
 describe('TeamScheduleSyncService', () => {
   const blockRepo = { findOne: jest.fn(), create: jest.fn(), save: jest.fn(), delete: jest.fn(), merge: jest.fn(), update: jest.fn() };

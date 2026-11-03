@@ -1,15 +1,15 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { CaseIntervention } from './case-intervention.entity';
-import { ProgramIntervention } from '../programs/program-intervention.entity';
-import { CaseInterventionsService } from './case-interventions.service';
-import { CaseInterventionsController } from './case-interventions.controller';
-import { InterventionCatalogEntry } from './intervention-catalog.entity';
-import { InterventionCatalogService } from './intervention-catalog.service';
-import { InterventionCatalogController } from './intervention-catalog.controller';
-import { AccessCardsModule } from '../access-cards/access-cards.module';
-import { CasesModule } from '../cases/cases.module';
-import { InterAgencyReferralsModule } from '../inter-agency-referrals/inter-agency-referrals.module';
+import { CaseIntervention } from './case-intervention.entity.js';
+import { ProgramIntervention } from '../programs/program-intervention.entity.js';
+import { CaseInterventionsService } from './case-interventions.service.js';
+import { CaseInterventionsController } from './case-interventions.controller.js';
+import { InterventionCatalogEntry } from './intervention-catalog.entity.js';
+import { InterventionCatalogService } from './intervention-catalog.service.js';
+import { InterventionCatalogController } from './intervention-catalog.controller.js';
+import { AccessCardsModule } from '../access-cards/access-cards.module.js';
+import { CasesModule } from '../cases/cases.module.js';
+import { InterAgencyReferralsModule } from '../inter-agency-referrals/inter-agency-referrals.module.js';
 
 @Module({
   // `CasesModule` for the step-1 seal assertion, and `forwardRef` because the

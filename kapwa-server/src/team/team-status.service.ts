@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, In, Repository } from 'typeorm';
-import { NotificationsGateway } from '../notifications/notifications.gateway';
-import { TeamStatus } from './team-status.entity';
+import { NotificationsGateway } from '../notifications/notifications.gateway.js';
+import { TeamStatus } from './team-status.entity.js';
 
 // Canonical whereabouts vocabulary (plan constraint): a staff member is in
 // one of these six states. Stored as varchar(32) and validated here — the

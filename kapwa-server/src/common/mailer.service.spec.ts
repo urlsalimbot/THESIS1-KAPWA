@@ -1,4 +1,4 @@
-import { MailerService, maskEmail } from './mailer.service';
+import { MailerService, maskEmail } from './mailer.service.js';
 import type { ConfigService } from '@nestjs/config';
 
 function makeService(env: Record<string, string> = {}) {

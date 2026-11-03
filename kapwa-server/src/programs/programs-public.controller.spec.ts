@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { ProgramsPublicController } from './programs-public.controller';
-import { ProgramsService } from './programs.service';
+import { ProgramsPublicController } from './programs-public.controller.js';
+import { ProgramsService } from './programs.service.js';
 
 describe('ProgramsPublicController', () => {
   let ctrl: ProgramsPublicController;

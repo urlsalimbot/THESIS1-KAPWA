@@ -1,4 +1,4 @@
-import { movingAverageForecast, holtLinear, mape } from './forecast';
+import { movingAverageForecast, holtLinear, mape } from './forecast.js';
 
 describe('forecast models', () => {
   it('continues a perfect linear series', () => {

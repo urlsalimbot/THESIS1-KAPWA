@@ -1,5 +1,5 @@
 import { Entity, Column, CreateDateColumn } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
+import { BaseEntity } from '../common/base.entity.js';
 
 @Entity('chat_messages')
 export class ChatMessage extends BaseEntity {

@@ -1,5 +1,5 @@
 import { Entity, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
+import { BaseEntity } from '../common/base.entity.js';
 
 // Documentary minimum for ad-hoc crisis services: each intervention type
 // defines its own required documents. Seeded in migration 0084.

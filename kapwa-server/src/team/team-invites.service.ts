@@ -1,9 +1,9 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { TeamInvite } from './team-invite.entity';
-import { TeamScheduleBlock } from './team-schedule-block.entity';
-import { BLOCK_TYPES } from './team-schedule.service';
+import { TeamInvite } from './team-invite.entity.js';
+import { TeamScheduleBlock } from './team-schedule-block.entity.js';
+import { BLOCK_TYPES } from './team-schedule.service.js';
 
 // Staff roles allowed to send/receive schedule invites (role matrix:
 // coordinator is read-only on the workspace; claimant has no access — both

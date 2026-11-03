@@ -1,4 +1,5 @@
-import { parseImportFile, ColumnMap, ColumnMapError } from './dedup-parse.service';
+import ExcelJS from 'exceljs';
+import { parseImportFile, ColumnMap, ColumnMapError } from './dedup-parse.service.js';
 
 const baseMap: ColumnMap = {
   baseline: {
@@ -33,7 +34,6 @@ describe('parseImportFile', () => {
 
   it('parses an xlsx workbook', async () => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const ExcelJS = require('exceljs');
     const buffer = (() => {
       const wb = new ExcelJS.Workbook();
       const ws = wb.addWorksheet('List');
@@ -41,8 +41,8 @@ describe('parseImportFile', () => {
       ws.addRow(['Ramos', 'Marites', 'Dela Cruz', '1990-07-07', 'Poblacion', 'Food pack']);
       return wb.xlsx.writeBuffer();
     })();
-    return buffer.then(async (buf: Buffer) => {
-      const out = await parseImportFile(buf, 'list.xlsx', baseMap);
+    return buffer.then(async (buf) => {
+      const out = await parseImportFile(buf as any, 'list.xlsx', baseMap);
       expect(out.rows).toHaveLength(1);
       expect(out.rows[0]).toMatchObject({ lastName: 'Ramos', barangay: 'Poblacion', originalRemarks: 'Food pack' });
     });

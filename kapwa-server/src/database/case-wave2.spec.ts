@@ -1,7 +1,7 @@
-import { Case } from '../cases/case.entity';
-import { CaseRequirement } from '../cases/case-requirement.entity';
-import { CaseReferral } from '../cases/case-referral.entity';
-import { CaseAssistance } from '../cases/case-assistance.entity';
+import { Case } from '../cases/case.entity.js';
+import { CaseRequirement } from '../cases/case-requirement.entity.js';
+import { CaseReferral } from '../cases/case-referral.entity.js';
+import { CaseAssistance } from '../cases/case-assistance.entity.js';
 import { instanceToPlain } from 'class-transformer';
 
 describe('Case wave-2 getters', () => {

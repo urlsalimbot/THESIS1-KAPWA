@@ -1,4 +1,4 @@
-import { DedupFinalizeWorker } from './dedup-finalize.worker';
+import { DedupFinalizeWorker } from './dedup-finalize.worker.js';
 
 /**
  * The queue behind the "Finalize" button: a claimed job runs off the request

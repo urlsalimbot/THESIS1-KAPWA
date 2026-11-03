@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { AccessCardsService } from './access-cards.service';
-import { OrgService } from '../common/org.service';
-import { AccessCardService } from './access-card-service.entity';
-import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
-import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
-import { Agency } from '../agencies/agency.entity';
+import { AccessCardsService } from './access-cards.service.js';
+import { OrgService } from '../common/org.service.js';
+import { AccessCardService } from './access-card-service.entity.js';
+import { ConsentLedger } from '../beneficiaries/consent-ledger.entity.js';
+import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity.js';
+import { Agency } from '../agencies/agency.entity.js';
 
 describe('AccessCardsService', () => {
   let service: AccessCardsService;

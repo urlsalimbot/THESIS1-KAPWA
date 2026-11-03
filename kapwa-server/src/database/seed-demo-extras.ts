@@ -1,3 +1,4 @@
+import { esmDirname } from '../common/esm-path.js';
 /**
  * Demo extras — the modules no other seed script touches.
  *
@@ -28,8 +29,8 @@
  */
 import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { AppDataSource } from './data-source';
-import { call, login, uploadFile } from './seed-http';
+import { AppDataSource } from './data-source.js';
+import { call, login, uploadFile } from './seed-http.js';
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
@@ -322,7 +323,7 @@ async function seedDedup(token: string): Promise<void> {
   // already saved — a missing hand-upload copy must not fail the seed.
   let sampleAt = 'not written (read-only image)';
   try {
-    const dir = join(__dirname, 'demo-data');
+    const dir = join(esmDirname(import.meta.url), 'demo-data');
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, 'dedup-demo.csv'), batchB + '\n');
     sampleAt = 'src/database/demo-data/dedup-demo.csv';

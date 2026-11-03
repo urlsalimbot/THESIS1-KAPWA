@@ -1,7 +1,8 @@
+import { esmDirname } from './esm-path.js';
 import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { getMetadataArgsStorage } from 'typeorm';
-import { BARANGAY_COLUMNS } from './barangay-columns';
+import { BARANGAY_COLUMNS } from './barangay-columns.js';
 
 // `check-barangay-drift.ts` reads the columns in BARANGAY_COLUMNS and then asks
 // the database for the values in them. It reports a column that no longer
@@ -19,7 +20,7 @@ import { BARANGAY_COLUMNS } from './barangay-columns';
 // `database/data-source.ts` globs them, rather than from a hand-written import
 // list: a second list would go stale in precisely the way this guards against.
 
-const ENTITIES_DIR = join(__dirname, '..');
+const ENTITIES_DIR = join(esmDirname(import.meta.url), '..');
 
 function entityFiles(dir: string): string[] {
   const out: string[] = [];
@@ -36,10 +37,9 @@ function entityFiles(dir: string): string[] {
 
 describe('BARANGAY_COLUMNS', () => {
   // Loading every entity registers its columns with TypeORM's metadata storage.
-  beforeAll(() => {
+  beforeAll(async () => {
     for (const file of entityFiles(ENTITIES_DIR)) {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      require(file);
+      await import(file);
     }
   });
 

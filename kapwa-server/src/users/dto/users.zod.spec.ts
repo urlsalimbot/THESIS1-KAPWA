@@ -1,4 +1,4 @@
-import { CreateUserInputSchema, UpdateUserSchema } from './users.zod';
+import { CreateUserInputSchema, UpdateUserSchema } from './users.zod.js';
 
 describe('CreateUserInputSchema', () => {
   const uiPayload = {

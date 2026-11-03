@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UsersService } from './users.service';
-import { AccountProvisioningService } from '../accounts/account-provisioning.service';
+import { UsersService } from './users.service.js';
+import { AccountProvisioningService } from '../accounts/account-provisioning.service.js';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { User, UserRole } from '../auth/user.entity';
+import { User, UserRole } from '../auth/user.entity.js';
 import { FindOperator } from 'typeorm';
 import { ConflictException, BadRequestException } from '@nestjs/common';
 

@@ -1,7 +1,7 @@
 import { Entity, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { Person } from './person.entity';
-import { Household } from './household.entity';
-import { BaseEntity } from '../common/base.entity';
+import { Person } from './person.entity.js';
+import type { Household } from './household.entity.js';
+import { BaseEntity } from '../common/base.entity.js';
 
 @Entity('household_memberships')
 export class HouseholdMembership extends BaseEntity {
@@ -31,7 +31,7 @@ export class HouseholdMembership extends BaseEntity {
   @JoinColumn({ name: 'person_id' })
   person?: Person;
 
-  @ManyToOne(() => Household, h => h.members)
+  @ManyToOne('Household', 'members')
   @JoinColumn({ name: 'household_id' })
   household?: Household;
 

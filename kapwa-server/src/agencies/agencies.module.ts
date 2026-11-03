@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AgenciesService } from './agencies.service';
-import { AgenciesController } from './agencies.controller';
-import { Agency } from './agency.entity';
-import { AgencyContact } from './agency-contact.entity';
-import { AuthModule } from '../auth/auth.module';
+import { AgenciesService } from './agencies.service.js';
+import { AgenciesController } from './agencies.controller.js';
+import { Agency } from './agency.entity.js';
+import { AgencyContact } from './agency-contact.entity.js';
+import { AuthModule } from '../auth/auth.module.js';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Agency, AgencyContact]), AuthModule],

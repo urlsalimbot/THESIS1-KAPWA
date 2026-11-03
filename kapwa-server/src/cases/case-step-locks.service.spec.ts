@@ -1,27 +1,28 @@
+import { esmDirname } from '../common/esm-path.js';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException, ConflictException } from '@nestjs/common';
-import { CaseStepLocksService, CASE_STEP_LABELS, CASE_STEP_UNGUARDED_FIELDS } from './case-step-locks.service';
-import { COMMON_STEPS, CASE_STEP_FLOORS, CASE_STATUS_INDEX } from './case-step-labels';
-import { CaseStepLock } from './case-step-lock.entity';
-import { CasesService } from './cases.service';
-import { CasesExportService } from './cases-export.service';
-import { Case, CaseStatus } from './case.entity';
-import { CaseHistory } from './case-history.entity';
-import { CaseIntervention } from '../case-interventions/case-intervention.entity';
-import { ProgramEnrollment } from '../case-enrollments/program-enrollment.entity';
-import { CaseEvent } from '../case-events/case-event.entity';
-import { InterventionRequiredDocument } from './intervention-required-document.entity';
-import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
-import { Program } from '../programs/program.entity';
-import { ProgramRequiredDocument } from '../programs/program-required-document.entity';
-import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
-import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
-import { NotificationsService } from '../notifications/notifications.service';
-import { AuditLogService } from '../audit/audit-log.service';
-import { User } from '../auth/user.entity';
+import { CaseStepLocksService, CASE_STEP_LABELS, CASE_STEP_UNGUARDED_FIELDS } from './case-step-locks.service.js';
+import { COMMON_STEPS, CASE_STEP_FLOORS, CASE_STATUS_INDEX } from './case-step-labels.js';
+import { CaseStepLock } from './case-step-lock.entity.js';
+import { CasesService } from './cases.service.js';
+import { CasesExportService } from './cases-export.service.js';
+import { Case, CaseStatus } from './case.entity.js';
+import { CaseHistory } from './case-history.entity.js';
+import { CaseIntervention } from '../case-interventions/case-intervention.entity.js';
+import { ProgramEnrollment } from '../case-enrollments/program-enrollment.entity.js';
+import { CaseEvent } from '../case-events/case-event.entity.js';
+import { InterventionRequiredDocument } from './intervention-required-document.entity.js';
+import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity.js';
+import { Program } from '../programs/program.entity.js';
+import { ProgramRequiredDocument } from '../programs/program-required-document.entity.js';
+import { HouseholdMembership } from '../beneficiaries/household-membership.entity.js';
+import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
+import { AuditLogService } from '../audit/audit-log.service.js';
+import { User } from '../auth/user.entity.js';
 
 interface DoneFixtureCase {
   name: string;
@@ -74,7 +75,7 @@ interface DoneFixtureCase {
 // entirely on this test. Read the shared fixture and drive the service through
 // every case: drop a branch in either copy and one case here fails.
 const FIXTURE_PATH = join(
-  __dirname, '..', '..', '..', 'docs', 'superpowers', 'specs', 'case-step-done-fixture.json',
+  esmDirname(import.meta.url), '..', '..', '..', 'docs', 'superpowers', 'specs', 'case-step-done-fixture.json',
 );
 const FIXTURE: DoneFixtureCase[] = JSON.parse(readFileSync(FIXTURE_PATH, 'utf8'));
 

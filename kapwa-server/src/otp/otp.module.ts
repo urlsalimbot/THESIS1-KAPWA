@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { OtpService } from './otp.service';
-import { SmsGatewayService } from './sms-gateway.service';
-import { PublicConfigController } from './public-config.controller';
-import { OtpCode } from './otp.entity';
+import { OtpService } from './otp.service.js';
+import { SmsGatewayService } from './sms-gateway.service.js';
+import { PublicConfigController } from './public-config.controller.js';
+import { OtpCode } from './otp.entity.js';
 
 @Module({
   imports: [TypeOrmModule.forFeature([OtpCode])],

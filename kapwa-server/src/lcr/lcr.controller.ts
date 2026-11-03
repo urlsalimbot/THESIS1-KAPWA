@@ -1,11 +1,11 @@
 import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { ImportLcrRecordSchema } from './dto/lcr.zod';
-import { LcrService } from './lcr.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { ImportLcrRecordSchema } from './dto/lcr.zod.js';
+import { LcrService } from './lcr.service.js';
 
 @ApiTags('LCR')
 @Controller('lcr')

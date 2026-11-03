@@ -1,7 +1,7 @@
 import { DataSource } from 'typeorm';
-import * as bcrypt from 'bcrypt';
-import { AppDataSource } from './data-source';
-import { BARANGAYS } from '../common/constants';
+import bcrypt from 'bcrypt';
+import { AppDataSource } from './data-source.js';
+import { BARANGAYS } from '../common/constants.js';
 
 const SALT_ROUNDS = 12;
 

@@ -1,8 +1,8 @@
 import { DataSource } from 'typeorm';
-import { GUARDS_METADATA } from '@nestjs/common/constants';
-import { TeamAchievementsService } from './team-achievements.service';
-import { TeamAchievementsController } from './team-achievements.controller';
-import { ROLES_KEY } from '../auth/decorators/roles.decorator';
+import { GUARDS_METADATA } from '@nestjs/common/constants.js';
+import { TeamAchievementsService } from './team-achievements.service.js';
+import { TeamAchievementsController } from './team-achievements.controller.js';
+import { ROLES_KEY } from '../auth/decorators/roles.decorator.js';
 
 describe('TeamAchievementsService', () => {
   let service: TeamAchievementsService;

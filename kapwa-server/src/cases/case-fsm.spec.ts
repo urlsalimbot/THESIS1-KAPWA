@@ -1,5 +1,5 @@
-import { CaseStatus } from './case.entity';
-import { CASE_FSM, CASE_FSM_ROLES, isValidTransition, canTransition, nextActionFor } from './case-fsm';
+import { CaseStatus } from './case.entity.js';
+import { CASE_FSM, CASE_FSM_ROLES, isValidTransition, canTransition, nextActionFor } from './case-fsm.js';
 
 describe('case-fsm', () => {
   it('enforces the documented transition table', () => {

@@ -1,19 +1,19 @@
 import { Controller, Get, Post, Patch, Delete, HttpCode, BadRequestException, Param, Body, Query, UseGuards, Request, UseInterceptors, SerializeOptions, DefaultValuePipe, ParseIntPipe, Res } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ClassSerializerInterceptor } from '@nestjs/common';
-import { CasesService } from './cases.service';
-import { CasesExportService } from './cases-export.service';
-import { ScsrExportService } from '../scsr/scsr-export.service';
-import { CaseStepLocksService } from './case-step-locks.service';
-import { GisExportService } from '../gis/gis-export.service';
-import { CaseStatus } from './case.entity';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { AuthenticatedRequest } from '../auth/types';
-import { AbacGuard } from '../auth/guards/abac.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { exportFileName } from '../common/constants';
+import { CasesService } from './cases.service.js';
+import { CasesExportService } from './cases-export.service.js';
+import { ScsrExportService } from '../scsr/scsr-export.service.js';
+import { CaseStepLocksService } from './case-step-locks.service.js';
+import { GisExportService } from '../gis/gis-export.service.js';
+import { CaseStatus } from './case.entity.js';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { AuthenticatedRequest } from '../auth/types.js';
+import { AbacGuard } from '../auth/guards/abac.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { exportFileName } from '../common/constants.js';
 
 
 const STATUS_ALIASES: Record<string, CaseStatus> = {
@@ -45,7 +45,7 @@ import {
   CreateCaseInput, ApproveCaseInput, OverrideStatusInput, DisburseInput, AssessmentV2Input,
   TransitionPlanInput, RequirementsInput, ClosureInput, ReferralDecisionInput,
   DiscernmentInput, ProtectionOrderInput, SoloParentInput, AdoptionInput, CaseMetaInput,
-} from './dto/cases.zod';
+} from './dto/cases.zod.js';
 
 @ApiTags('Cases')
 @ApiBearerAuth()

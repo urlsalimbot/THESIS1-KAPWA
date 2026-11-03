@@ -1,16 +1,16 @@
 import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Request, UseInterceptors, SerializeOptions } from '@nestjs/common';
 import { ClassSerializerInterceptor } from '@nestjs/common';
 import { instanceToPlain } from 'class-transformer';
-import { BeneficiariesService } from './beneficiaries.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { AbacGuard } from '../auth/guards/abac.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { Sensitivity } from '../auth/decorators/resource-sensitivity.decorator';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { DEFAULT_LIST_LIMIT } from '../common/constants';
-import { AuthenticatedRequest } from '../auth/types';
-import { CreateBeneficiarySchema, CreateBeneficiaryInput, RevokeConsentSchema, GrantConsentSchema, NhtsPrSchema, NhtsPrInput, SetFamilyMemberStatusSchema, SetFamilyMemberStatusInput } from './dto/beneficiaries.zod';
+import { BeneficiariesService } from './beneficiaries.service.js';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { AbacGuard } from '../auth/guards/abac.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { Sensitivity } from '../auth/decorators/resource-sensitivity.decorator.js';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { DEFAULT_LIST_LIMIT } from '../common/constants.js';
+import { AuthenticatedRequest } from '../auth/types.js';
+import { CreateBeneficiarySchema, CreateBeneficiaryInput, RevokeConsentSchema, GrantConsentSchema, NhtsPrSchema, NhtsPrInput, SetFamilyMemberStatusSchema, SetFamilyMemberStatusInput } from './dto/beneficiaries.zod.js';
 
 @Controller('beneficiaries')
 @UseGuards(JwtAuthGuard, RolesGuard, AbacGuard)

@@ -1,11 +1,11 @@
 import { Controller, Get, Post, Param, Query, Body, Res, Request, UseGuards, ParseUUIDPipe } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { AnalyticsService } from './analytics.service';
-import { ClusteringService } from './clustering.service';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { AnalyticsService } from './analytics.service.js';
+import { ClusteringService } from './clustering.service.js';
 import {
   AnalyticsRangeSchema, AnalyticsRangeInput,
   ClusteringRunSchema, ClusteringRunInput,
@@ -13,8 +13,8 @@ import {
   RunListQuerySchema, RunListQueryInput,
   ForecastQuerySchema, ForecastQueryInput,
   AssociationsQuerySchema, AssociationsQueryInput,
-} from './dto/analytics.zod';
-import { AuthenticatedRequest } from '../auth/types';
+} from './dto/analytics.zod.js';
+import { AuthenticatedRequest } from '../auth/types.js';
 
 @ApiTags('Analytics')
 @Controller('analytics')

@@ -1,5 +1,5 @@
 import { Entity, Column, CreateDateColumn, Index, Unique } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
+import { BaseEntity } from '../common/base.entity.js';
 
 // One row per (case, step). A seal is deliberately reversible: the row is
 // deleted on unlock, and the audit log is what records that it happened.

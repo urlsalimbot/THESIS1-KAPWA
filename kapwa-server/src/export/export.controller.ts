@@ -2,11 +2,11 @@ import { Controller, Get, Post, Body, Query, UseGuards, Res, HttpStatus, BadRequ
 import { Response } from 'express';
 import { z } from 'zod';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { ExportService } from './export.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { ExportService } from './export.service.js';
 
 const GenerateCertificateSchema = z.object({
   type: z.enum(['eligibility', 'referral']),

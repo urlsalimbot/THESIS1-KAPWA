@@ -1,5 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { CaseEventsService } from './case-events.service';
+import { CaseEventsService } from './case-events.service.js';
 
 describe('CaseEventsService', () => {
   const eventRepo = { create: jest.fn(), save: jest.fn(), find: jest.fn(), findOne: jest.fn(), delete: jest.fn(), count: jest.fn() };

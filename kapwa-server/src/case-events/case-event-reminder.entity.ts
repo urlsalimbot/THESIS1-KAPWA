@@ -1,5 +1,5 @@
 import { Entity, Column, CreateDateColumn } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
+import { BaseEntity } from '../common/base.entity.js';
 
 // Dedupe ledger: one row per (event, offset, channel), inserted BEFORE any
 // delivery so two overlapping cron ticks cannot double-send. `sentAt` NULL

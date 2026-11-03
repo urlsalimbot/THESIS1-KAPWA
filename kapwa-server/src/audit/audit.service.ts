@@ -1,12 +1,12 @@
-import { AUDIT_LOG_DEFAULT_LIMIT } from '../common/constants';
+import { AUDIT_LOG_DEFAULT_LIMIT } from '../common/constants.js';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Case } from '../cases/case.entity';
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
-import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
+import { Case } from '../cases/case.entity.js';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity.js';
+import { ConsentLedger } from '../beneficiaries/consent-ledger.entity.js';
 import * as crypto from 'crypto';
-import { CacheService } from '../common/cache.service';
+import { CacheService } from '../common/cache.service.js';
 
 @Injectable()
 export class AuditService {

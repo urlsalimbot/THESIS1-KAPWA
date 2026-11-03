@@ -1,6 +1,6 @@
 import { Entity, Column, CreateDateColumn } from 'typeorm';
-import { CaseStatus } from './case.entity';
-import { BaseEntity } from '../common/base.entity';
+import { CaseStatus } from './case.entity.js';
+import { BaseEntity } from '../common/base.entity.js';
 
 @Entity('case_history')
 export class CaseHistory extends BaseEntity {

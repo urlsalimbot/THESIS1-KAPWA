@@ -1,10 +1,10 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, UpdateDateColumn } from 'typeorm';
 import { Expose } from 'class-transformer';
-import { BaseEntity } from '../common/base.entity';
-import { Agency } from '../agencies/agency.entity';
-import { Person } from '../beneficiaries/person.entity';
-import { Case } from '../cases/case.entity';
-import { User } from '../auth/user.entity';
+import { BaseEntity } from '../common/base.entity.js';
+import { Agency } from '../agencies/agency.entity.js';
+import { Person } from '../beneficiaries/person.entity.js';
+import { Case } from '../cases/case.entity.js';
+import { User } from '../auth/user.entity.js';
 
 /**
  * An inter-agency referral is the record the endorsement letter is made of:

@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { GUARDS_METADATA } from '@nestjs/common/constants';
-import { TeamStatusService } from './team-status.service';
-import { TeamStatus } from './team-status.entity';
-import { TeamStatusController } from './team-status.controller';
-import { NotificationsGateway } from '../notifications/notifications.gateway';
-import { ROLES_KEY } from '../auth/decorators/roles.decorator';
+import { GUARDS_METADATA } from '@nestjs/common/constants.js';
+import { TeamStatusService } from './team-status.service.js';
+import { TeamStatus } from './team-status.entity.js';
+import { TeamStatusController } from './team-status.controller.js';
+import { NotificationsGateway } from '../notifications/notifications.gateway.js';
+import { ROLES_KEY } from '../auth/decorators/roles.decorator.js';
 
 describe('TeamStatusService', () => {
   let service: TeamStatusService;

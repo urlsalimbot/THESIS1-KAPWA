@@ -1,4 +1,4 @@
-import { AuthController } from './auth.controller';
+import { AuthController } from './auth.controller.js';
 
 /**
  * The auth surface is the only place an attacker can guess a credential, so

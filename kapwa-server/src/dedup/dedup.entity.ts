@@ -1,6 +1,6 @@
-import { BaseEntity } from '../common/base.entity';
+import { BaseEntity } from '../common/base.entity.js';
 import { Column, Entity, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
-import type { EligibilityCode } from './dedup-eligibility.service';
+import type { EligibilityCode } from './dedup-eligibility.service.js';
 
 export type ClientImportStatus = 'defined' | 'reviewing' | 'finalizing' | 'finalized';
 export type ClientImportRowStatus = 'pending' | 'no_match' | 'retained' | 'primary' | 'deprioritized';

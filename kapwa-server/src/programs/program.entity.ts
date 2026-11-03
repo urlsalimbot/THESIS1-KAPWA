@@ -1,9 +1,9 @@
 import { Entity, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { Expose, Exclude } from 'class-transformer';
-import { BaseEntity } from '../common/base.entity';
-import { ProgramFundSource } from './program-fund-source.entity';
-import { ProgramRequiredDocument } from './program-required-document.entity';
-import { ProgramIntervention } from './program-intervention.entity';
+import { BaseEntity } from '../common/base.entity.js';
+import { ProgramFundSource } from './program-fund-source.entity.js';
+import { ProgramRequiredDocument } from './program-required-document.entity.js';
+import { ProgramIntervention } from './program-intervention.entity.js';
 
 export interface ApprovalStep {
   stepName: string;

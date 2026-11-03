@@ -1,4 +1,4 @@
-import { personSignals, dedupScore, PersonSignals, PersonLike } from './dedup-matcher.service';
+import { personSignals, dedupScore, PersonSignals, PersonLike } from './dedup-matcher.service.js';
 
 /**
  * Candidate generation for one import (spec §4):

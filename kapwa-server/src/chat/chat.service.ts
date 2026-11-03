@@ -1,11 +1,11 @@
-import { DEFAULT_MESSAGE_LIMIT } from '../common/constants';
+import { DEFAULT_MESSAGE_LIMIT } from '../common/constants.js';
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { ChatMessage } from './chat.entity';
-import { User } from '../auth/user.entity';
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
-import { Case } from '../cases/case.entity';
+import { ChatMessage } from './chat.entity.js';
+import { User } from '../auth/user.entity.js';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity.js';
+import { Case } from '../cases/case.entity.js';
 
 @Injectable()
 export class ChatService {

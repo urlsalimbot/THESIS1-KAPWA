@@ -1,12 +1,12 @@
 import { Controller, Get, Post, Param, Body, Query, UseGuards, Request, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { AuthenticatedRequest } from '../auth/types';
-import { BeneficiaryRemarksService } from './beneficiary-remarks.service';
-import { AddRemarkSchema, AddRemarkInput } from './dto/dedup.zod';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { AuthenticatedRequest } from '../auth/types.js';
+import { BeneficiaryRemarksService } from './beneficiary-remarks.service.js';
+import { AddRemarkSchema, AddRemarkInput } from './dto/dedup.zod.js';
 
 /** The beneficiary view's Remarks History card reads and writes here. */
 @ApiTags('Beneficiary Remarks')

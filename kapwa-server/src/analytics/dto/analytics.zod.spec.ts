@@ -1,4 +1,4 @@
-import { AnalyticsRangeSchema, ClusteringRunSchema, ForecastQuerySchema, AssociationsQuerySchema } from './analytics.zod';
+import { AnalyticsRangeSchema, ClusteringRunSchema, ForecastQuerySchema, AssociationsQuerySchema } from './analytics.zod.js';
 
 describe('analytics zod schemas', () => {
   it('accepts an ascending or absent date range', () => {

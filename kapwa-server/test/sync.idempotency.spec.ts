@@ -1,14 +1,14 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { SyncService } from '../src/sync/sync.service';
-import { ConflictResolver } from '../src/sync/conflict-resolver';
-import { SyncQueue } from '../src/sync/sync-queue.entity';
-import { VersionVector } from '../src/sync/version-vector.entity';
-import { IntakeService } from "../src/intake/intake.service";
-import { CaseStepLocksService } from '../src/cases/case-step-locks.service';
+import { SyncService } from '../src/sync/sync.service.js';
+import { ConflictResolver } from '../src/sync/conflict-resolver.js';
+import { SyncQueue } from '../src/sync/sync-queue.entity.js';
+import { VersionVector } from '../src/sync/version-vector.entity.js';
+import { IntakeService } from "../src/intake/intake.service.js";
+import { CaseStepLocksService } from '../src/cases/case-step-locks.service.js';
 
-const crypto = require('crypto');
+import crypto from 'node:crypto';
 const keyPair = crypto.generateKeyPairSync('ed25519');
 const pubKeyRaw = keyPair.publicKey.export({ type: 'spki', format: 'der' }).subarray(-32).toString('hex');
 

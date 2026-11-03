@@ -38,6 +38,9 @@ jobs:
       - name: Build
         run: npm run build
       - name: Test
+        env:
+          # Jest's ESM runtime is still behind this flag (Node 20).
+          NODE_OPTIONS: --experimental-vm-modules
         run: npx jest --silent
 
   client:
@@ -204,7 +207,7 @@ jobs:
         run: npm run migrate
       - name: Seed the accounts the smoke tests sign in with
         working-directory: kapwa-server
-        run: npx ts-node src/database/seed-accounts.ts
+        run: node --import=tsimp/import src/database/seed-accounts.ts
       - name: Start the API
         working-directory: kapwa-server
         run: |

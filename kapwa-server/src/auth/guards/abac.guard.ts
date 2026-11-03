@@ -2,9 +2,9 @@ import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@
 import { Reflector } from '@nestjs/core';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AbacService, ResourceSensitivity } from '../services/abac.service';
-import { RESOURCE_SENSITIVITY_KEY } from '../decorators/resource-sensitivity.decorator';
-import { ConsentLedger } from '../../beneficiaries/consent-ledger.entity';
+import { AbacService, ResourceSensitivity } from '../services/abac.service.js';
+import { RESOURCE_SENSITIVITY_KEY } from '../decorators/resource-sensitivity.decorator.js';
+import { ConsentLedger } from '../../beneficiaries/consent-ledger.entity.js';
 
 /**
  * Force a query-param scope onto the request.

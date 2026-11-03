@@ -1,12 +1,12 @@
 import { Body, Controller, Get, Post, UseGuards, UseInterceptors, SerializeOptions } from '@nestjs/common';
 import { ClassSerializerInterceptor } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { AgenciesService } from './agencies.service';
-import { CreateAgencySchema } from './dto/agencies.zod';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { AgenciesService } from './agencies.service.js';
+import { CreateAgencySchema } from './dto/agencies.zod.js';
 
 @ApiTags('Agencies')
 @Controller('agencies')

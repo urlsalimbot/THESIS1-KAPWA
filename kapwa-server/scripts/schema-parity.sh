@@ -47,7 +47,7 @@ echo "── path 1/2: fresh-boot bootstrap (dist/database/migrate.js)"
 DB_NAME="$BOOT_DB" node dist/database/migrate.js >/dev/null
 
 echo "── path 2/2: TypeORM migration chain"
-DB_NAME="$CHAIN_DB" npx typeorm-ts-node-commonjs migration:run -d src/database/data-source.ts >/dev/null
+DB_NAME="$CHAIN_DB" npx typeorm-ts-node-esm migration:run -d src/database/data-source.ts >/dev/null
 
 # Normalized fingerprint: one line per structural fact, sorted, so the two dumps
 # are comparable text. Names are deliberately excluded from indexes and

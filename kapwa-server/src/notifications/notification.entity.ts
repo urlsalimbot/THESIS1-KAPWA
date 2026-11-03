@@ -1,5 +1,5 @@
 import { Entity, Column, CreateDateColumn } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
+import { BaseEntity } from '../common/base.entity.js';
 
 export enum NotificationType {
   SMS = 'sms',

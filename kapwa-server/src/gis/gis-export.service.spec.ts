@@ -1,6 +1,6 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import { CaseStatus } from '../cases/case.entity';
-import { GisExportService, PRINTABLE_CASE_STATUSES } from './gis-export.service';
+import { CaseStatus } from '../cases/case.entity.js';
+import { GisExportService, PRINTABLE_CASE_STATUSES } from './gis-export.service.js';
 
 describe('GisExportService', () => {
   const baseCase = {

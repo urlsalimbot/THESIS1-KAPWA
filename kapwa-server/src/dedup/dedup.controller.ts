@@ -3,13 +3,13 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { Response } from 'express';
-import { MAX_FILE_SIZE } from '../common/constants';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { AuthenticatedRequest } from '../auth/types';
-import { DedupService } from './dedup.service';
-import { CreateDedupOperationSchema, CreateDedupOperationInput, DedupDecisionSchema, DedupDecisionInput, EligibilityDecisionSchema, EligibilityDecisionInput } from './dto/dedup.zod';
+import { MAX_FILE_SIZE } from '../common/constants.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { AuthenticatedRequest } from '../auth/types.js';
+import { DedupService } from './dedup.service.js';
+import { CreateDedupOperationSchema, CreateDedupOperationInput, DedupDecisionSchema, DedupDecisionInput, EligibilityDecisionSchema, EligibilityDecisionInput } from './dto/dedup.zod.js';
 
 @ApiTags('Client Deduplication')
 @Controller('client-dedup')

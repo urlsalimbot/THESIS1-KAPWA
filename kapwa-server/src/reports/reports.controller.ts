@@ -1,12 +1,12 @@
 import { BadRequestException, Controller, Get, Inject, Query, Res, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { SummaryReportService } from './summary-report.service';
-import { buildSummaryReportPdf } from './summary-report-pdf.builder';
-import { SummaryReportQuerySchema } from './dto/summary-report.query';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { SummaryReportService } from './summary-report.service.js';
+import { buildSummaryReportPdf } from './summary-report-pdf.builder.js';
+import { SummaryReportQuerySchema } from './dto/summary-report.query.js';
 
 export const SUMMARY_REPORT_BUILDER = 'SUMMARY_REPORT_BUILDER';
 

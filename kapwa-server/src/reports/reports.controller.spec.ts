@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
-import { ReportsController } from './reports.controller';
-import { SummaryReportQuerySchema } from './dto/summary-report.query';
+import { ReportsController } from './reports.controller.js';
+import { SummaryReportQuerySchema } from './dto/summary-report.query.js';
 
 describe('SummaryReportQuerySchema', () => {
   it('defaults year and semester', () => {

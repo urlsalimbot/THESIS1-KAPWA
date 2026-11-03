@@ -1,4 +1,4 @@
-import { IrfKeyService } from './irf-key.service';
+import { IrfKeyService } from './irf-key.service.js';
 
 describe('IrfKeyService', () => {
   let irfRepo: any;

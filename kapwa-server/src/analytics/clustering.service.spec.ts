@@ -1,13 +1,13 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException, UnprocessableEntityException } from '@nestjs/common';
-import { ClusteringService } from './clustering.service';
-import { AnalyticsFeaturesService } from './analytics-features.service';
-import { AnalysisRun } from './analysis-run.entity';
-import { AnalysisRunCluster } from './analysis-run-cluster.entity';
-import { AnalysisRunMember } from './analysis-run-member.entity';
-import { AuditLogService } from '../audit/audit-log.service';
-import type { HouseholdFeatureRow } from './analytics.types';
+import { ClusteringService } from './clustering.service.js';
+import { AnalyticsFeaturesService } from './analytics-features.service.js';
+import { AnalysisRun } from './analysis-run.entity.js';
+import { AnalysisRunCluster } from './analysis-run-cluster.entity.js';
+import { AnalysisRunMember } from './analysis-run-member.entity.js';
+import { AuditLogService } from '../audit/audit-log.service.js';
+import type { HouseholdFeatureRow } from './analytics.types.js';
 
 function rows(n: number): HouseholdFeatureRow[] {
   return Array.from({ length: n }, (_, i) => ({

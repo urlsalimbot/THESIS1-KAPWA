@@ -1,10 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Person } from '../beneficiaries/person.entity';
-import { PersonAddress } from '../beneficiaries/person-address.entity';
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
-import { BeneficiaryRole } from '../beneficiaries/beneficiary-role.entity';
+import { Person } from '../beneficiaries/person.entity.js';
+import { PersonAddress } from '../beneficiaries/person-address.entity.js';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity.js';
+import { BeneficiaryRole } from '../beneficiaries/beneficiary-role.entity.js';
 
 @Injectable()
 export class LcrService {

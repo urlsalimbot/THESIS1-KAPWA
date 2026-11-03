@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { CsrService } from './csr.service';
-import { OrgService } from '../common/org.service';
-import { CsrRecord } from './csr.entity';
+import { CsrService } from './csr.service.js';
+import { OrgService } from '../common/org.service.js';
+import { CsrRecord } from './csr.entity.js';
 
 describe('CsrService', () => {
   let service: CsrService;

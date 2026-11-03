@@ -1,5 +1,5 @@
 import * as crypto from 'crypto';
-import { AuditService } from './audit.service';
+import { AuditService } from './audit.service.js';
 
 const link = (id: string, hash: string | null) =>
   crypto.createHash('sha256').update(JSON.stringify({ id, hash })).digest('hex');

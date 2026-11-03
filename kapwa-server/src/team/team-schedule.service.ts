@@ -1,8 +1,8 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThanOrEqual, Raw, FindOptionsWhere, In, Repository } from 'typeorm';
-import { AuditLogService } from '../audit/audit-log.service';
-import { TeamScheduleBlock } from './team-schedule-block.entity';
+import { AuditLogService } from '../audit/audit-log.service.js';
+import { TeamScheduleBlock } from './team-schedule-block.entity.js';
 
 // Canonical block vocabulary (plan constraint): a staff day block is one of
 // these five. Stored as varchar(32) and validated here — the same shape as

@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { OfficeEventsService } from './office-events.service';
-import { OfficeEvent } from './office-event.entity';
-import { AuditLogService } from '../audit/audit-log.service';
+import { OfficeEventsService } from './office-events.service.js';
+import { OfficeEvent } from './office-event.entity.js';
+import { AuditLogService } from '../audit/audit-log.service.js';
 
 describe('OfficeEventsService', () => {
   let service: OfficeEventsService;

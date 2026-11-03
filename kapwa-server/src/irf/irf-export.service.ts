@@ -1,11 +1,11 @@
 import { Injectable, ForbiddenException, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { IrfCase } from './irf-case.entity';
-import { IrfService } from './irf.service';
-import { IrfAuditService } from './irf-audit.service';
-import { AgenciesService } from '../agencies/agencies.service';
-import { buildIrfPdf } from './irf-pdf.builder';
+import { IrfCase } from './irf-case.entity.js';
+import { IrfService } from './irf.service.js';
+import { IrfAuditService } from './irf-audit.service.js';
+import { AgenciesService } from '../agencies/agencies.service.js';
+import { buildIrfPdf } from './irf-pdf.builder.js';
 
 @Injectable()
 export class IrfExportService {

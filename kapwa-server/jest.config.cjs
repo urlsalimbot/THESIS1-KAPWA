@@ -3,8 +3,13 @@ module.exports = {
   rootDir: '.',
   roots: ['<rootDir>/src', '<rootDir>/test'],
   testRegex: '.*\\.spec\\.ts$',
+  extensionsToTreatAsEsm: ['.ts'],
   transform: {
-    '^.+\\.(t|j)s$': 'ts-jest',
+    '^.+\\.(t|j)s$': ['ts-jest', { useESM: true, diagnostics: { ignoreCodes: [151002] } }],
+  },
+  // Source imports carry `.js` specifiers (Node ESM); Jest resolves the `.ts`.
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   transformIgnorePatterns: ['/node_modules/(?!(uuid|cockatiel)/)'],
   collectCoverageFrom: [
@@ -16,4 +21,5 @@ module.exports = {
   ],
   coverageDirectory: './coverage',
   testEnvironment: 'node',
+  setupFilesAfterEnv: ['<rootDir>/test/setup-esm.ts'],
 };

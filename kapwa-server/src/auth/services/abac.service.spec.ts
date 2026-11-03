@@ -1,4 +1,4 @@
-import { AbacService } from './abac.service';
+import { AbacService } from './abac.service.js';
 
 describe('AbacService', () => {
   it('allows admin to access anything', () => {

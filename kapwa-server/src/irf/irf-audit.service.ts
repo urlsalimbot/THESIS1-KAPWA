@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { IrfCase } from './irf-case.entity';
+import { IrfCase } from './irf-case.entity.js';
 
 @Injectable()
 export class IrfAuditService {

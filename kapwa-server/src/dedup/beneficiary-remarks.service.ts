@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
-import { BeneficiaryRemark, RemarkKind } from './dedup.entity';
+import { BeneficiaryRemark, RemarkKind } from './dedup.entity.js';
 
 /**
  * Append-only remark history per beneficiary (spec §3): the beneficiary view's

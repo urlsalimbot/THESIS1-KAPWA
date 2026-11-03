@@ -1,6 +1,6 @@
 import { Entity, Column, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
-import { User } from '../auth/user.entity';
+import { BaseEntity } from '../common/base.entity.js';
+import { User } from '../auth/user.entity.js';
 
 // Team workspace: internal office events (meetings, training, celebrations).
 // Visible to 'staff' (default), 'team', or the owning user depending on the

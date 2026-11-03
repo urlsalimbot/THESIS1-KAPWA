@@ -1,6 +1,6 @@
 import { Entity, Column, CreateDateColumn, OneToMany } from 'typeorm';
-import { HouseholdMembership } from './household-membership.entity';
-import { BaseEntity } from '../common/base.entity';
+import { HouseholdMembership } from './household-membership.entity.js';
+import { BaseEntity } from '../common/base.entity.js';
 
 @Entity('households')
 export class Household extends BaseEntity {

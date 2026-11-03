@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { GUARDS_METADATA } from '@nestjs/common/constants';
-import { TeamInvitesService } from './team-invites.service';
-import { TeamInvite } from './team-invite.entity';
-import { TeamScheduleBlock } from './team-schedule-block.entity';
-import { TeamInvitesController } from './team-invites.controller';
-import { ROLES_KEY } from '../auth/decorators/roles.decorator';
+import { GUARDS_METADATA } from '@nestjs/common/constants.js';
+import { TeamInvitesService } from './team-invites.service.js';
+import { TeamInvite } from './team-invite.entity.js';
+import { TeamScheduleBlock } from './team-schedule-block.entity.js';
+import { TeamInvitesController } from './team-invites.controller.js';
+import { ROLES_KEY } from '../auth/decorators/roles.decorator.js';
 
 describe('TeamInvitesService', () => {
   let service: TeamInvitesService;

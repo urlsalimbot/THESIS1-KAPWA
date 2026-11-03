@@ -1,17 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
-import { CasesService } from './cases.service';
-import { CasesExportService } from './cases-export.service';
-import { Case, CaseStatus } from './case.entity';
-import { CaseHistory } from './case-history.entity';
+import { CasesService } from './cases.service.js';
+import { CasesExportService } from './cases-export.service.js';
+import { Case, CaseStatus } from './case.entity.js';
+import { CaseHistory } from './case-history.entity.js';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { NotificationsService } from '../notifications/notifications.service';
-import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
-import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
-import { CaseAssistance } from './case-assistance.entity';
-import { CaseStepLock } from './case-step-lock.entity';
-import { canTransition } from './case-fsm';
-import { TeamScheduleSyncService } from '../team/team-schedule-sync.service';
+import { NotificationsService } from '../notifications/notifications.service.js';
+import { HouseholdMembership } from '../beneficiaries/household-membership.entity.js';
+import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity.js';
+import { CaseAssistance } from './case-assistance.entity.js';
+import { CaseStepLock } from './case-step-lock.entity.js';
+import { canTransition } from './case-fsm.js';
+import { TeamScheduleSyncService } from '../team/team-schedule-sync.service.js';
 
 describe('CasesService', () => {
   let service: CasesService;

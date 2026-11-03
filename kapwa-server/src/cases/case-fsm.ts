@@ -1,4 +1,4 @@
-import { CaseStatus } from './case.entity';
+import { CaseStatus } from './case.entity.js';
 
 // Documented case lifecycle. Closure is only reachable through Phase-Out
 // (transitioning); closing directly from enrolled/assessed/in_review/active would

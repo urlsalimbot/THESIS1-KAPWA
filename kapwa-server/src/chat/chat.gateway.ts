@@ -8,7 +8,7 @@ import {
   MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { ChatService } from './chat.service';
+import { ChatService } from './chat.service.js';
 import { JwtService } from '@nestjs/jwt';
 
 // CORS origins for the chat socket. Accepts the NOTIF_WS_ORIGIN allowlist

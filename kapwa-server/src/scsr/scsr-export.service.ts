@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Case } from '../cases/case.entity';
-import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
-import { Person } from '../beneficiaries/person.entity';
-import { User, UserRole } from '../auth/user.entity';
-import { OrgService } from '../common/org.service';
-import { buildScsrPdf, ScsrFamilyRow, ScsrKind } from './scsr-pdf.builder';
+import { Case } from '../cases/case.entity.js';
+import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity.js';
+import { Person } from '../beneficiaries/person.entity.js';
+import { User, UserRole } from '../auth/user.entity.js';
+import { OrgService } from '../common/org.service.js';
+import { buildScsrPdf, ScsrFamilyRow, ScsrKind } from './scsr-pdf.builder.js';
 
 const FILIPINO_MONTHS = [
   'Enero', 'Peb', 'Marso', 'Abril', 'Mayo', 'Hunyo',

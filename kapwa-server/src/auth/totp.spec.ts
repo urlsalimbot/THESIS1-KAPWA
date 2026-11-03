@@ -1,4 +1,4 @@
-import { totpForCounter, generateTOTPSecret } from './totp';
+import { totpForCounter, generateTOTPSecret } from './totp.js';
 
 // RFC 6238 Appendix B test vectors, SHA-1 variant, 6 digits, 30 s period —
 // the table's T values are seconds; the counter is floor(T / 30) with T0 = 0.

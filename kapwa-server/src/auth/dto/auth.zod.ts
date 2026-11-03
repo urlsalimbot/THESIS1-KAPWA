@@ -1,5 +1,5 @@
-import { BARANGAY_NAMES, MIN_PASSWORD_LENGTH } from '../../common/constants';
-import { IntakeInputSchema } from '../../intake/dto/intake.zod';
+import { BARANGAY_NAMES, MIN_PASSWORD_LENGTH } from '../../common/constants.js';
+import { IntakeInputSchema } from '../../intake/dto/intake.zod.js';
 import { z } from 'zod';
 
 /** Self-registration carries the beneficiary/family half of the General Intake. */

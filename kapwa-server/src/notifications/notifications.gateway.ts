@@ -6,7 +6,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
-import { UserRole } from '../auth/user.entity';
+import { UserRole } from '../auth/user.entity.js';
 
 // Roles whose live whereabouts are staff-visible. Only sockets with one of
 // these roles join the shared 'team' room; claimants and other roles never

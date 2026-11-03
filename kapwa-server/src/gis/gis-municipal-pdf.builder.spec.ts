@@ -1,6 +1,6 @@
-import { buildMunicipalGisPdf } from './gis-municipal-pdf.builder';
-import { GisPdfData } from './gis-export.types';
-import { searchableText } from './gis-pdf-test.util';
+import { buildMunicipalGisPdf } from './gis-municipal-pdf.builder.js';
+import { GisPdfData } from './gis-export.types.js';
+import { searchableText } from './gis-pdf-test.util.js';
 
 // Municipal (MSWDO Norzagaray) General Intake Sheet — the second GIS
 // variation. Assertions cover the form's own sections, the Filipino labels,

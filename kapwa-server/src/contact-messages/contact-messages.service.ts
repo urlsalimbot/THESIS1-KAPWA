@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { ContactMessage, ContactMessageReply } from './contact-message.entity';
-import { CreateContactMessageInput } from './dto/contact-message.zod';
-import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationCategory, NotificationType } from '../notifications/notification.entity';
-import { User } from '../auth/user.entity';
-import { MailerService } from '../common/mailer.service';
+import { ContactMessage, ContactMessageReply } from './contact-message.entity.js';
+import { CreateContactMessageInput } from './dto/contact-message.zod.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
+import { NotificationCategory, NotificationType } from '../notifications/notification.entity.js';
+import { User } from '../auth/user.entity.js';
+import { MailerService } from '../common/mailer.service.js';
 
 @Injectable()
 export class ContactMessagesService {

@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
-import { BeneficiariesController } from './beneficiaries.controller';
-import { BeneficiariesService } from './beneficiaries.service';
-import { AbacGuard } from '../auth/guards/abac.guard';
+import { BeneficiariesController } from './beneficiaries.controller.js';
+import { BeneficiariesService } from './beneficiaries.service.js';
+import { AbacGuard } from '../auth/guards/abac.guard.js';
 
 describe('BeneficiariesController', () => {
   let controller: BeneficiariesController;

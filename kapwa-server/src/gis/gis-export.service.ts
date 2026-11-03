@@ -1,13 +1,13 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Case, CaseStatus } from '../cases/case.entity';
-import { CaseIntervention } from '../case-interventions/case-intervention.entity';
-import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
-import { OrgService } from '../common/org.service';
-import { loadGisData } from './gis-export.loader';
-import { buildGisPdf } from './gis-pdf.builder';
-import { buildMunicipalGisPdf } from './gis-municipal-pdf.builder';
+import { Case, CaseStatus } from '../cases/case.entity.js';
+import { CaseIntervention } from '../case-interventions/case-intervention.entity.js';
+import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity.js';
+import { OrgService } from '../common/org.service.js';
+import { loadGisData } from './gis-export.loader.js';
+import { buildGisPdf } from './gis-pdf.builder.js';
+import { buildMunicipalGisPdf } from './gis-municipal-pdf.builder.js';
 
 /** GIS variations: the national DSWD sheet and the MSWDO municipal sheet. */
 export type GisForm = 'national' | 'municipal';

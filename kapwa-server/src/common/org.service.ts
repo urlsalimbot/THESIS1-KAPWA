@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { ORG_LOCATION } from './constants';
+import { ORG_LOCATION } from './constants.js';
 
 export interface OrgProfile {
   officeName: string;

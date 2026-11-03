@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CASE_EVENT_TYPES, CASE_EVENT_STATUSES } from '../case-event.entity';
+import { CASE_EVENT_TYPES, CASE_EVENT_STATUSES } from '../case-event.entity.js';
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD');
 const timeSchema = z.string().regex(/^\d{2}:\d{2}$/, 'Expected HH:MM').optional().nullable();

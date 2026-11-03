@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ExportController } from './export.controller';
-import { ExportService } from './export.service';
-import { Case } from '../cases/case.entity';
-import { AuditModule } from '../audit/audit.module';
+import { ExportController } from './export.controller.js';
+import { ExportService } from './export.service.js';
+import { Case } from '../cases/case.entity.js';
+import { AuditModule } from '../audit/audit.module.js';
 
 @Module({
   imports: [

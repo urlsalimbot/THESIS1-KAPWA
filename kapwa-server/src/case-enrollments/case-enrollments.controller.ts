@@ -1,12 +1,12 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Request } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { AuthenticatedRequest } from '../auth/types';
-import { CaseEnrollmentsService } from './case-enrollments.service';
-import { CaseStepLocksService } from '../cases/case-step-locks.service';
-import { CreateProgramEnrollmentSchema, UpdateProgramEnrollmentSchema, CreateProgramEnrollmentInput, UpdateProgramEnrollmentInput } from './dto/case-enrollments.zod';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { AuthenticatedRequest } from '../auth/types.js';
+import { CaseEnrollmentsService } from './case-enrollments.service.js';
+import { CaseStepLocksService } from '../cases/case-step-locks.service.js';
+import { CreateProgramEnrollmentSchema, UpdateProgramEnrollmentSchema, CreateProgramEnrollmentInput, UpdateProgramEnrollmentInput } from './dto/case-enrollments.zod.js';
 
 @Controller('cases/:caseId/enrollments')
 @UseGuards(JwtAuthGuard, RolesGuard)

@@ -1,3 +1,4 @@
+import { nodeRequire } from '../common/node-require.js';
 /**
  * Parses an uploaded xlsx/csv client list against a declarable column map
  * (spec §2). Baseline columns plus any number of declared extra fields; the
@@ -104,7 +105,7 @@ export async function parseImportFile(
     grid = parseCsvText(buffer.toString('utf8'));
   } else {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const ExcelJS = require('exceljs');
+    const ExcelJS = nodeRequire('exceljs');
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer);
     const sheet = workbook.worksheets[0];

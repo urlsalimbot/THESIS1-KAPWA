@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PendingIntake } from './pending-intake.entity';
+import { PendingIntake } from './pending-intake.entity.js';
 
 @Injectable()
 export class PendingIntakesService {

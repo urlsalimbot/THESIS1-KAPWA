@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
-import { AnalyticsController } from './analytics.controller';
-import { AnalyticsService } from './analytics.service';
-import { ClusteringService } from './clustering.service';
+import { AnalyticsController } from './analytics.controller.js';
+import { AnalyticsService } from './analytics.service.js';
+import { ClusteringService } from './clustering.service.js';
 
 describe('AnalyticsController', () => {
   let controller: AnalyticsController;

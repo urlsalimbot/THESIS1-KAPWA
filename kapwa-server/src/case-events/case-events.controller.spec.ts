@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CaseEventsController } from './case-events.controller';
-import { CaseEventsService } from './case-events.service';
-import { AbacGuard } from '../auth/guards/abac.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { AuthenticatedRequest } from '../auth/types';
+import { CaseEventsController } from './case-events.controller.js';
+import { CaseEventsService } from './case-events.service.js';
+import { AbacGuard } from '../auth/guards/abac.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { AuthenticatedRequest } from '../auth/types.js';
 
 describe('CaseEventsController', () => {
   let ctrl: CaseEventsController;

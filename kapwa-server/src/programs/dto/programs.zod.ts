@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { INTERVENTION_FORM_FORMATS, PROGRAM_TYPES } from '../../common/case-catalog';
+import { INTERVENTION_FORM_FORMATS, PROGRAM_TYPES } from '../../common/case-catalog.js';
 
 // The catalog vocabularies, as zod enums: the UI cannot invent a program type
 // or a form format the rest of the system does not know (audit 3.2.9).

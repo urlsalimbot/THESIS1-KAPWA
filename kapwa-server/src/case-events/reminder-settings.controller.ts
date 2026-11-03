@@ -1,12 +1,12 @@
 import { Body, Controller, Get, Put, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { AbacGuard } from '../auth/guards/abac.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { AuthenticatedRequest } from '../auth/types';
-import { ReminderSettingsService } from './reminder-settings.service';
-import { ReminderSettingDraft } from './dto/reminder-settings.zod';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { AbacGuard } from '../auth/guards/abac.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { AuthenticatedRequest } from '../auth/types.js';
+import { ReminderSettingsService } from './reminder-settings.service.js';
+import { ReminderSettingDraft } from './dto/reminder-settings.zod.js';
 
 // System defaults are the MSWDO Head's (admin); every staff member owns their
 // own overrides. Reads are as narrow as writes: the defaults are public to

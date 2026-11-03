@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ReminderSetting } from './reminder-setting.entity';
-import { ReminderSettingDraft, ReminderSettingsBulkSchema } from './dto/reminder-settings.zod';
+import { ReminderSetting } from './reminder-setting.entity.js';
+import { ReminderSettingDraft, ReminderSettingsBulkSchema } from './dto/reminder-settings.zod.js';
 
 /**
  * Lead-time configuration. System rows (admin) are the defaults every worker

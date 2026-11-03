@@ -2,15 +2,15 @@ import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { NotFoundException } from '@nestjs/common';
-import { BeneficiariesService } from '../src/beneficiaries/beneficiaries.service';
-import { Person } from '../src/beneficiaries/person.entity';
-import { HouseholdMembership } from '../src/beneficiaries/household-membership.entity';
-import { BeneficiaryClaimant } from '../src/beneficiaries/beneficiary-claimant.entity';
-import { Beneficiary } from '../src/beneficiaries/beneficiary.entity';
-import { BeneficiaryRole } from '../src/beneficiaries/beneficiary-role.entity';
-import { ConsentLedger } from '../src/beneficiaries/consent-ledger.entity';
-import { Case } from '../src/cases/case.entity';
-import { User } from '../src/auth/user.entity';
+import { BeneficiariesService } from '../src/beneficiaries/beneficiaries.service.js';
+import { Person } from '../src/beneficiaries/person.entity.js';
+import { HouseholdMembership } from '../src/beneficiaries/household-membership.entity.js';
+import { BeneficiaryClaimant } from '../src/beneficiaries/beneficiary-claimant.entity.js';
+import { Beneficiary } from '../src/beneficiaries/beneficiary.entity.js';
+import { BeneficiaryRole } from '../src/beneficiaries/beneficiary-role.entity.js';
+import { ConsentLedger } from '../src/beneficiaries/consent-ledger.entity.js';
+import { Case } from '../src/cases/case.entity.js';
+import { User } from '../src/auth/user.entity.js';
 
 describe('BeneficiariesService — Family Graph', () => {
   let service: BeneficiariesService;

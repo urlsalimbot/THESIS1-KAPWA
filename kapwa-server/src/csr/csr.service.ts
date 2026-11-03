@@ -1,10 +1,10 @@
-import { DEFAULT_LIST_LIMIT } from '../common/constants';
+import { DEFAULT_LIST_LIMIT } from '../common/constants.js';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CsrRecord } from './csr.entity';
-import { OrgService } from '../common/org.service';
-import { nextSequenceValue } from '../database/sequences';
+import { CsrRecord } from './csr.entity.js';
+import { OrgService } from '../common/org.service.js';
+import { nextSequenceValue } from '../database/sequences.js';
 
 const CSR_PAD_WIDTH = 4;
 @Injectable()

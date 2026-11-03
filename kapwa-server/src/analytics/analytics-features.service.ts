@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Household } from '../beneficiaries/household.entity';
-import type { HouseholdFeatureRow } from './analytics.types';
+import { Household } from '../beneficiaries/household.entity.js';
+import type { HouseholdFeatureRow } from './analytics.types.js';
 
 export interface FeatureFilters {
   from?: string;

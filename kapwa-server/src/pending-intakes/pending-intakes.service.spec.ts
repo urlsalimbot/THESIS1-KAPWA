@@ -1,4 +1,4 @@
-import { PendingIntakesService } from './pending-intakes.service';
+import { PendingIntakesService } from './pending-intakes.service.js';
 
 function repoMock() {
   return {

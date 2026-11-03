@@ -1,7 +1,9 @@
+import { esmDirname } from '../common/esm-path.js';
+import { nodeRequire } from '../common/node-require.js';
 import * as path from 'path';
 import * as fs from 'fs';
-import { AccessCardPdfData } from './access-card-pdf.types';
-import { MUNICIPAL_MAYOR, ORG_LOCATION } from '../common/constants';
+import { AccessCardPdfData } from './access-card-pdf.types.js';
+import { MUNICIPAL_MAYOR, ORG_LOCATION } from '../common/constants.js';
 
 // Landscape A4 (841.89 × 595.28) — the Family Access Card is a landscape
 // document. The cover face and the inner face each carry ONE column of the
@@ -157,8 +159,8 @@ function drawClientCover(doc: any, x: number, data: AccessCardPdfData): void {
   doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#111').text('CLIENT', x + 10, 107, { width: 66 });
 
   // Municipal seal + DSWD logo to the right of the photo box
-  const sealPath = path.join(__dirname, '..', 'gis', 'assets', 'norzagaray-bulacan-official-logo.png');
-  const dswdPath = path.join(__dirname, '..', 'gis', 'assets', 'DSWD-Logo.png');
+  const sealPath = path.join(esmDirname(import.meta.url), '..', 'gis', 'assets', 'norzagaray-bulacan-official-logo.png');
+  const dswdPath = path.join(esmDirname(import.meta.url), '..', 'gis', 'assets', 'DSWD-Logo.png');
   if (fs.existsSync(sealPath)) {
     try { doc.image(sealPath, x + 80, 42, { fit: [42, 42] }); } catch { /* header renders without the seal */ }
   }
@@ -292,7 +294,7 @@ function drawClientCover(doc: any, x: number, data: AccessCardPdfData): void {
 }
 
 export async function buildAccessCardPdf(data: AccessCardPdfData): Promise<Buffer> {
-  const PDFDocument = require('pdfkit');
+  const PDFDocument = nodeRequire('pdfkit');
   const doc = new PDFDocument({
     size: 'A4',
     layout: 'landscape',

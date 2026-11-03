@@ -1,15 +1,15 @@
 import { Controller, Get, Post, Param, Body, Query, UseGuards, ParseUUIDPipe, DefaultValuePipe, ParseIntPipe, Request, Res, UseInterceptors, SerializeOptions } from '@nestjs/common';
 import { ClassSerializerInterceptor } from '@nestjs/common';
-import { ZodPipe } from '../common/pipes/zod.pipe';
-import { LogServiceSchema, LogServiceInput } from './dto/access-cards.zod';
+import { ZodPipe } from '../common/pipes/zod.pipe.js';
+import { LogServiceSchema, LogServiceInput } from './dto/access-cards.zod.js';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { AbacGuard } from '../auth/guards/abac.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { AccessCardsService } from './access-cards.service';
-import { AuthenticatedRequest } from '../auth/types';
-import { exportFileName } from '../common/constants';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { AbacGuard } from '../auth/guards/abac.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { AccessCardsService } from './access-cards.service.js';
+import { AuthenticatedRequest } from '../auth/types.js';
+import { exportFileName } from '../common/constants.js';
 
 @ApiTags('Access Cards')
 @Controller('access-cards')

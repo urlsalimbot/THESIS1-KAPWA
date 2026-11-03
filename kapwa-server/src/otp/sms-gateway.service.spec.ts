@@ -1,4 +1,4 @@
-import { SmsGatewayService } from './sms-gateway.service';
+import { SmsGatewayService } from './sms-gateway.service.js';
 
 describe('SmsGatewayService', () => {
   const env = { ...process.env };

@@ -1,36 +1,36 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Optional, Logger } from '@nestjs/common';
-import { displayFullName } from '../common/person-name';
-import { roundMoney, workingDaysBetween } from '../common/utils';
+import { displayFullName } from '../common/person-name.js';
+import { roundMoney, workingDaysBetween } from '../common/utils.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Case, CaseStatus } from './case.entity';
-import { CaseRequirement } from './case-requirement.entity';
-import { CaseReferral } from './case-referral.entity';
-import { CaseAssistance } from './case-assistance.entity';
-import { CaseFollowUpVisit } from './case-follow-up-visit.entity';
-import { CaseStepLock } from './case-step-lock.entity';
-import { InterventionRequiredDocument } from './intervention-required-document.entity';
+import { Case, CaseStatus } from './case.entity.js';
+import { CaseRequirement } from './case-requirement.entity.js';
+import { CaseReferral } from './case-referral.entity.js';
+import { CaseAssistance } from './case-assistance.entity.js';
+import { CaseFollowUpVisit } from './case-follow-up-visit.entity.js';
+import { CaseStepLock } from './case-step-lock.entity.js';
+import { InterventionRequiredDocument } from './intervention-required-document.entity.js';
 // A plain const from a leaf module, not `CaseStepLocksService`: that service
 // injects `CasesService`, so depending on it here would be a require cycle — and
 // with `emitDecoratorMetadata` that costs the locks service a Nest DI failure at
 // boot, which no unit test can see. The labels are all this file needs, and an
 // error that spells a step differently from the stepper costs the worker a trip
 // to the UI to find out what is open.
-import { CASE_STEP_LABELS, stepsDueAt, stepsForCategory, stepsInPhase } from './case-step-labels';
-import { isValidTransition, canTransition, nextActionFor } from './case-fsm';
-import { NotificationCategory } from '../notifications/notification.entity';
-import { CaseHistory } from './case-history.entity';
-import { CasesExportService } from './cases-export.service';
-import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
-import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
-import { NotificationsService } from '../notifications/notifications.service';
-import { AuditLogService } from '../audit/audit-log.service';
-import { TeamScheduleSyncService } from '../team/team-schedule-sync.service';
-import { AssessmentInput, TransitionPlanInput, RequirementsInput, ClosureInput, AssessmentV2Input, DiscernmentInput, ProtectionOrderInput, SoloParentInput, AdoptionInput, CaseMetaInput } from './dto/cases.zod';
+import { CASE_STEP_LABELS, stepsDueAt, stepsForCategory, stepsInPhase } from './case-step-labels.js';
+import { isValidTransition, canTransition, nextActionFor } from './case-fsm.js';
+import { NotificationCategory } from '../notifications/notification.entity.js';
+import { CaseHistory } from './case-history.entity.js';
+import { CasesExportService } from './cases-export.service.js';
+import { HouseholdMembership } from '../beneficiaries/household-membership.entity.js';
+import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
+import { AuditLogService } from '../audit/audit-log.service.js';
+import { TeamScheduleSyncService } from '../team/team-schedule-sync.service.js';
+import { AssessmentInput, TransitionPlanInput, RequirementsInput, ClosureInput, AssessmentV2Input, DiscernmentInput, ProtectionOrderInput, SoloParentInput, AdoptionInput, CaseMetaInput } from './dto/cases.zod.js';
 import {
   SATURDAY, SUNDAY,
   PENDING_ESCALATION_DAYS, REVIEW_ESCALATION_DAYS, APPROVED_ESCALATION_DAYS,
-} from '../common/constants';
+} from '../common/constants.js';
 
 const MAX_RETRY_ATTEMPTS = 3;
 const CONTROL_NO_PAD_WIDTH = 5;

@@ -1,6 +1,8 @@
+import { esmDirname } from '../common/esm-path.js';
+import { nodeRequire } from '../common/node-require.js';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ORG_LOCATION } from '../common/constants';
+import { ORG_LOCATION } from '../common/constants.js';
 
 // Endorsement Letter — the formal document by which MSWDO hands a beneficiary
 // to a partner agency. It is the referral: issuing it records the inter-agency
@@ -28,7 +30,7 @@ export interface EndorsementLetterData {
 
 export async function buildEndorsementLetterPdf(data: EndorsementLetterData): Promise<Buffer> {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const PDFDocument = require('pdfkit');
+  const PDFDocument = nodeRequire('pdfkit');
   const doc = new PDFDocument({
     size: 'A4',
     margins: { top: 48, bottom: 48, left: 56, right: 56 },
@@ -53,7 +55,7 @@ export async function buildEndorsementLetterPdf(data: EndorsementLetterData): Pr
   const badgeSize = 52;
   const badgeY = 34;
   const badge = (file: string, x: number) => {
-    const filePath = path.join(__dirname, '..', 'gis', 'assets', file);
+    const filePath = path.join(esmDirname(import.meta.url), '..', 'gis', 'assets', file);
     if (!fs.existsSync(filePath)) return;
     try {
       doc.image(filePath, x, badgeY, { fit: [badgeSize, badgeSize] });

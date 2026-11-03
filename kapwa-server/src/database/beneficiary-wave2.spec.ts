@@ -1,7 +1,7 @@
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
-import { Person } from '../beneficiaries/person.entity';
-import { BeneficiaryRole } from '../beneficiaries/beneficiary-role.entity';
-import { Household } from '../beneficiaries/household.entity';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity.js';
+import { Person } from '../beneficiaries/person.entity.js';
+import { BeneficiaryRole } from '../beneficiaries/beneficiary-role.entity.js';
+import { Household } from '../beneficiaries/household.entity.js';
 
 describe('Beneficiary wave-2 getters (person-keyed beneficiary_roles)', () => {
   it('exposes category and consentStatus from the person.roles relation', () => {

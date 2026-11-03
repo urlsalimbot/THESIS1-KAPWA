@@ -1,4 +1,4 @@
-import { DedupService } from './dedup.service';
+import { DedupService } from './dedup.service.js';
 
 function mockRepo(over: any = {}) {
   return {

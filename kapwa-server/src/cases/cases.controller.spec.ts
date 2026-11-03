@@ -1,15 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ConflictException } from '@nestjs/common';
-import { CasesController } from './cases.controller';
-import { CasesService } from './cases.service';
-import { CasesExportService } from './cases-export.service';
-import { CaseStepLocksService } from './case-step-locks.service';
-import { GisExportService } from '../gis/gis-export.service';
-import { ScsrExportService } from '../scsr/scsr-export.service';
-import { AuthenticatedRequest } from '../auth/types';
-import { AbacGuard } from '../auth/guards/abac.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CasesController } from './cases.controller.js';
+import { CasesService } from './cases.service.js';
+import { CasesExportService } from './cases-export.service.js';
+import { CaseStepLocksService } from './case-step-locks.service.js';
+import { GisExportService } from '../gis/gis-export.service.js';
+import { ScsrExportService } from '../scsr/scsr-export.service.js';
+import { AuthenticatedRequest } from '../auth/types.js';
+import { AbacGuard } from '../auth/guards/abac.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 
 describe('CasesController step-lock routes', () => {
   let ctrl: CasesController;

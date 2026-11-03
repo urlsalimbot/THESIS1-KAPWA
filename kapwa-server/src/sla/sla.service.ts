@@ -2,11 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
-import { Case, CaseStatus } from '../cases/case.entity';
-import { Notification, NotificationCategory } from '../notifications/notification.entity';
-import { caseStatusLabel } from '../common/status-labels';
-import { workingDaysBetween } from '../common/utils';
-import { PENDING_ESCALATION_DAYS, PENDING_WARNING_DAYS, REVIEW_ESCALATION_DAYS, REVIEW_WARNING_DAYS, APPROVED_ESCALATION_DAYS, APPROVED_WARNING_DAYS } from '../common/constants';
+import { Case, CaseStatus } from '../cases/case.entity.js';
+import { Notification, NotificationCategory } from '../notifications/notification.entity.js';
+import { caseStatusLabel } from '../common/status-labels.js';
+import { workingDaysBetween } from '../common/utils.js';
+import { PENDING_ESCALATION_DAYS, PENDING_WARNING_DAYS, REVIEW_ESCALATION_DAYS, REVIEW_WARNING_DAYS, APPROVED_ESCALATION_DAYS, APPROVED_WARNING_DAYS } from '../common/constants.js';
 
 @Injectable()
 export class SlaService {

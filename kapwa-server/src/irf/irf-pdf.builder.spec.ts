@@ -1,6 +1,6 @@
 import * as zlib from 'zlib';
 import { PDFDocument } from 'pdf-lib';
-import { buildIrfPdf, IrfPdfData } from './irf-pdf.builder';
+import { buildIrfPdf, IrfPdfData } from './irf-pdf.builder.js';
 
 // pdfkit stores page content in FlateDecode streams and encodes text as
 // hex-encoded TJ arrays, so decode both before asserting on text.

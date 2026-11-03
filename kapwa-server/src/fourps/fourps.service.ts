@@ -1,11 +1,11 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CaseComplianceItem, ComplianceType } from './fourps-compliance.entity';
-import { CasePayout } from './fourps-payout.entity';
-import { AccessCardsService, AccessCardCategory } from '../access-cards/access-cards.service';
-import { roundMoney } from '../common/utils';
-import { CaseIntervention } from '../case-interventions/case-intervention.entity';
+import { CaseComplianceItem, ComplianceType } from './fourps-compliance.entity.js';
+import { CasePayout } from './fourps-payout.entity.js';
+import { AccessCardsService, AccessCardCategory } from '../access-cards/access-cards.service.js';
+import { roundMoney } from '../common/utils.js';
+import { CaseIntervention } from '../case-interventions/case-intervention.entity.js';
 
 /**
  * Whoever caused an access-card row to exist. Structurally satisfied by the

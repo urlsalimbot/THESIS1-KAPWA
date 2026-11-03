@@ -1,4 +1,4 @@
-import { computeAgeFromDob } from './compute-age';
+import { computeAgeFromDob } from './compute-age.js';
 
 describe('computeAgeFromDob', () => {
   beforeEach(() => {
