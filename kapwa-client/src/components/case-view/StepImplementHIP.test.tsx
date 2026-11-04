@@ -579,9 +579,9 @@ describe('StepImplementHIP — sealing step 2', () => {
     expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
   });
 
-  it('holds the seal while an ad-hoc crisis document is unmet (crisis mode)', async () => {
+  it('holds the seal while an ad-hoc crisis document is unmet', async () => {
     renderSeal({
-      caseData: { id: 'case-1', crisisMode: true, requirementsChecklist: {} },
+      caseData: { id: 'case-1', requirementsChecklist: {} },
       interventions: [{ id: 'iv-2', interventionType: 'medical_assistance', serviceName: 'Medical Assistance' }],
       crisisDocs: [{ interventionType: 'medical_assistance', documentKey: 'medical_certificate' }],
     });
@@ -592,7 +592,7 @@ describe('StepImplementHIP — sealing step 2', () => {
 
   it('enables Lock once the ad-hoc crisis document is met', async () => {
     renderSeal({
-      caseData: { id: 'case-1', crisisMode: true, requirementsChecklist: { medical_certificate: true } },
+      caseData: { id: 'case-1', requirementsChecklist: { medical_certificate: true } },
       interventions: [{ id: 'iv-2', interventionType: 'medical_assistance', serviceName: 'Medical Assistance' }],
       crisisDocs: [{ interventionType: 'medical_assistance', documentKey: 'medical_certificate' }],
     });

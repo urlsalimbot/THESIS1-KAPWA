@@ -45,7 +45,7 @@ const DOCS = [
 function renderRequirements(
   docs: unknown[] = DOCS,
   checklist: Record<string, boolean> = {},
-  overrides: { programs?: unknown[]; interventions?: unknown[]; extraProgramIds?: string[]; readOnly?: boolean; caseData?: { crisisMode?: boolean } } = {},
+  overrides: { programs?: unknown[]; interventions?: unknown[]; extraProgramIds?: string[]; readOnly?: boolean; caseData?: Record<string, unknown> } = {},
 ) {
   mockSWR.mockImplementation((key: unknown) => {
     if (Array.isArray(key) && key[0] === 'cases' && key[1] === 'intervention-documents') {
@@ -337,26 +337,16 @@ describe('CaseRequirements — crisis-mode intervention documents', () => {
     mockMutate.mockReset().mockResolvedValue(undefined);
   });
 
-  it('shows intervention-anchored documents for ad-hoc services in crisis mode', async () => {
+  it('shows intervention-anchored documents for ad-hoc services', async () => {
     renderRequirements(DOCS, {}, {
       interventions: [{ id: 'i1', interventionType: 'medical_assistance' }],
-      caseData: { crisisMode: true },
     });
     expect(await screen.findByText('medical_certificate')).toBeTruthy();
   });
 
-  it('shows intervention documents for every recorded intervention, crisis mode or not', async () => {
-    renderRequirements(DOCS, {}, {
-      interventions: [{ id: 'i1', interventionType: 'medical_assistance' }],
-      caseData: { crisisMode: false },
-    });
-    await waitFor(() => expect(screen.getByText('medical_certificate')).toBeTruthy());
-  });
-
-  it('still shows program documents for enrolled services in crisis mode', async () => {
+  it('still shows program documents for enrolled services', async () => {
     renderRequirements(DOCS, { 'Valid ID': true }, {
       interventions: [{ id: 'i1', programId: 'p1' }, { id: 'i2', interventionType: 'medical_assistance' }],
-      caseData: { crisisMode: true },
     });
     expect(await screen.findByText('Valid ID')).toBeTruthy();
     expect(await screen.findByText('medical_certificate')).toBeTruthy();
