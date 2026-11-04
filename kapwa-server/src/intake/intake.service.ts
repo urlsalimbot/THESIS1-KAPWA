@@ -1,4 +1,5 @@
 import { Injectable, InternalServerErrorException, HttpException, NotFoundException, ForbiddenException, ConflictException, Logger } from '@nestjs/common';
+import { manilaDay } from '../common/manila-day.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, MoreThan, Repository } from 'typeorm';
 import { Person } from '../beneficiaries/person.entity.js';
@@ -168,7 +169,7 @@ export class IntakeService {
 
   /** The exact-key identity findOrCreatePerson's no-barangay dedup branch uses. */
   private memberDedupKey(p: { surname: string; firstName: string; dob?: Date | string | null }): string {
-    const dob = p.dob ? new Date(p.dob).toISOString().slice(0, 10) : '';
+    const dob = p.dob ? manilaDay(p.dob) : '';
     return `${p.surname.trim().toLowerCase()}\u0000${p.firstName.trim().toLowerCase()}\u0000${dob}`;
   }
 

@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { manilaDay } from '../common/manila-day.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Referral, ReferralStatus } from './referral.entity.js';
@@ -122,7 +123,7 @@ export class ReferralsService {
         middleName: referral.middleName,
         extension: referral.extension,
         sex: referral.gender,
-        dob: referral.dob ? new Date(referral.dob).toISOString().slice(0, 10) : '',
+        dob: referral.dob ? manilaDay(referral.dob) : '',
         phone: referral.phone || '',
         addressLine: referral.addressLine || '',
       },

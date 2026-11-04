@@ -1,4 +1,5 @@
 import { nodeRequire } from '../common/node-require.js';
+import { manilaDay } from '../common/manila-day.js';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -103,7 +104,7 @@ export class ExportService {
       header: true,
       columns: ['Program', 'Category', 'Services Rendered', 'Total Amount', 'Unique Households'],
     });
-    const dateStr = new Date().toISOString().slice(0, 10);
+    const dateStr = manilaDay(new Date());
     this.logger.warn(`EXPORT: service-summary CSV, ${rows.length} rows`);
     return { buffer: Buffer.from(csv), filename: `service-summary-${dateStr}.csv` };
   }

@@ -241,15 +241,16 @@ describe('TeamAchievementsController', () => {
     expect(svcMock.rollup).not.toHaveBeenCalled();
   });
 
-  it('passes UTC-midnight Dates to the service and returns its rollup', async () => {
+  it('passes Manila-midnight Dates to the service and returns its rollup', async () => {
     const rollup = { perStaff: [], range: { from: '2026-09-28T00:00:00.000Z', to: '2026-10-04T00:00:00.000Z' } };
     svcMock.rollup.mockResolvedValue(rollup);
 
     const result = await ctrl.rollup('2026-09-28', '2026-10-04');
 
+    // Date-only query params are Manila days: midnight UTC+8, not UTC.
     expect(svcMock.rollup).toHaveBeenCalledWith(
-      new Date('2026-09-28T00:00:00.000Z'),
-      new Date('2026-10-04T00:00:00.000Z'),
+      new Date('2026-09-27T16:00:00.000Z'),
+      new Date('2026-10-03T16:00:00.000Z'),
     );
     expect(result).toBe(rollup);
   });

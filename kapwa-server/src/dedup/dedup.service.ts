@@ -71,8 +71,9 @@ export class DedupService {
   /** A row's status derives from its matches: pending wins, then deprioritized,
    *  then an intra-import winner (primary), else it was retained against an
    *  existing record. A row with no matches never needs a decision. */
-  private async deriveRowStatus(rowId: string): Promise<ClientImportRow['status']> {
-    const matches = await this.matchesRepo.find({ where: { rowId } });
+  private async deriveRowStatus(rowId: string, em?: EntityManager): Promise<ClientImportRow['status']> {
+    const repo = em ? em.getRepository(ClientImportMatch) : this.matchesRepo;
+    const matches = await repo.find({ where: { rowId } });
     if (matches.length === 0) return 'no_match';
     if (matches.some((m) => m.status === 'pending')) return 'pending';
     if (matches.some((m) => m.status === 'deprioritized')) return 'deprioritized';
@@ -118,143 +119,157 @@ export class DedupService {
     const row = await this.rowsRepo.findOne({ where: { id: match.rowId } });
     if (!row) throw new NotFoundException('Row not found');
 
-    const now = new Date();
-    match.decidedBy = actorId;
-    match.decidedAt = now;
+    // Narrowed outside the closure: TypeScript does not carry `in`-operator
+    // narrowing into the transaction callback.
+    const keepChoice = 'keep' in body ? body.keep : undefined;
+    const asSamePerson = body as { samePerson?: boolean; position?: 'keep' | 'deprioritize' };
+    const samePerson = asSamePerson.samePerson;
+    const position = asSamePerson.position;
 
-    if ('keep' in body) {
-      // --- Phase 1: which row of the pair wins ---------------------------
-      if (match.targetType !== 'import_row') {
-        throw new BadRequestException('Use the same-person decision for record and household matches');
+    // A decision stamps several rows and a match. The whole set must apply or
+    // none of it: a crash between saves used to leave the pair half-decided.
+    return this.opsRepo.manager.transaction(async (em: EntityManager) => {
+      const matchesRepo = em.getRepository(ClientImportMatch);
+      const rowsRepo = em.getRepository(ClientImportRow);
+
+      const now = new Date();
+      match.decidedBy = actorId;
+      match.decidedAt = now;
+
+      if (keepChoice !== undefined) {
+        // --- Phase 1: which row of the pair wins ---------------------------
+        if (match.targetType !== 'import_row') {
+          throw new BadRequestException('Use the same-person decision for record and household matches');
+        }
+        const keepThis = keepChoice === 'import_row';
+        match.status = keepThis ? 'primary' : 'deprioritized';
+        if (remark) match.remark = remark;
+        await matchesRepo.save(match);
+
+        const paired = match.targetImportRowId
+          ? await rowsRepo.findOne({ where: { id: match.targetImportRowId } })
+          : null;
+        row.decidedBy = actorId;
+        row.decidedAt = now;
+        if (keepThis) {
+          row.matchedPersonId = match.targetPersonId ?? row.matchedPersonId;
+          row.remarks = [row.originalRemarks, remark].filter(Boolean).join(' | ') || undefined;
+        } else {
+          row.remarks = [
+            row.originalRemarks,
+            `Deprioritized — duplicate of row ${paired?.rowIndex ?? match.targetImportRowId}${remark ? `: ${remark}` : ''}`,
+          ].filter(Boolean).join(' | ');
+        }
+        row.status = await this.deriveRowStatus(row.id, em);
+        // A pair winner that also matches an existing record is retained: finalize
+        // must update that record, not create a second person for the same client.
+        if (row.status === 'primary' && row.matchedPersonId) row.status = 'retained';
+
+        // The pair has exactly one winner. The loser carries no match row of its
+        // own, so its status must be stamped here: deriving it from its (empty)
+        // match set would leave it `no_match`, and finalize would import both
+        // duplicates. This is the "only the finalized priority list is imported"
+        // rule for an intra-list pair.
+        if (paired) {
+          if (keepThis) {
+            paired.status = 'deprioritized';
+            paired.remarks = [
+              paired.originalRemarks,
+              `Deprioritized — duplicate of row ${row.rowIndex}`,
+            ].filter(Boolean).join(' | ');
+          } else {
+            paired.status = paired.matchedPersonId ? 'retained' : 'primary';
+            // Clear a note a previous keep-this decision left on the winner.
+            paired.remarks = paired.originalRemarks || undefined;
+          }
+          // The pair decision is also the row's eligibility decision; without
+          // this the removed waive/confirm controls would leave a disqualified
+          // row blocking finalize forever.
+          if (paired.eligibility === 'disqualified' && !paired.eligibilityDecision) {
+            paired.eligibilityDecision = keepThis ? 'confirm' : 'waive';
+            paired.eligibilityDecidedBy = actorId;
+            paired.eligibilityDecidedAt = now;
+          }
+          await rowsRepo.save(paired);
+        }
+
+        if (row.eligibility === 'disqualified' && !row.eligibilityDecision) {
+          row.eligibilityDecision = keepThis ? 'waive' : 'confirm';
+          row.eligibilityDecidedBy = actorId;
+          row.eligibilityDecidedAt = now;
+        }
+        await rowsRepo.save(row);
+        return { row, match };
       }
-      const keepThis = body.keep === 'import_row';
-      match.status = keepThis ? 'primary' : 'deprioritized';
-      if (remark) match.remark = remark;
-      await this.matchesRepo.save(match);
 
-      const paired = match.targetImportRowId
-        ? await this.rowsRepo.findOne({ where: { id: match.targetImportRowId } })
-        : null;
+      // --- Phase 2: same person? -> deprioritize or keep, or a new client -----
+      if (samePerson === false) {
+        // A false positive: the row has nothing to do with this record. The match
+        // is deleted (it is not a match anymore), so the row's status derives as
+        // no_match and finalize imports it as a NEW client — no record update.
+        match.status = 'deprioritized';
+        if (remark) match.remark = remark;
+        await matchesRepo.delete({ id: matchId });
+
+        row.matchedPersonId = null;
+        row.eligibility = 'allowed';
+        row.eligibilityCode = 'new_client';
+        row.eligibilityReason = 'Not the same person — imported as a new client';
+        row.eligibilityDecision = null;
+        row.decidedBy = actorId;
+        row.decidedAt = now;
+        row.remarks = [row.originalRemarks, remark].filter(Boolean).join(' | ') || undefined;
+        row.status = await this.deriveRowStatus(row.id, em);
+        await rowsRepo.save(row);
+        // No remark history on the matched person: they are a different person.
+        return { row, match };
+      }
+
+      // Same person. The record is updated at finalize either way; the decision
+      // is where the row sits in the priority list.
+      const deprioritize = position === 'deprioritize';
+      match.status = deprioritize ? 'deprioritized' : 'primary';
+      if (remark) match.remark = remark;
+      await matchesRepo.save(match);
+
       row.decidedBy = actorId;
       row.decidedAt = now;
-      if (keepThis) {
-        row.matchedPersonId = match.targetPersonId ?? row.matchedPersonId;
-        row.remarks = [row.originalRemarks, remark].filter(Boolean).join(' | ') || undefined;
-      } else {
+      // Same person: point the row at the record the operator chose. Without
+      // this, a row that first answered "not the same person" (which clears the
+      // field) and then "yes, keep" on another candidate kept a null match and
+      // was silently dropped at finalize.
+      if (match.targetPersonId) row.matchedPersonId = match.targetPersonId;
+      if (deprioritize) {
         row.remarks = [
           row.originalRemarks,
-          `Deprioritized — duplicate of row ${paired?.rowIndex ?? match.targetImportRowId}${remark ? `: ${remark}` : ''}`,
+          remark ? `Deprioritized — ${remark}` : 'Deprioritized',
         ].filter(Boolean).join(' | ');
       }
-      row.status = await this.deriveRowStatus(row.id);
-      // A pair winner that also matches an existing record is retained: finalize
-      // must update that record, not create a second person for the same client.
+      row.status = await this.deriveRowStatus(row.id, em);
       if (row.status === 'primary' && row.matchedPersonId) row.status = 'retained';
 
-      // The pair has exactly one winner. The loser carries no match row of its
-      // own, so its status must be stamped here: deriving it from its (empty)
-      // match set would leave it `no_match`, and finalize would import both
-      // duplicates. This is the "only the finalized priority list is imported"
-      // rule for an intra-list pair.
-      if (paired) {
-        if (keepThis) {
-          paired.status = 'deprioritized';
-          paired.remarks = [
-            paired.originalRemarks,
-            `Deprioritized — duplicate of row ${row.rowIndex}`,
-          ].filter(Boolean).join(' | ');
-        } else {
-          paired.status = paired.matchedPersonId ? 'retained' : 'primary';
-          // Clear a note a previous keep-this decision left on the winner.
-          paired.remarks = paired.originalRemarks || undefined;
-        }
-        // The pair decision is also the row's eligibility decision; without
-        // this the removed waive/confirm controls would leave a disqualified
-        // row blocking finalize forever.
-        if (paired.eligibility === 'disqualified' && !paired.eligibilityDecision) {
-          paired.eligibilityDecision = keepThis ? 'confirm' : 'waive';
-          paired.eligibilityDecidedBy = actorId;
-          paired.eligibilityDecidedAt = now;
-        }
-        await this.rowsRepo.save(paired);
-      }
-
+      // A disqualified row's eligibility gate is the same question the tree
+      // answers: keeping them (position unchanged) serves them — the waive; moving
+      // them to the bottom confirms. Mirror it once no match is left pending, so
+      // finalize's "disqualified awaiting decision" gate clears with the tree.
       if (row.eligibility === 'disqualified' && !row.eligibilityDecision) {
-        row.eligibilityDecision = keepThis ? 'waive' : 'confirm';
-        row.eligibilityDecidedBy = actorId;
-        row.eligibilityDecidedAt = now;
+        const remaining = await matchesRepo.find({ where: { rowId: row.id, status: 'pending' } });
+        if (remaining.length === 0) {
+          row.eligibilityDecision = deprioritize ? 'confirm' : 'waive';
+        }
       }
-      await this.rowsRepo.save(row);
+      await rowsRepo.save(row);
+
+      // The decision is traceable on the record that survives.
+      if (remark && match.targetPersonId && this.remarksService) {
+        const bens = await em.query('SELECT id FROM beneficiaries WHERE person_id = $1 LIMIT 1', [match.targetPersonId]);
+        const beneficiaryId = bens?.[0]?.id;
+        if (beneficiaryId) {
+          await this.remarksService.append({ beneficiaryId, operationId, kind: 'decision', remark, source: op.source, authoredBy: actorId }, em);
+        }
+      }
       return { row, match };
-    }
-
-    // --- Phase 2: same person? -> deprioritize or keep, or a new client -----
-    if (body.samePerson === false) {
-      // A false positive: the row has nothing to do with this record. The match
-      // is deleted (it is not a match anymore), so the row's status derives as
-      // no_match and finalize imports it as a NEW client — no record update.
-      match.status = 'deprioritized';
-      if (remark) match.remark = remark;
-      await this.matchesRepo.delete({ id: matchId });
-
-      row.matchedPersonId = null;
-      row.eligibility = 'allowed';
-      row.eligibilityCode = 'new_client';
-      row.eligibilityReason = 'Not the same person — imported as a new client';
-      row.eligibilityDecision = null;
-      row.decidedBy = actorId;
-      row.decidedAt = now;
-      row.remarks = [row.originalRemarks, remark].filter(Boolean).join(' | ') || undefined;
-      row.status = await this.deriveRowStatus(row.id);
-      await this.rowsRepo.save(row);
-      // No remark history on the matched person: they are a different person.
-      return { row, match };
-    }
-
-    // Same person. The record is updated at finalize either way; the decision
-    // is where the row sits in the priority list.
-    const deprioritize = body.position === 'deprioritize';
-    match.status = deprioritize ? 'deprioritized' : 'primary';
-    if (remark) match.remark = remark;
-    await this.matchesRepo.save(match);
-
-    row.decidedBy = actorId;
-    row.decidedAt = now;
-    // Same person: point the row at the record the operator chose. Without
-    // this, a row that first answered "not the same person" (which clears the
-    // field) and then "yes, keep" on another candidate kept a null match and
-    // was silently dropped at finalize.
-    if (match.targetPersonId) row.matchedPersonId = match.targetPersonId;
-    if (deprioritize) {
-      row.remarks = [
-        row.originalRemarks,
-        remark ? `Deprioritized — ${remark}` : 'Deprioritized',
-      ].filter(Boolean).join(' | ');
-    }
-    row.status = await this.deriveRowStatus(row.id);
-    if (row.status === 'primary' && row.matchedPersonId) row.status = 'retained';
-
-    // A disqualified row's eligibility gate is the same question the tree
-    // answers: keeping them (position unchanged) serves them — the waive; moving
-    // them to the bottom confirms. Mirror it once no match is left pending, so
-    // finalize's "disqualified awaiting decision" gate clears with the tree.
-    if (row.eligibility === 'disqualified' && !row.eligibilityDecision) {
-      const remaining = await this.matchesRepo.find({ where: { rowId: row.id, status: 'pending' } });
-      if (remaining.length === 0) {
-        row.eligibilityDecision = deprioritize ? 'confirm' : 'waive';
-      }
-    }
-    await this.rowsRepo.save(row);
-
-    // The decision is traceable on the record that survives.
-    if (remark && match.targetPersonId && this.remarksService) {
-      const bens = await this.rowsRepo.query('SELECT id FROM beneficiaries WHERE person_id = $1 LIMIT 1', [match.targetPersonId]);
-      const beneficiaryId = bens?.[0]?.id;
-      if (beneficiaryId) {
-        await this.remarksService.append({ beneficiaryId, operationId, kind: 'decision', remark, source: op.source, authoredBy: actorId });
-      }
-    }
-    return { row, match };
+    });
   }
 
   async revert(operationId: string, matchId: string) {
@@ -265,45 +280,53 @@ export class DedupService {
     if (!match) throw new NotFoundException('Match not found');
     const wasPaired = match.targetType === 'import_row' ? match.targetImportRowId : null;
     const revertedPersonId = match.targetPersonId;
-    match.status = 'pending';
-    match.decidedAt = undefined;
-    match.decidedBy = undefined;
-    match.remark = undefined;
-    await this.matchesRepo.save(match);
 
-    const row = await this.rowsRepo.findOne({ where: { id: match.rowId } });
-    if (row) {
-      // Reverting a same-person decision removes the link the decision made;
-      // the row must go back to being undecided, not stay retained to a person.
-      if (revertedPersonId && row.matchedPersonId === revertedPersonId) row.matchedPersonId = null;
-      // Deprioritizing a duplicate appended a note; undo it with the decision.
-      if (match.targetType === 'import_row') row.remarks = row.originalRemarks || undefined;
-      // The decision also mirrored the row's eligibility answer; reopening the
-      // match must reopen that gate or finalize would stay falsely clearable.
-      if (row.eligibility === 'disqualified') {
-        row.eligibilityDecision = null;
-        row.eligibilityDecidedBy = undefined;
-        row.eligibilityDecidedAt = undefined;
-      }
-      row.status = await this.deriveRowStatus(row.id);
-      await this.rowsRepo.save(row);
-    }
-    // Pair decisions also stamped the other row (winner or loser); reset it too
-    // or the other row keeps the old result after the decision is undone.
-    if (wasPaired) {
-      const paired = await this.rowsRepo.findOne({ where: { id: wasPaired } });
-      if (paired) {
-        paired.status = await this.deriveRowStatus(paired.id);
-        paired.remarks = paired.originalRemarks || undefined;
-        if (paired.eligibility === 'disqualified') {
-          paired.eligibilityDecision = null;
-          paired.eligibilityDecidedBy = undefined;
-          paired.eligibilityDecidedAt = undefined;
+    // Same atomicity rule as decide(): a revert stamps a match and up to
+    // two rows, and all of it must apply or none of it.
+    return this.opsRepo.manager.transaction(async (em: EntityManager) => {
+      const matchesRepo = em.getRepository(ClientImportMatch);
+      const rowsRepo = em.getRepository(ClientImportRow);
+
+      match.status = 'pending';
+      match.decidedAt = undefined;
+      match.decidedBy = undefined;
+      match.remark = undefined;
+      await matchesRepo.save(match);
+
+      const row = await rowsRepo.findOne({ where: { id: match.rowId } });
+      if (row) {
+        // Reverting a same-person decision removes the link the decision made;
+        // the row must go back to being undecided, not stay retained to a person.
+        if (revertedPersonId && row.matchedPersonId === revertedPersonId) row.matchedPersonId = null;
+        // Deprioritizing a duplicate appended a note; undo it with the decision.
+        if (match.targetType === 'import_row') row.remarks = row.originalRemarks || undefined;
+        // The decision also mirrored the row's eligibility answer; reopening the
+        // match must reopen that gate or finalize would stay falsely clearable.
+        if (row.eligibility === 'disqualified') {
+          row.eligibilityDecision = null;
+          row.eligibilityDecidedBy = undefined;
+          row.eligibilityDecidedAt = undefined;
         }
-        await this.rowsRepo.save(paired);
+        row.status = await this.deriveRowStatus(row.id, em);
+        await rowsRepo.save(row);
       }
-    }
-    return { row, match };
+      // Pair decisions also stamped the other row (winner or loser); reset it too
+      // or the other row keeps the old result after the decision is undone.
+      if (wasPaired) {
+        const paired = await rowsRepo.findOne({ where: { id: wasPaired } });
+        if (paired) {
+          paired.status = await this.deriveRowStatus(paired.id, em);
+          paired.remarks = paired.originalRemarks || undefined;
+          if (paired.eligibility === 'disqualified') {
+            paired.eligibilityDecision = null;
+            paired.eligibilityDecidedBy = undefined;
+            paired.eligibilityDecidedAt = undefined;
+          }
+          await rowsRepo.save(paired);
+        }
+      }
+      return { row, match };
+    });
   }
 
   /**

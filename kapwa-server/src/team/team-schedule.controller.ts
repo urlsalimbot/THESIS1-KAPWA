@@ -12,7 +12,7 @@ import { TeamScheduleService, TeamBlockInput } from './team-schedule.service.js'
 // the week the client navigated to.
 function parseDay(s?: string): Date | undefined {
   if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return undefined;
-  const d = new Date(`${s}T00:00:00Z`);
+  const d = new Date(`${s}T00:00:00+08:00`);
   return Number.isNaN(d.getTime()) ? undefined : d;
 }
 

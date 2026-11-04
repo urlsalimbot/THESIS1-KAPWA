@@ -1,6 +1,11 @@
 import { DedupService } from './dedup.service.js';
 
 function mockRepo(over: any = {}) {
+  const manager = {
+    query: jest.fn().mockResolvedValue([]),
+    getRepository: jest.fn(),
+    transaction: jest.fn(),
+  };
   return {
     findOne: jest.fn().mockResolvedValue(null),
     save: jest.fn(async (e: any) => e),
@@ -9,6 +14,7 @@ function mockRepo(over: any = {}) {
     query: jest.fn().mockResolvedValue([]),
     find: jest.fn().mockResolvedValue([]),
     delete: jest.fn().mockResolvedValue({}),
+    manager,
     ...over,
   };
 }
@@ -19,6 +25,10 @@ describe('DedupService decisions', () => {
 
   beforeEach(() => {
     opsRepo = mockRepo(); rowsRepo = mockRepo(); matchesRepo = mockRepo(); remarksService = { append: jest.fn(async (e: any) => e) };
+    // decide()/revert() run their writes through the repo manager's transaction.
+    opsRepo.manager.transaction.mockImplementation(async (fn: any) => fn(opsRepo.manager));
+    opsRepo.manager.getRepository.mockImplementation((e: any) =>
+      e.name === 'ClientImportRow' ? rowsRepo : e.name === 'ClientImportMatch' ? matchesRepo : opsRepo);
     service = new DedupService(opsRepo, rowsRepo, matchesRepo, stubAdapter as any, remarksService);
   });
 
@@ -39,7 +49,7 @@ describe('DedupService decisions', () => {
     matchesRepo.find.mockResolvedValue([
       { id: 'm1', rowId: 'r1', status: 'deprioritized', targetType: 'db_person' },
     ]);
-    rowsRepo.query.mockResolvedValue([{ id: 'ben-9' }]);
+    opsRepo.manager.query.mockResolvedValue([{ id: 'ben-9' }]);
 
     const out = await service.decide(
       'op1', 'm1',

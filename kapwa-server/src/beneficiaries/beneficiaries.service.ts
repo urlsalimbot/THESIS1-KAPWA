@@ -1,4 +1,5 @@
 import { DEFAULT_LIST_LIMIT, paginate } from '../common/constants.js';
+import { manilaDay } from '../common/manila-day.js';
 import { Injectable, NotFoundException, BadRequestException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -385,7 +386,7 @@ export class BeneficiariesService {
       extension: person.extension ?? null,
       gender: person.gender ?? null,
       dob: person.dob
-        ? (person.dob instanceof Date ? person.dob.toISOString().slice(0, 10) : String(person.dob).slice(0, 10))
+        ? (person.dob instanceof Date ? manilaDay(person.dob) : String(person.dob).slice(0, 10))
         : null,
       relationship: 'Self',
       age: person.age ?? 0,
@@ -709,7 +710,7 @@ export class BeneficiariesService {
       id: r.id,
       controlNo: r.controlNo,
       serviceName: r.serviceName,
-      date: r.date ? new Date(r.date).toISOString().slice(0, 10) : null,
+      date: r.date ? manilaDay(r.date) : null,
       amount: Number(r.amount) || 0,
       fundSource: r.fundSource || null,
       receiptUrl: null,
@@ -741,7 +742,7 @@ export class BeneficiariesService {
     );
     const services = rows.map((r: any) => ({
       serviceRendered: r.service_rendered,
-      serviceDate: r.service_date ? new Date(r.service_date).toISOString().slice(0, 10) : null,
+      serviceDate: r.service_date ? manilaDay(r.service_date) : null,
       cost: r.cost != null ? Number(r.cost) : null,
       category: r.category,
     }));

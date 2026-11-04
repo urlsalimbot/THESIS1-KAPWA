@@ -1,4 +1,5 @@
 import { RECENT_CASES_LIMIT, SLA_OVERDUE_DAYS } from '../common/constants.js';
+import { manilaDay } from '../common/manila-day.js';
 import { paginate } from '../common/constants.js';
 import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -35,8 +36,16 @@ export class DashboardService {
     }, 10_000);
   }
 
+  /**
+   * Clients served today (Manila day): interventions with `delivery_date`
+   * today. Was a hardcoded 0, which made the dashboard KPI meaningless.
+   */
   async getServedToday(): Promise<number> {
-    return 0;
+    const rows: Array<{ count: string | number }> = await this.caseRepo.manager.query(
+      `SELECT COUNT(*)::int AS count FROM case_interventions WHERE delivery_date = $1`,
+      [manilaDay(new Date())],
+    );
+    return Number(rows?.[0]?.count ?? 0);
   }
 
   /**
@@ -57,11 +66,11 @@ export class DashboardService {
       // Monday-first calendar week, exactly as getTrends computes it.
       const monday = new Date(now);
       monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-      return monday.toISOString().slice(0, 10);
+      return manilaDay(monday);
     }
-    if (range === '1m') return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-    if (range === '3m') return new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString().slice(0, 10);
-    if (range === '6m') return new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().slice(0, 10);
+    if (range === '1m') return manilaDay(new Date(now.getFullYear(), now.getMonth(), 1));
+    if (range === '3m') return manilaDay(new Date(now.getFullYear(), now.getMonth() - 2, 1));
+    if (range === '6m') return manilaDay(new Date(now.getFullYear(), now.getMonth() - 5, 1));
     // Unknown or absent range: no cutoff, matching the endpoints' former
     // unfiltered behavior rather than guessing a window.
     return undefined;
@@ -75,7 +84,7 @@ export class DashboardService {
     const key = `dashboard:metrics:${barangay ?? 'all'}:${startDate ?? 'all'}:${endDate ?? 'all'}`;
     const compute = async () => {
       // End is inclusive; treat it as [start, end+1day).
-      const endExclusive = endDate ? new Date(new Date(endDate).getTime() + 86_400_000).toISOString().slice(0, 10) : null;
+      const endExclusive = endDate ? manilaDay(new Date(new Date(`${endDate}T00:00:00+08:00`).getTime() + 86_400_000)) : null;
       const caseQb = this.caseRepo.createQueryBuilder('c')
         .leftJoin('c.beneficiary', 'b')
         .leftJoin('b.person', 'p');
@@ -84,10 +93,10 @@ export class DashboardService {
         caseQb.where('EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE :barangay OR pa2.raw ILIKE :barangay))', { barangay: `%${barangay}%` });
       }
       if (startDate) {
-        caseQb.andWhere('c.created_at >= :start', { start: `${startDate}T00:00:00Z` });
+        caseQb.andWhere('c.created_at >= :start', { start: `${startDate}T00:00:00+08:00` });
       }
       if (endExclusive) {
-        caseQb.andWhere('c.created_at < :end', { end: `${endExclusive}T00:00:00Z` });
+        caseQb.andWhere('c.created_at < :end', { end: `${endExclusive}T00:00:00+08:00` });
       }
 
       const totalCases = await caseQb.clone().getCount();
@@ -109,8 +118,8 @@ export class DashboardService {
       if (barangay) {
         byStatusQb.where('EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE :barangay OR pa2.raw ILIKE :barangay))', { barangay: `%${barangay}%` });
       }
-      if (startDate) byStatusQb.andWhere('c.created_at >= :start', { start: `${startDate}T00:00:00Z` });
-      if (endExclusive) byStatusQb.andWhere('c.created_at < :end', { end: `${endExclusive}T00:00:00Z` });
+      if (startDate) byStatusQb.andWhere('c.created_at >= :start', { start: `${startDate}T00:00:00+08:00` });
+      if (endExclusive) byStatusQb.andWhere('c.created_at < :end', { end: `${endExclusive}T00:00:00+08:00` });
       const byStatus = await byStatusQb.getRawMany();
 
       // Real disbursement + recent-intervention numbers (were hardcoded 0).
@@ -184,7 +193,7 @@ export class DashboardService {
     // The dashboard's range selector drives this; a case is "in range" when
     // filed within the window, on the same created_at basis the metrics use.
     if (createdAfter) {
-      qb.andWhere('c.created_at >= :createdAfter', { createdAfter: `${createdAfter}T00:00:00Z` });
+      qb.andWhere('c.created_at >= :createdAfter', { createdAfter: `${createdAfter}T00:00:00+08:00` });
     }
 
     paginate(qb, page, limit);
@@ -203,7 +212,7 @@ export class DashboardService {
           { barangay: `%${barangay}%` });
       }
       if (createdAfter) {
-        qb2.andWhere('c.created_at >= :createdAfter', { createdAfter: `${createdAfter}T00:00:00Z` });
+        qb2.andWhere('c.created_at >= :createdAfter', { createdAfter: `${createdAfter}T00:00:00+08:00` });
       }
       paginate(qb2, page, limit);
       const cases = await qb2.getMany();
@@ -309,7 +318,7 @@ export class DashboardService {
         const disbursedRows = await this.caseRepo.manager.query(
           `SELECT COALESCE(SUM(amount), 0) AS total FROM case_interventions
            WHERE delivery_date >= $1 AND delivery_date < $2`,
-          [b.start.toISOString().slice(0, 10), b.end.toISOString().slice(0, 10)],
+          [manilaDay(b.start), manilaDay(b.end)],
         );
         return {
           month: b.label,
