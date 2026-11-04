@@ -992,9 +992,9 @@ describe('CaseStepLocksService', () => {
   });
 
   describe('crisis-mode requirements', () => {
-    it('requires intervention-anchored documents for ad-hoc services in crisis mode', async () => {
+    it('requires intervention-anchored documents for ad-hoc services', async () => {
       // An ad-hoc medical_assistance in crisis mode must have its documents met.
-      findById.mockResolvedValue({ id: 'c1', status: 'enrolled', crisisMode: true });
+      findById.mockResolvedValue({ id: 'c1', status: 'enrolled' });
       interventionCount.mockResolvedValue(1);
       // The intervention has no program → no program documents.
       interventionQuery.mockResolvedValue([{ intervention_type: 'medical_assistance' }]);
@@ -1015,8 +1015,8 @@ describe('CaseStepLocksService', () => {
       await expect(service.lock('c1', 'interventions', swUser)).rejects.toThrow(/not complete/i);
     });
 
-    it('allows the seal when intervention documents are met in crisis mode', async () => {
-      findById.mockResolvedValue({ id: 'c1', status: 'enrolled', crisisMode: true, requirementsChecklist: { medical_certificate: true } });
+    it('allows the seal when intervention documents are met', async () => {
+      findById.mockResolvedValue({ id: 'c1', status: 'enrolled', requirementsChecklist: { medical_certificate: true } });
       interventionCount.mockResolvedValue(1);
       interventionQuery.mockResolvedValue([{ intervention_type: 'medical_assistance' }]);
       interventionDocsFind.mockResolvedValue([{ interventionType: 'medical_assistance', documentKey: 'medical_certificate' }]);

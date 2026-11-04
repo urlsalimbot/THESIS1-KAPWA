@@ -44,7 +44,6 @@ export function interventionRequirementsMet(
   interventions: any[],
   programs: any[],
   requirementsChecklist?: Record<string, boolean> | null,
-  crisisMode?: boolean,
   interventionDocs?: any[],
 ): boolean {
   const programIds = [...new Set(interventions.map((i: any) => i?.programId).filter(Boolean))];
@@ -54,7 +53,7 @@ export function interventionRequirementsMet(
         .filter((p: any) => programIds.includes(p.id))
         .flatMap((p: any) => requiredDocumentKeys(p)),
       // Every recorded intervention contributes its own documentary minimum —
-      // program-anchored or ad-hoc, crisis mode or not.
+      // program-anchored or ad-hoc.
       ...(Array.isArray(interventionDocs)
         ? interventionDocs
             .filter((d) => interventions.some((i) => i?.interventionType && i.interventionType === d?.interventionType))

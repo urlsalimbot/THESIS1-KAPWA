@@ -303,7 +303,6 @@ export function CaseViewPage() {
       interventions,
       programs || [],
       caseData?.requirementsChecklist,
-      Boolean(caseData?.crisisMode),
       interventionDocs,
     ),
     [interventions, programs, caseData, interventionDocs],
@@ -736,11 +735,6 @@ export function CaseViewPage() {
         <div className="lg:col-span-2 space-y-4">
 
           {/* Case details strip */}
-          {caseData?.crisisMode && (
-            <div className="rounded-md border border-warning/35 bg-alert-error-bg px-3 py-2 text-xs text-warning-foreground" role="status">
-              {t('caseView.crisisModeBanner', 'Crisis mode — ad-hoc services use intervention-anchored documents.')}
-            </div>
-          )}
           <section className="rounded-lg border bg-card" aria-label={t('cases.caseDetails', 'Case details')}>
             <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
               <dl className="grid flex-1 min-w-[15rem] grid-cols-2 gap-x-6 gap-y-3 text-sm">
@@ -764,21 +758,6 @@ export function CaseViewPage() {
                 )}
               </dl>
               <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
-                {['admin', 'social_worker'].includes(user?.role ?? '') && (
-                  <Button
-                    variant={caseData.crisisMode ? 'default' : 'outline'}
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={async () => {
-                      await api.patch(`/cases/${id}/meta`, { crisisMode: !caseData.crisisMode });
-                      await mutate(queryKeys.cases.detail(id!));
-                    }}
-                  >
-                    {caseData.crisisMode
-                      ? t('caseView.exitCrisisMode', 'Exit Crisis Mode')
-                      : t('caseView.crisisMode', 'Crisis Mode')}
-                  </Button>
-                )}
                 {user?.role === 'admin' && caseData.status === 'active' && !caseData.certificateUrl && (
                   <Button variant="outline" size="sm" className="gap-1.5" disabled={issuing === 'coe'} onClick={() => issueDoc('coe')}>
                     <FileText size={14} aria-hidden="true" /> {issuing === 'coe' ? t('cases.issuing', 'Issuing…') : t('cases.issueCoe', 'Issue COE')}

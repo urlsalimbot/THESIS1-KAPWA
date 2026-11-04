@@ -92,7 +92,6 @@ describe('interventionRequirementsMet against the shared fixture', () => {
           [...interventions, ...interventionsWithTypes],
           programs,
           fx.requirements.checklist,
-          false,
           interventionDocs,
         ),
       ).toBe(fx.expected);

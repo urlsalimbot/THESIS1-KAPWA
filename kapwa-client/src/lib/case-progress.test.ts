@@ -54,33 +54,27 @@ describe('interventionRequirementsMet', () => {
     expect(interventionRequirementsMet(interventions, programs, {})).toBe(false);
   });
 
-  describe('crisis-mode intervention documents', () => {
+  describe('intervention-anchored documents', () => {
     const ADHOC = [{ id: 'i1', interventionType: 'medical_assistance' }];
     const DOCS = [{ interventionType: 'medical_assistance', documentKey: 'medical_certificate' }];
 
-    it('requires intervention documents for ad-hoc services in crisis mode', () => {
-      expect(interventionRequirementsMet(ADHOC, [], {}, true, DOCS)).toBe(false);
-    });
-
-    it('requires intervention documents for every recorded intervention, crisis mode or not', () => {
-      expect(interventionRequirementsMet(ADHOC, [], {}, false, DOCS)).toBe(false);
-      expect(interventionRequirementsMet(ADHOC, [], {}, undefined, DOCS)).toBe(false);
+    it('requires intervention documents for ad-hoc services', () => {
+      expect(interventionRequirementsMet(ADHOC, [], {}, DOCS)).toBe(false);
     });
 
     it('returns true once the intervention documents are met', () => {
-      expect(interventionRequirementsMet(ADHOC, [], { medical_certificate: true }, true, DOCS)).toBe(true);
-      expect(interventionRequirementsMet(ADHOC, [], { medical_certificate: true }, false, DOCS)).toBe(true);
+      expect(interventionRequirementsMet(ADHOC, [], { medical_certificate: true }, DOCS)).toBe(true);
     });
 
-    it('keeps program documents required alongside crisis docs', () => {
+    it('keeps program documents required alongside intervention docs', () => {
       const mixed = [{ id: 'i1', programId: 'p1' }, { id: 'i2', interventionType: 'medical_assistance' }];
-      expect(interventionRequirementsMet(mixed, [program('p1', ['Valid ID'])], {}, true, DOCS)).toBe(false);
-      expect(interventionRequirementsMet(mixed, [program('p1', ['Valid ID'])], { medical_certificate: true }, true, DOCS)).toBe(false);
-      expect(interventionRequirementsMet(mixed, [program('p1', ['Valid ID'])], { 'Valid ID': true, medical_certificate: true }, true, DOCS)).toBe(true);
+      expect(interventionRequirementsMet(mixed, [program('p1', ['Valid ID'])], {}, DOCS)).toBe(false);
+      expect(interventionRequirementsMet(mixed, [program('p1', ['Valid ID'])], { medical_certificate: true }, DOCS)).toBe(false);
+      expect(interventionRequirementsMet(mixed, [program('p1', ['Valid ID'])], { 'Valid ID': true, medical_certificate: true }, DOCS)).toBe(true);
     });
 
     it('ignores intervention docs for types not in the case', () => {
-      expect(interventionRequirementsMet([{ id: 'i1', interventionType: 'crisis_counseling' }], [], {}, true, DOCS)).toBe(true);
+      expect(interventionRequirementsMet([{ id: 'i1', interventionType: 'crisis_counseling' }], [], {}, DOCS)).toBe(true);
     });
   });
 });

@@ -202,8 +202,9 @@ export class Case extends BaseEntity {
   @Column({ name: 'is_indigenous', type: 'boolean', default: false })
   isIndigenous!: boolean;
 
-  // Crisis mode: worker-toggled; ad-hoc services (no program) then carry their
-  // intervention-anchored documentary minimums instead of none.
+  // shortcut: the crisis-mode feature was removed but this column is kept so no
+  // destructive migration is needed; drop the column and this field when a
+  // migration window allows a backup.
   @Column({ name: 'crisis_mode', type: 'boolean', default: false })
   crisisMode!: boolean;
 
