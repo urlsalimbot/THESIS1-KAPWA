@@ -166,6 +166,32 @@ describe('DashboardService', () => {
     expect(result.slaStatus).toBe('compliant');
   });
 
+  describe('getServedToday', () => {
+    it('counts interventions delivered today (Manila day)', async () => {
+      caseRepoMock.manager.query.mockResolvedValueOnce([{ count: '4' }]);
+      const result = await service.getServedToday();
+      expect(caseRepoMock.manager.query).toHaveBeenCalledWith(
+        expect.stringContaining('case_interventions'),
+        [expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)],
+      );
+      expect(result).toBe(4);
+    });
+
+    it('reads zero when nothing was delivered today', async () => {
+      caseRepoMock.manager.query.mockResolvedValueOnce([]);
+      expect(await service.getServedToday()).toBe(0);
+    });
+  });
+
+  describe('rangeStart', () => {
+    it('returns a Manila calendar day for every known range', () => {
+      for (const range of ['1w', '1m', '3m', '6m']) {
+        expect(DashboardService.rangeStart(range)).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      }
+      expect(DashboardService.rangeStart(undefined)).toBeUndefined();
+    });
+  });
+
   describe('getDailyCounts', () => {
     it('rejects a missing month instead of binding an Invalid Date', async () => {
       await expect(service.getDailyCounts(NaN, NaN)).rejects.toThrow('year and month are required');

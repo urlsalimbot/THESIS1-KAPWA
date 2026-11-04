@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { manilaDay } from '../common/manila-day.js';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, MoreThanOrEqual, Repository } from 'typeorm';
@@ -70,7 +71,7 @@ export class CaseEventReminderService {
   async checkForReminders(now: Date): Promise<{ dispatched: number; skipped: number }> {
     let dispatched = 0;
     let skipped = 0;
-    const today = now.toISOString().slice(0, 10);
+    const today = manilaDay(now);
     // The DB filter is an optimization only — correctness comes from the
     // `eventAt > now` guard below, which also excludes today's past times.
     const candidates = await this.events.find({

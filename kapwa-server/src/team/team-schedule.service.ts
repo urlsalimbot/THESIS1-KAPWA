@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { manilaDay } from '../common/manila-day.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThanOrEqual, Raw, FindOptionsWhere, In, Repository } from 'typeorm';
 import { AuditLogService } from '../audit/audit-log.service.js';
@@ -94,7 +95,7 @@ export class TeamScheduleService {
   }
 
   private static dayString(d: Date): string {
-    return d.toISOString().slice(0, 10);
+    return manilaDay(d);
   }
 
   async listBlocks(
